@@ -19,9 +19,9 @@ multimodal MediaPipe GenAI engines.
 - Full repository pnpm verify passed, including typecheck, tests, boundaries, packed-consumer compatibility, runtime qualification, and build.
 - Durable record: docs/verification/2026-09-28-litert-upstream-integrity.md.
 
-### Current continuation (uncommitted)
+### Current continuation
 
-The public `text-gen` worker transport now has an additive, explicit MediaPipe
+The public `text-gen` worker transport has an additive, explicit MediaPipe
 GenAI engine for multimodal browser consumers. Existing `load(model)` and
 string `generate(prompt)` callers keep the LiteRT-LM path unchanged; a consumer
 can opt into `engine: 'mediapipe'` and send structured text/image/audio prompt
@@ -51,7 +51,7 @@ Evidence established so far against this working tree:
   MediaPipe GenAI chunk, and a Vite/Vitest feature probe selected the shared
   multimodal path. The consumer link was then restored to its pinned Git SHA.
 
-Full `pnpm verify` passed after this continuation: workspace typecheck,
+Full `pnpm verify` passed against this continuation: workspace typecheck,
 all package/app tests, 15/15 package-boundary tests, all 10 packed-consumer
 compatibility rows, runtime qualification, and production builds.
 

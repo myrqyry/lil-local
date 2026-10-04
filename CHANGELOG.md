@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add a pinned conversion-evidence lane from `john-rocky/LiteRT-Models@460d52221c22388b6a9a8e8a44b61dde72976b4e`: reproducible blockwise LiteRT-LM int4 recipes, a machine-readable candidate catalog that keeps Android evidence separate from browser qualification, and a deterministic validator included in `pnpm verify`.
+- Runtime qualification observations can now carry numeric parity evidence (absolute/relative error, non-finite counts, failing element counts, and tolerances) so compile/run success cannot silently stand in for output correctness.
 - `text-gen`'s shared worker client now has an explicit MediaPipe GenAI engine for browser multimodal prompts. Existing LiteRT-LM callers stay text-only and unchanged; multimodal consumers can send structured text/image/audio parts, while remote model URLs are handed directly to MediaPipe and Blob models are streamed through a reader instead of being materialized into another full ArrayBuffer.
 - Shared downstream inference compatibility now covers browser cache, text generation, encoder embeddings, ColBERT retrieval, Kokoro, Qwen3-TTS, image embeddings, and video classification from their packed public entrypoints.
 - `feat(playground)`: wire adapters to Hugging Face and flag missing models (`apps/playground/src/adapters/*`, `types.ts`, `ModelList.tsx`, `ModelRunner.tsx`)
