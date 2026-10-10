@@ -216,7 +216,7 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
         return (options.signature
           ? await model.run(options.signature, inputs)
           : await model.run(inputs)) as LiteRtModelOutput
-      }, signal, `litert-preflight:${path}`)
+      }, signal, `litert-preflight:${path}`, { priority: options.inferencePriority })
 
       const inferenceDurationMs = performance.now() - startedAt
       const result: LiteRtPreflightResult = {
@@ -514,7 +514,7 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
         this.assertUsable()
         startedAt = performance.now()
         return (signature ? await model.run(signature, input) : await model.run(input)) as LiteRtModelOutput
-      }, signal, options.label ?? `litert:${path}`)
+      }, signal, options.label ?? `litert:${path}`, { priority: options.inferencePriority })
 
       const inferenceDurationMs = performance.now() - startedAt
       this.diagnostics.set(key, {

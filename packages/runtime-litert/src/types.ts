@@ -15,6 +15,8 @@ export interface LiteRtModelOptions {
   webNNOptions?: WebNNRuntimeOptions
   signal?: AbortSignal
   onProgress?: (progress: { loadedBytes: number; totalBytes?: number }) => void
+  /** Optional inference/preflight queue priority; does not affect model identity or loading. */
+  inferencePriority?: number
 }
 
 export type LiteRtTypedArray = Float32Array | Int32Array | Int8Array | Uint8Array

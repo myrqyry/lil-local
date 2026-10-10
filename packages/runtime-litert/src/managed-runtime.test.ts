@@ -200,6 +200,43 @@ describe('managed LiteRT runtime', () => {
     expect(model.run).toHaveBeenCalledTimes(1)
   })
 
+  it('honors predict inferencePriority through the actual LiteRT coordinator', async () => {
+    const order: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const model = {
+      run: vi.fn(async (input: { id: string }) => {
+        order.push(input.id)
+        if (input.id === 'active') await gate
+        return [{}]
+      }),
+    }
+    vi.mocked(loadAndCompile).mockResolvedValue(model as never)
+    const coordinator = new InferenceCoordinator()
+    const context = await createLiteRtRuntime({
+      backend: 'wasm',
+      coordinator,
+      assets: { resolve: vi.fn().mockResolvedValue(new ArrayBuffer(8)) },
+    })
+    await context.liteRt.loadModel('shared.tflite')
+
+    const first = context.liteRt.predict('shared.tflite', { id: 'active' } as never)
+    await vi.waitFor(() => expect(coordinator.snapshot().active).toBe(true))
+    const ordinary = context.liteRt.predict('shared.tflite', { id: 'ordinary' } as never)
+    const urgent = context.liteRt.predict(
+      'shared.tflite',
+      { id: 'urgent' } as never,
+      { inferencePriority: 8 },
+    )
+    await vi.waitFor(() => expect(coordinator.snapshot().queued).toBe(2))
+
+    release()
+    await Promise.all([first, ordinary, urgent])
+    expect(order).toEqual(['active', 'urgent', 'ordinary'])
+    expect(loadAndCompile).toHaveBeenCalledTimes(1)
+    expect(context.liteRt.getModelInfo('shared.tflite')).toBeDefined()
+  })
+
   it('returns JSON-serializable runtime diagnostics', async () => {
     const model = { run: vi.fn().mockResolvedValue([{}]) }
     vi.mocked(loadAndCompile).mockResolvedValue(model as never)

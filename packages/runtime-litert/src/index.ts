@@ -4,6 +4,7 @@ export type {
   InferenceCoordinatorSnapshot,
   InferenceEvent,
   InferenceEventDetails,
+  InferenceRunOptions,
 } from './coordinator'
 export { parseNpy } from './npy'
 export { AUTO_BACKEND_ORDER, probeRuntimeCapabilities, rankBackends, selectBackend } from './capabilities'
