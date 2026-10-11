@@ -1,25 +1,52 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
-## Current follow-up — PR #15 merged Verify failure — 2026-10-05
+## Current follow-up — runtime evidence export and model provenance — 2026-10-10
 
-Current source is merged `master` at `1e72863a44fe1a250e55aac7cfcb9f48b2101564`.
-The patch in this checkout repairs a pre-existing Node 22.16 example-config load
-failure and the two unresolved PR #15 correctness findings. Fresh full
-`pnpm verify` exits 0 using Node 22.16.0 and pnpm 11.17.0, including 426
-package/example test executions, 15 boundary tests, 10 compatibility rows,
-15 conversion-validator tests, 73 qualification tests, and all builds.
-The example dev server also serves all three worker shells with exact contents.
+Following `77fe3af` (the pushed opt-in inference priority scheduler), the
+playground now has a versioned, explicitly session-scoped runtime proof JSON
+export and a selected-model disclosure for the adapter's recorded verification
+status, backends, date, note, and evidence reference. Neither operation promotes
+an adapter's durable qualification or claims that a model passed browser
+inference without fresh runtime evidence.
 
-This is local verification, not a green hosted CI result. Changes have not been
-committed or pushed; PR #15 review threads remain unresolved remotely. No new
-real-browser model inference or numerical reference observations were recorded.
-Full diagnosis, source links, and verification limits:
-`docs/verification/2026-10-05-pr15-verify-followup.md`.
+The export is offered only when `useModelRunner` has an actual non-null
+`RuntimePathProof`, produced from inference telemetry. Download names are
+sanitized, the anchor is attached/removed, and object URLs are revoked after
+a grace period rather than before slower browsers begin their downloads.
+The UI labels recorded evidence without treating the `registered` status as
+verified. See `.meristem/strategy/lil-tart/10x/session-1.md` for the review and
+scope decisions.
 
-## Current follow-up — 2026-09-28, integrated onto `2200684`
+Verification: focused playground typecheck and 168 tests passed on the updated
+working tree. Full `pnpm verify` exited 0 on this source tree on 2026-10-10,
+covering typechecking, package/example tests, boundary checks, packed-consumer
+compatibility, conversion validation, qualification contracts, and builds.
+Actual browser download/inference smoke has **not** been performed; the test
+suite does not establish real device/model behavior. No downstream consumer
+integration has been demonstrated.
 
-This section supersedes the historical working-tree/status notes below. The
+## Historical state — Verify-gate hardening — 2026-10-06
+
+At that checkpoint, the checkout was clean `master` at `fda8cda`, matching `origin/master`.
+This commit follows PR #15's merge (`1e72863`) and contains the Verify-gate
+follow-up: Node 22.16-compatible example config loading, qualification rejection
+of failed numeric parity, and complete pinned-recipe validation with mutation
+coverage.
+
+Fresh `pnpm verify` passed on the exact pre-commit tree with Node 22.16.0 and
+pnpm 11.17.0. Detailed diagnosis, commands, counts, and evidence limits are in
+`docs/verification/2026-10-05-pr15-verify-followup.md`. Hosted CI status for
+`fda8cda` and the current status of PR #15 review threads have not been checked
+in this session. No new browser model-inference or numerical-reference evidence
+was recorded; candidate models remain browser-unverified.
+
+No follow-on implementation objective is stated in this session. Older work
+records below are retained as history and are not current branch/status claims.
+
+## Historical follow-up — 2026-09-28, integrated onto `2200684`
+
+This section records the earlier PR #10 continuation. The
 remote PR #10 branch was checked again and still pointed to `a3dfeb4`. Its Vercel
 comment reported Ready at 07:48 UTC, newer than the 05:27 snapshot in the task.
 The user subsequently authorized committing and pushing. Before delivery, the
@@ -65,7 +92,7 @@ Final combined validation and delivery are recorded in the follow-up report.
 - Detailed validation and remaining limitations:
   `docs/verification/2026-09-28-pr10-followup.md`.
 
-## Current continuation — conversion qualification forward-port — 2026-10-05
+## Historical continuation — conversion qualification forward-port — 2026-10-05
 
 The old `aster/litert-upstream-hardening` branch was 115 commits behind current
 `master`, while its provenance and MediaPipe work had already landed separately.

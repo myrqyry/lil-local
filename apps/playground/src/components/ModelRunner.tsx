@@ -4,6 +4,7 @@ import { useModelRunner } from '../hooks/useModelRunner'
 import type { Accelerator } from '../hooks/useModelRunner'
 import type { ModelAdapter, TensorSpec } from '../adapters/types'
 import { getTartGuideMessage } from '../tartGuide'
+import { downloadRuntimePathReceipt } from '../runtimePathReceipt'
 import {
   clearStoredModels,
   listOrphanedModels,
@@ -280,6 +281,29 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
                       )}
                     </div>
 
+                    {selectedAdapter.verification && (
+                      <details className="neo-well mt-2 px-3 py-2.5 text-xs text-on-surface-variant">
+                        <summary className="cursor-pointer select-none font-medium text-on-surface">Recorded model evidence</summary>
+                        <div className="mt-2 space-y-2">
+                          <p>Status: {selectedAdapter.verification.status.replace(/-/g, ' ')}</p>
+                          {selectedAdapter.verification.backends && selectedAdapter.verification.backends.length > 0 && (
+                            <p>Recorded backends: {selectedAdapter.verification.backends.map((backend) => backend.toUpperCase()).join(', ')}</p>
+                          )}
+                          {selectedAdapter.verification.verifiedAt && <p>Verified: {selectedAdapter.verification.verifiedAt}</p>}
+                          {selectedAdapter.verification.note && <p>{selectedAdapter.verification.note}</p>}
+                          {selectedAdapter.verification.evidence && (
+                            <p className="break-all">
+                              Evidence: {/^https?:\/\//i.test(selectedAdapter.verification.evidence) ? (
+                                <a className="text-primary underline" href={selectedAdapter.verification.evidence} target="_blank" rel="noreferrer">
+                                  {selectedAdapter.verification.evidence}
+                                </a>
+                              ) : selectedAdapter.verification.evidence}
+                            </p>
+                          )}
+                        </div>
+                      </details>
+                    )}
+
                     <details className="neo-well mt-2 px-3 py-2.5 text-xs text-on-surface-variant">
                       <summary className="cursor-pointer select-none font-medium text-on-surface">Model details</summary>
                       <div className="mt-2 space-y-2">
@@ -434,6 +458,13 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
                               {runtimePathProof.inferenceEvents.length} events
                             </span>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => downloadRuntimePathReceipt(runtimePathProof)}
+                            className="expressive-secondary-button mt-2 px-2.5 py-1.5 text-[11px] font-semibold text-on-surface"
+                          >
+                            Download session proof JSON
+                          </button>
                           <div className="mt-2 space-y-1.5 font-mono text-[11px] text-on-surface-variant">
                             {runtimePathProof.graphBackends.map((graph) => (
                               <div key={graph.graph} className="rounded-md bg-surface/45 px-2 py-1.5">
