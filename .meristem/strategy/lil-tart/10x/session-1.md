@@ -162,7 +162,7 @@ Keep this in the selected-model inspector rather than every card to avoid turnin
 3. Provenance/SBOM metadata as source/license information is curated for actual model assets.
 
 ### Backlog / Pass for now
-Candidates 5–30 are deferred or rejected in the evaluation table for concrete evidence, feasibility, policy, or product-fit reasons. Revisit only if demand or project constraints change; do not infer that the list represents user requests.
+Candidates 5–30 are deferred or rejected in the evaluation table for concrete evidence, feasibility, policy, or product suitability reasons. Revisit only if demand or project constraints change; do not infer that the list represents user requests.
 
 ## Continuity and limits
 
