@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Introduce a substrate-neutral typed browser model lifecycle in `inference-core`; route the existing D1 ONNX Runtime Web panel through its real load/infer/dispose adapter without modifying the LiteRT runner. Cover disposal races and packed-consumer compatibility. Fresh D1 browser smoke after the UI bridge remains to be verified.
 - Add MoGe-2 LiteRT to the existing depth-estimation package: pinned FP16 WebGPU / FP32 WASM models, true multi-output point/normal/mask/scale decoding, asynchronous GPU readback, relative depth conversion into the canonical DepthFrame, and a caller-owned shared runtime integration. The adapter remains separate from DA3, with no Veyax or OBS product dependencies.
 - Add opt-in priority scheduling to the shared LiteRT inference coordinator, including `inferencePriority` on inference and preflight requests; existing callers retain FIFO ordering, queued abort remains effective, and active inference is never preempted.
 - Add a pinned conversion-evidence lane from `john-rocky/LiteRT-Models@460d52221c22388b6a9a8e8a44b61dde72976b4e`: reproducible blockwise LiteRT-LM int4 recipes, a machine-readable candidate catalog that keeps Android evidence separate from browser qualification, and a deterministic validator included in `pnpm verify`.

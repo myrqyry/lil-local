@@ -42,3 +42,37 @@ Use entries like:
 **Constraints / consequences:** License is LFM Open License v1.0; versioned model assets are downloaded only on click. WebGPU is explicitly requested, though ORT may execute some shape operations on CPU. Vision, voice, numerical parity and long-running stability are not qualified. Use package-compatibility and actual model inference evidence, never just a successful build.
 
 **Evidence:** \`packages/decision-onnx/\`, \`apps/playground/src/components/D1DecisionPanel.tsx\`, \`docs/verification/2026-10-12-d1-webgpu-text.md\`; real Chromium NVIDIA/Turing Q8 text decision on 2026-10-12, single-run billing 99.56%, ~1011 ms.
+
+## 2026-10-13 — Multi-substrate browser inference without collapsing runtimes
+
+**Decision:** Lil Tart is a browser inference launcher, lab, and reusable
+runtime qualification system, not solely a LiteRT library. Keep the established
+LiteRT runner and per-model ABI intact. Introduce `BrowserSubstrateRunner` in
+`inference-core` as a small, public engine-independent explicit
+load/infer/dispose contract. Migrate the already existing D1 Omni ONNX Runtime
+Web *panel wiring* through a real, separately implemented ONNX adapter.
+Keep GGUF/llama.cpp and other candidate engines uninstalled until individually
+qualified. Runtime identity, model format, task ABI, and WebGPU/WebNN/WASM
+execution backend are distinct concepts.
+
+**Boundaries:** No automatic runtime/model downloads; no engine-neutral tensor
+ABI, global GPU allocator, cross-runtime caching, universal preflight,
+automatic backend selection, or auto-promotion from session output to durable
+qualification. D1's previously observed browser path requested WebGPU but did
+not establish GPU placement for every ONNX node. This new UI bridge has only
+static, mocked-integration, and build evidence until re-smoked on a real model.
+
+**Verification:** `pnpm --filter @litert-playground/inference-core typecheck`
+and tests passed (47 tests including new lifecycle cases); playground
+typecheck and 169 tests passed; `pnpm verify` exited 0 on the final
+runtime/consumer source tree, exercising the packed entrypoint. New tests
+cover explicit lazy load, real invocation delegation through an injected
+engine, single-flight inference, late-load cleanup, disposal waiting, errors,
+and external package API compatibility. No new live browser inference is
+claimed by these tests.
+
+**References:** `docs/web-substrates.md`,
+`packages/inference-core/src/substrate.ts`,
+`apps/playground/src/substrates/d1Onnx.ts`,
+`apps/playground/src/components/D1DecisionPanel.tsx`,
+`docs/verification/2026-10-12-d1-webgpu-text.md`.

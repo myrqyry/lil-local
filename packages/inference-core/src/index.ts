@@ -4,3 +4,5 @@ export * from './assets'
 export * from './receipts'
 export * from './capabilities'
 export * from './capabilityResolver'
+
+export * from './substrate'

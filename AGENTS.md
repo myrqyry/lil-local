@@ -1,6 +1,6 @@
 # Lil Tart
 
-pnpm monorepo for LiteRT.js browser inference. Node 22+, pnpm 11+.
+pnpm monorepo for browser inference and runtime qualification; LiteRT.js is the established runtime, with opt-in ONNX and future substrate lanes. Node 22+, pnpm 11+.
 
 ## Commands
 

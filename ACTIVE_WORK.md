@@ -1,6 +1,22 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## Current follow-up — multi-substrate browser inference — 2026-10-13
+
+Lil Tart now has an engine-neutral `BrowserSubstrateRunner` published through
+`inference-core`; the existing D1 ONNX Runtime Web panel delegates to the
+real ONNX model via an adapter to that interface. Established LiteRT model
+packages and the managed LiteRT runner remain unchanged. The packed external
+consumer imports the new API. Full `pnpm verify` passed, and focused runner
+and ONNX-bridge tests passed.
+
+**Unfinished:** Fresh real-browser D1 smoke after the UI wiring change, runtime
+receipts common across engines, and opt-in qualification of additional
+substrates (GGUF etc.). Structural typecheck and simulated adapter tests
+must not be described as live model proof. Details: `docs/web-substrates.md`
+and `.meristem/DECISIONS.md`.
+
+
 ## Current follow-up — MoGe-2 shared geometry extraction — 2026-10-12
 
 The real MoGe-2 LiteRT browser proof has been extracted from Veyax into Lil

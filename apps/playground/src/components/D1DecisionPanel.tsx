@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
 import {
-  D1OnnxWebGpu,
   D1_MODEL_REVISION,
   type D1Decision,
   type D1Question,
+  type D1LoadPhase,
 } from '@litert-playground/decision-onnx'
+import { d1OnnxSubstrate, type D1SubstrateInput } from '../substrates/d1Onnx'
 
 const defaultState = 'I was charged twice for the same order. I need a refund.'
 const defaultOptions = 'billing: Charges, refunds, invoices\ntechnical: App or website faults\nfraud: Suspected unauthorized use'
@@ -34,7 +36,7 @@ export function D1DecisionPanel() {
   const [answer, setAnswer] = useState<D1Decision | null>(null)
   const [loading, setLoading] = useState(false)
   const [deciding, setDeciding] = useState(false)
-  const pipeline = useRef<D1OnnxWebGpu | null>(null)
+  const pipeline = useRef<BrowserSubstrateRunner<D1SubstrateInput, D1Decision, D1LoadPhase> | null>(null)
   const generation = useRef(0)
 
   useEffect(() => () => {
@@ -52,7 +54,8 @@ export function D1DecisionPanel() {
     setAnswer(null)
     setStatus('Starting explicit WebGPU load…')
     try {
-      const loaded = await D1OnnxWebGpu.load(phase => {
+      const loaded = new BrowserSubstrateRunner(d1OnnxSubstrate)
+      await loaded.load(phase => {
         if (requestId === generation.current) {
           setStatus(phase === 'tokenizer'
             ? 'Loading tokenizer…'
@@ -107,7 +110,7 @@ export function D1DecisionPanel() {
     setError('')
     setAnswer(null)
     try {
-      setAnswer(await instance.decide(state, payload))
+      setAnswer(await instance.run({ state, question: payload }))
     } catch (reason) {
       setError(String(reason))
     } finally {

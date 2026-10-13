@@ -11,7 +11,7 @@
 ░    ░    ░  ░    ░                     ░     ░              
 ```
 
-A local-first model substrate, launcher, runtime qualification lab, and reusable LiteRT.js workspace.
+A local-first browser inference lab, model launcher, runtime qualification workspace, and reusable LiteRT.js ecosystem.
 
 Lil Tart is the interactive browser app in `apps/playground`. The repository still
 uses the `@litert-playground/*` package namespace underneath it, because the app and
@@ -63,6 +63,17 @@ does **not** silently promote repository verification metadata.
 
 The longer-term product direction is for Tart to turn a proven local runtime path into
 an "add this to my app" recipe without guessing from UI state.
+
+### Browser inference substrates
+
+Lil Tart is growing beyond LiteRT: `inference-core` now exposes a
+`BrowserSubstrateRunner` interface for explicitly loaded browser engines.
+The existing real D1 ONNX Runtime Web panel uses it; the established LiteRT
+runner remains unchanged. GGUF and other engines remain unqualified candidates,
+not silently added dependencies or models.
+
+See [browser inference substrates](docs/web-substrates.md) for implementation
+boundaries, evidence requirements, and further paths.
 
 ### Shared LiteRT runtime
 

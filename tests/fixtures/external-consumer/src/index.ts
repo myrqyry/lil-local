@@ -1,4 +1,4 @@
-import { InferenceError, createHttpAssetResolver } from '@litert-playground/inference-core'
+import { BrowserSubstrateRunner, InferenceError, createHttpAssetResolver, type BrowserSubstrate } from '@litert-playground/inference-core'
 import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
 import { ManagedLiteRtModelController, useManagedLiteRtModel } from '@litert-playground/react-litert'
 import { createBrowserCacheAssetResolver } from '@litert-playground/browser-cache'
@@ -27,6 +27,19 @@ import {
   type MoGeGeometry,
   type DepthFrame,
 } from '@litert-playground/depth-estimation'
+
+// Substrate-neutral public API must work from a *packed* consumer, without
+// pulling in a specific LiteRT/ONNX/GGUF implementation at import time.
+export const externalSubstrate: BrowserSubstrate<string, string> = {
+  id: 'external-test-provider',
+  format: 'test',
+  capabilities: ['text-generation'],
+  requestedBackends: ['wasm'],
+  async create() {
+    return { infer: async (input) => input, dispose: async () => undefined }
+  },
+}
+export const externalSubstrateRunner = new BrowserSubstrateRunner(externalSubstrate)
 
 // A constructor option whose type is unreachable from the entrypoint is a hole in the
 // supported surface, so the packed consumer has to be able to name it.
