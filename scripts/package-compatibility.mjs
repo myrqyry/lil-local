@@ -12,6 +12,7 @@ const packages = [
   ['react-litert', 'react-litert.tgz'],
   ['browser-cache', 'browser-cache.tgz'],
   ['text-gen', 'text-gen.tgz'],
+  ['decision-onnx', 'decision-onnx.tgz'],
   ['encoder', 'encoder.tgz'],
   ['retrieval', 'retrieval.tgz'],
   ['kokoro', 'kokoro.tgz'],

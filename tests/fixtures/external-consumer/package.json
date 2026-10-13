@@ -11,6 +11,7 @@
     "@litert-playground/runtime-litert": "file:./archives/runtime-litert.tgz",
     "@litert-playground/browser-cache": "file:./archives/browser-cache.tgz",
     "@litert-playground/text-gen": "file:./archives/text-gen.tgz",
+    "@litert-playground/decision-onnx": "file:./archives/decision-onnx.tgz",
     "@litert-playground/encoder": "file:./archives/encoder.tgz",
     "@litert-playground/retrieval": "file:./archives/retrieval.tgz",
     "@litert-playground/kokoro": "file:./archives/kokoro.tgz",

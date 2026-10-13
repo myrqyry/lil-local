@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ModelRunner from './components/ModelRunner'
 import { Qwen3TtsPanel } from './components/Qwen3TtsPanel'
 import { LfmPipelinePanel } from './components/LfmPipelinePanel'
+import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -18,6 +19,21 @@ const ttsEntry: ModelAdapter = {
 const lfmEntry: ModelAdapter = {
   modelId: 'lfm2.5-pipelines',
   metadata: { name: 'Gemma 4 + LFM2.5 Pipelines', description: 'Gemma 4 and LFM2.5 text-gen, ColBERT retrieval, and encoders via shared pipelines', modelPath: '', tags: ['llm', 'retrieval', 'encoder', 'pipeline'] },
+  inputSpecs: [],
+  outputSpecs: [],
+  isPipeline: true,
+  prepareInputs: () => ({}),
+  parseOutputs: async () => ({}),
+}
+
+const d1Entry: ModelAdapter = {
+  modelId: 'd1-omni-600m-onnx-webgpu',
+  metadata: {
+    name: 'D1 Omni 600M (WebGPU Decisions)',
+    description: 'Opt-in Q8 ONNX text-only System One decisions using ONNX Runtime Web. Browser qualification pending.',
+    modelPath: '',
+    tags: ['language', 'decisions', 'onnx', 'webgpu', 'pipeline'],
+  },
   inputSpecs: [],
   outputSpecs: [],
   isPipeline: true,
@@ -45,6 +61,21 @@ export default function App() {
     )
   }
 
+  if (selectedId === 'd1-omni-600m-onnx-webgpu') {
+    return (
+      <div className="min-h-screen bg-surface-dim">
+        <div className="mx-auto max-w-2xl p-4">
+          <button
+            className="mb-4 text-sm text-secondary transition-colors hover:text-on-secondary-container"
+            onClick={() => setSelectedId(null)}
+          >← Back to model list</button>
+          <h1 className="mb-4 text-2xl font-bold text-on-surface">D1 Omni · WebGPU</h1>
+          <D1DecisionPanel />
+        </div>
+      </div>
+    )
+  }
+
   if (selectedId === 'lfm2.5-pipelines') {
     return (
       <div className="min-h-screen bg-surface-dim">
@@ -64,7 +95,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

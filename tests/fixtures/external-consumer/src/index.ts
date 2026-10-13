@@ -10,6 +10,7 @@ import {
   type LiteRtLmWorkerPrompt,
 } from '@litert-playground/text-gen'
 import { EncoderPipeline } from '@litert-playground/encoder'
+import { D1OnnxWebGpu, type D1Question } from '@litert-playground/decision-onnx'
 import { ColBertPipeline } from '@litert-playground/retrieval'
 import { maxSim, rankDense } from '@litert-playground/retrieval/scoring'
 import { KokoroPipeline } from '@litert-playground/kokoro'
@@ -52,6 +53,12 @@ export const depthFrameContract: Pick<
   nearFarConvention: 'unknown',
 }
 
+export const exampleD1Question: D1Question = {
+  type: 'noul',
+  instructions: 'A source-stamped observation exists.',
+}
+export const d1TextRuntime = D1OnnxWebGpu
+
 export const depthPipeline = new DepthEstimationPipeline()
 export const depthManifest = da3SmallPortraitManifest
 
@@ -70,6 +77,7 @@ export const importedPackages = [
   LiteRtLmTextPipeline,
   LiteRtLmWorkerClient,
   EncoderPipeline,
+  D1OnnxWebGpu,
   ColBertPipeline,
   maxSim,
   rankDense,

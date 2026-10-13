@@ -32,3 +32,13 @@ Use entries like:
 **Evidence / references:** `conversion/`, `tests/runtime-qualification/shared/numericParity.ts`, source snapshot `john-rocky/LiteRT-Models@460d52221c22388b6a9a8e8a44b61dde72976b4e`.
 
 **Supersedes:** none
+
+## 2026-10-12 — Qualify D1 Omni text decisions with a separate ONNX WebGPU substrate
+
+**Decision:** Add an opt-in, pinned-revision D1 Omni 600M Q8 text decision package and browser laboratory panel. Keep ONNX Runtime Web separate from the shared LiteRT runtime. Do not automatically load 400+ MB of weights or repurpose Veyax's working native GGUF path. This slice supports choice and yes/no only, reports uncalibrated probabilities, and does not authorize actuation.
+
+**Why:** The ONNX Community conversion exposes a real WebGPU-compatible six-input decision graph. Veyax already has native D1 Mira/Vela semantics, but Lil Tart had no browser execution/proof path. One model family can now be evaluated in multiple substrates with independent runtime evidence.
+
+**Constraints / consequences:** License is LFM Open License v1.0; versioned model assets are downloaded only on click. WebGPU is explicitly requested, though ORT may execute some shape operations on CPU. Vision, voice, numerical parity and long-running stability are not qualified. Use package-compatibility and actual model inference evidence, never just a successful build.
+
+**Evidence:** \`packages/decision-onnx/\`, \`apps/playground/src/components/D1DecisionPanel.tsx\`, \`docs/verification/2026-10-12-d1-webgpu-text.md\`; real Chromium NVIDIA/Turing Q8 text decision on 2026-10-12, single-run billing 99.56%, ~1011 ms.

@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## Current follow-up — D1 Omni Q8 ONNX WebGPU text qualification — 2026-10-12
+
+Lil Tart now includes an explicitly user-loaded ONNX Runtime Web decision path, independently of its existing LiteRT runtime. The pinned D1 Omni 600M Q8 text graph executes choice and yes/no questions, reproduces the source prompt marker contract and score temperatures, and reports raw uncalibrated outcomes. No weights are downloaded by navigating to the panel. The package is consumed through its public entrypoint and the packed-consumer lane. The prior runtime-receipt/provenance work remains intact.
+
+**Observed evidence:** Real NVIDIA/Turing headless Chromium with Vulkan/WebGPU requested successfully loaded the model and returned a choice decision. This is one real inference request, **not** a benchmark, numerical parity result, or full GPU-node assignment proof (ORT warned some nodes were assigned elsewhere). See \`docs/verification/2026-10-12-d1-webgpu-text.md\`.
+
+**Unfinished:** Image/audio ONNX graph composition, quantified parity against native GGUF D1, repeated latency/VRAM calibration, browser cache management, cancelable model download, and Veyax consumption. Keep this as an opt-in lab until those paths are actually verified.
+
 ## Current follow-up — runtime evidence export and model provenance — 2026-10-10
 
 Following `77fe3af` (the pushed opt-in inference priority scheduler), the
