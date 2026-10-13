@@ -1,6 +1,25 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## Current follow-up — MoGe-2 shared geometry extraction — 2026-10-12
+
+The real MoGe-2 LiteRT browser proof has been extracted from Veyax into Lil
+Tart's existing `depth-estimation` package (the old Depth Anything 3
+pipeline remains intact). Both canonical relative DepthFrame and richer affine
+point/normal/mask/scale outputs are exposed through the public entrypoint.
+Independent Lil Tart WebGPU browser execution passed, and the complete
+`pnpm verify` gate passed, including packed external-consumer tests.
+Detailed evidence, limitations and model revision are recorded in
+`docs/verification/2026-10-12-moge2-port.md`.
+
+**Unfinished:** Veyax still uses its verified local adapter. It cannot
+consume this unpublished Lil Tart revision from its Git-pinned dependencies
+until that revision is available remotely and all Lil Tart packages are
+advanced to the same SHA. No push or downstream dependency rewrite was done.
+This is a consumer migration boundary, not evidence that Veyax has been
+rewired. HyperShaderFX native C++ also remains separate.
+
+
 ## Current follow-up — D1 Omni Q8 ONNX WebGPU text qualification — 2026-10-12
 
 Lil Tart now includes an explicitly user-loaded ONNX Runtime Web decision path, independently of its existing LiteRT runtime. The pinned D1 Omni 600M Q8 text graph executes choice and yes/no questions, reproduces the source prompt marker contract and score temperatures, and reports raw uncalibrated outcomes. No weights are downloaded by navigating to the panel. The package is consumed through its public entrypoint and the packed-consumer lane. The prior runtime-receipt/provenance work remains intact.

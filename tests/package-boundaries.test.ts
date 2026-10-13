@@ -287,6 +287,8 @@ describe('workspace package boundaries', () => {
     expect(pipeline).not.toMatch(/\bloadLiteRt\b|\bloadAndCompile\b/)
     expect(entrypoint).toContain('DepthEstimationPipeline')
     expect(entrypoint).toContain('da3SmallPortraitManifest')
+    expect(entrypoint).toContain('estimateMoGeGeometry')
+    expect(entrypoint).toContain('moGeGeometryToDepthFrame')
     expect(entrypoint).toContain('DepthFrame')
     expect(coreTypes).toContain('export interface DepthFrame')
     expect(coreTypes).toContain('sourceToDepthUv')

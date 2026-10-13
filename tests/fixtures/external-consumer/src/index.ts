@@ -20,6 +20,11 @@ import { MoViNetPipeline } from '@litert-playground/video-classification'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
+  estimateMoGeGeometry,
+  releaseMoGeModels,
+  moGeGeometryToDepthFrame,
+  MOGE_REVISION,
+  type MoGeGeometry,
   type DepthFrame,
 } from '@litert-playground/depth-estimation'
 
@@ -88,3 +93,11 @@ export const importedPackages = [
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
 ]
+
+// MoGe is exposed through the packed public entrypoint; consumers own runtime,
+// selection and frame provenance rather than reaching into internal sources.
+export const moGeEstimate = estimateMoGeGeometry
+export const moGeDispose = releaseMoGeModels
+export const moGeCanonicalDepth = moGeGeometryToDepthFrame
+export const moGePinnedRevision: string = MOGE_REVISION
+export type ExternalMoGeGeometry = MoGeGeometry
