@@ -16,7 +16,9 @@
     "qualify": "tsx tests/runtime-qualification/run-qualification.ts",
     "test:watch": "pnpm --filter playground test:watch",
     "typecheck": "pnpm -r --if-present typecheck",
-    "verify": "pnpm typecheck && pnpm test && pnpm test:boundaries && pnpm test:compatibility && pnpm test:conversion-assets && pnpm test:qualification && pnpm build"
+    "verify": "pnpm typecheck && pnpm test && pnpm test:webgpu-kernel-probe && pnpm test:boundaries && pnpm test:compatibility && pnpm test:conversion-assets && pnpm test:qualification && pnpm build",
+    "test:webgpu-kernel-probe": "node --test scripts/webgpu-matmul-selection.test.mjs",
+    "probe:webgpu-matmul": "node scripts/probe-webgpu-matmul.mjs"
   },
   "keywords": [],
   "author": "",

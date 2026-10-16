@@ -1,6 +1,21 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## Current follow-up — WebGPU kernel tuning feasibility — 2026-10-16
+
+A bounded real-NVIDIA WebGPU matmul probe now compares 8x8 and 16x16
+workgroups, verifies every output against CPU results, and refuses
+to choose a configuration without at least a 10% median advantage
+and nonoverlapping measurement samples. It was executed at
+128, 256 and 512 square matrix sizes on NVIDIA Turing/Chromium.
+All runs passed numerical checks, with **no reliable winner**.
+The normal pnpm verify gate includes three pure selection unit tests.
+This research cutting **does not intercept or accelerate LiteRT/ONNX**
+kernels; their runtime APIs do not expose direct replacement hooks.
+No inference/runtime/backend behavior was modified.
+Reproduction and actual measurements:
+docs/verification/2026-10-16-webgpu-kernel-tuning-feasibility.md
+
 ## Current follow-up — multi-substrate browser inference — 2026-10-13
 
 Lil Tart now has an engine-neutral `BrowserSubstrateRunner` published through
