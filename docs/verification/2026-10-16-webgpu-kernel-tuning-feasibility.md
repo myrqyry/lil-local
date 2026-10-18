@@ -70,7 +70,7 @@ shapes and workload types.
 
 An initial secure Chromium launch failed to acquire an adapter;
 a subsequent direct WebGPU capability check and probe both passed.
-The tool reports adapter errors instead of silently using fake data.
+The tool reports adapter errors instead of silently fabricating measurement data.
 
 ## Reproduction
 

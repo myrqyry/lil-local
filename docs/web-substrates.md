@@ -18,7 +18,7 @@ Lil Tart is a local-first **web inference qualification lab**, not a promise tha
 
 The runner never downloads weights or starts a GPU model in its constructor. `load()` is explicit, inference is single-flight, disposal waits for active inference, and models finishing a load after disposal are released instead of becoming ready. Failures propagate. The runner does **not** silently fall back, own a global GPU memory budget, normalize model-specific tensor ABIs, or promote verification records. Its metadata describes **requested** backends, not proof that every operation ran on the GPU.
 
-The existing D1 ONNX panel uses this contract to drive the real `D1OnnxWebGpu.load()`, `decide()`, and `dispose()` calls. This is not a fake engine adapter. The previous D1 browser evidence lives in `docs/verification/2026-10-12-d1-webgpu-text.md`; this new bridge has typecheck and unit-test evidence only until freshly re-smoked in the browser.
+The existing D1 ONNX panel uses this contract to drive the real `D1OnnxWebGpu.load()`, `decide()`, and `dispose()` calls. This adapter delegates to the actual ONNX inference engine rather than simulated responses. The previous D1 browser evidence lives in `docs/verification/2026-10-12-d1-webgpu-text.md`; this new bridge has typecheck and unit-test evidence only until freshly re-smoked in the browser.
 
 ## Adding a new runtime
 

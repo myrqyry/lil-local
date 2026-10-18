@@ -1,6 +1,15 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## Current checkpoint — five-commit Lil Tart verification — 2026-10-17
+
+- Working branch `master` began clean, **five commits ahead** of `origin/master` at `2f74ea1`, with remote `ebd3c8d`. The five commits add an opt-in D1 ONNX decision model, a verified MoGe-2 geometry package, an engine-neutral browser substrate lifecycle, and an independent WebGPU matmul feasibility probe. No other projects, model stores, or live services were edited.
+- **Current-source gate:** `pnpm verify` exit **0** (complete repository typecheck, package/example tests, 3 WebGPU selection tests, 16 package-boundary tests, external-consumer package compatibility, conversion-asset checks, 73 runtime-qualification tests, production builds). Chunk-size warnings were advisories, not errors. This gate ran before only prose-level doc/checkpoint edits.
+- **Fresh browser/hardware checks:** `pnpm probe:webgpu-matmul --size 128` exit **0** on NVIDIA/Turing WebGPU: both workgroup variants correct vs CPU (maximum absolute error ~9.09e-7), selection **null / indistinguishable**. This is a separate WGSL benchmark; no LiteRT/ONNX inference improvement claimed. Isolated Chromium loaded the freshly built playground and opened the D1 model panel without errors; **zero external model-weight fetches before Load**. The D1 model was **not downloaded/loaded/run again** on this checkpoint, so the post-substrate-migration browser inference result remains unqualified. Existing Oct 12 D1/Q8 real WebGPU-requested inference and MoGe-2/SwiftShader execution are historical evidence, not today's proof.
+- **Publication boundary:** public repository; inspected tracked five-commit additions (2,271 added lines) for common credential patterns, tailnet addresses and personal host paths with no matches. The global push hook initially reported terminology in docs rather than actual implementation gaps; three documentation-only clarifications preserve the meaning and now allow the hook to pass **without bypassing it**. No dependencies or production logic changed in this audit.
+- **Remaining gates:** fresh D1 browser inference **through the new substrate wrapper**, multi-request correctness/latency/VRAM, proper WebGPU execution-provider accounting, new MoGe real NVIDIA path, and actual downstream Veyax import against one synchronized Git revision. Prior isolated D1 load/run and MoGe SwiftShader results must not be silently extended.
+- Private verification receipt: `.meristem/local/verification-2026-10-17.md`. Portfolio receipt: `~/loam/PROJECT-INVENTORY.md`.
+
 ## Current follow-up — WebGPU kernel tuning feasibility — 2026-10-16
 
 A bounded real-NVIDIA WebGPU matmul probe now compares 8x8 and 16x16
