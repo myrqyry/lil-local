@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-18 — LiteRT-LM JS 0.18.1 and EmbeddingGemma 2 opt-in adapter
+
+- **Why:** Upstream shipped `@litert-lm/core@0.18.1` with the real JavaScript `EmbeddingEngine`; Lil Tart was still using `0.15.0`, and its existing `encoder` is a distinct Transformers/LiteRT path, not a LiteRT-LM model.
+- **Implemented:** Upgraded and exact-pinned `@litert-lm/core@0.18.1` in text-gen; no change to its worker/streaming/cancellation logic. Added separate `@litert-playground/embedding-litertlm` package with public `createEmbeddingGemma2Substrate`, an immutable Hugging Face model-source revision URL, explicit model load, WebGPU-only text embedding through the actual `EmbeddingEngine.computeEmbedding` API, streaming HTTP fetch with AbortSignal, native model dispose delegated to the shared BrowserSubstrateRunner, 128/256/512/768-dimensional validated Float32 outputs, and explicit Google LiteRT task prefixes. Image/audio are not enabled in this slice.
+- **Evidence:** `pnpm --filter @litert-playground/text-gen test` passed 74 cases, text-gen and playground typecheck passed, `pnpm --filter @litert-playground/embedding-litertlm test` passed 7 adapter contract cases, and package typecheck passed. The new adapter passes the **packed external-consumer compatibility** harness (pack, install, typecheck, Vite build) without any model fetch or execution. Final full `pnpm verify` exited **0** on the finished code: all workspace typechecks/tests, WebGPU selection tests, package boundaries, packed external-consumer compatibility, conversion assets, runtime qualification tests and production builds passed. Vite chunk-size notices remained advisory. A red boundary test caught pnpm saving `^0.18.1`; both the text-gen manifest and lockfile now specify **exact** `0.18.1`.
+- **Boundaries:** Installed upstream npm declarations/implementation and Google docs are real, but the embedding test engine is controlled/mocked. The pinned Hub revision was observed through metadata, not file-hashed. Neither EmbeddingGemma 2 weights nor new-version text-generation models were run on a real GPU. No changes to RikkaHub Local, its Android 0.18.0 dependency, or user phone models. Keep distinct from durable browser/model qualification; see `docs/verification/2026-10-18-litertlm-0181-embeddinggemma2.md`.
+
+
 ## 2026-10-18 — D1 ONNX disposal and error fidelity
 
 - **Why:** The previous cooperative cancellation work awaited cleanup through the shared substrate runner, but the D1 ONNX implementation still handled concurrent direct `dispose()` callers independently. A second caller could resolve while the first was still awaiting `InferenceSession.release()`, or even report success after that release failed. Also, when a load/ABI failure and resource release both failed, the catch path replaced the primary error with the release error.

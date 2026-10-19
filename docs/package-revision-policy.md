@@ -47,6 +47,7 @@ entrypoint.
 - `@litert-playground/runtime-litert`
 - `@litert-playground/browser-cache`
 - `@litert-playground/text-gen`
+- `@litert-playground/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
 - `@litert-playground/encoder`
 - `@litert-playground/retrieval`
 - `@litert-playground/kokoro`

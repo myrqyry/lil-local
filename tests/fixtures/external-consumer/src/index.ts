@@ -9,6 +9,7 @@ import {
   type LiteRtLmWorkerLoadOptions,
   type LiteRtLmWorkerPrompt,
 } from '@litert-playground/text-gen'
+import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@litert-playground/embedding-litertlm'
 import { EncoderPipeline } from '@litert-playground/encoder'
 import { D1OnnxWebGpu, type D1Question } from '@litert-playground/decision-onnx'
 import { ColBertPipeline } from '@litert-playground/retrieval'
@@ -40,6 +41,13 @@ export const externalSubstrate: BrowserSubstrate<string, string> = {
   },
 }
 export const externalSubstrateRunner = new BrowserSubstrateRunner(externalSubstrate)
+
+// The embedding adapter stays lazy even when imported from a packed consumer.
+export const externalEmbeddingPrompt = formatEmbeddingGemma2Text('remote document', 'search-query')
+export const externalEmbeddingSubstrate = createEmbeddingGemma2Substrate({
+  model: new Blob(['caller-owned fixture; no model load until explicit load()']),
+})
+export const externalEmbeddingRunner = new BrowserSubstrateRunner(externalEmbeddingSubstrate)
 
 // A constructor option whose type is unreachable from the entrypoint is a hole in the
 // supported surface, so the packed consumer has to be able to name it.

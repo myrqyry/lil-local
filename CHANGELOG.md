@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add a separate, opt-in EmbeddingGemma 2 WebGPU text-embedding adapter around the real LiteRT-LM `EmbeddingEngine`, with caller-owned revision-pinned model sources, lazy/streamed cancellable downloads, validated native vectors, and packed downstream-consumer coverage. Runtime model execution and GPU placement remain unqualified.
 - Add optional cooperative load cancellation to the public browser-substrate runner and the real D1 ONNX adapter: pre-abort rejection, signal-forwarding across tokenizer/graph stages, suppression of late ready/progress, and awaited disposal of late-compiled sessions. The D1 panel now has an explicit Stop loading action that preserves concurrent loader failures; ONNX Runtime's in-progress graph fetch/compile is not claimed to be interruptible.
 - Introduce a substrate-neutral typed browser model lifecycle in `inference-core`; route the existing D1 ONNX Runtime Web panel through its real load/infer/dispose adapter without modifying the LiteRT runner. Cover disposal races and packed-consumer compatibility. Fresh D1 browser smoke after the UI bridge remains to be verified.
 - Add MoGe-2 LiteRT to the existing depth-estimation package: pinned FP16 WebGPU / FP32 WASM models, true multi-output point/normal/mask/scale decoding, asynchronous GPU readback, relative depth conversion into the canonical DepthFrame, and a caller-owned shared runtime integration. The adapter remains separate from DA3, with no Veyax or OBS product dependencies.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fix(playground)`: replace 12 empty adapters (`sam2` ×2, `vision` ×10 including `6drepnet`, `blaze-face`, `yolox`, `u2net`, `edsr`, `migan`, `style-*`) with working `prepareInputs`/`parseOutputs` (`apps/playground/src/adapters/sam2.ts:16`, `apps/playground/src/adapters/vision.ts:70`)
 
 ### Fixed
+- Pin browser LiteRT-LM JavaScript core to `0.18.1` (from `0.15.0`) in the shared text-generation package; preserve existing worker, streaming, tool-call, and cancellation contracts and retest the packed external surface. Real model inference on this new version remains to be qualified.
 - Share one D1 ONNX disposal result across overlapping and subsequent callers so concurrent cleanup cannot falsely report success; preserve both primary load/ABI errors and GPU-session release errors when both fail, without upgrading the ES2020 TypeScript target.
 - Keep Node 22.16 example tests and builds working by transforming public workspace TypeScript imports with Vite's runner config loader.
 - Reject failed numeric parity when matching runtime qualification expectations and promoting browser evidence to manifest qualification.

@@ -429,6 +429,22 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
+  packages/embedding-litertlm:
+    dependencies:
+      '@litert-lm/core':
+        specifier: 0.18.1
+        version: 0.18.1
+    devDependencies:
+      '@litert-playground/inference-core':
+        specifier: workspace:*
+        version: link:../inference-core
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
   packages/encoder:
     dependencies:
       '@huggingface/transformers':
@@ -570,8 +586,8 @@ importers:
         specifier: ^3.8.1
         version: 3.8.1
       '@litert-lm/core':
-        specifier: ^0.15.0
-        version: 0.15.0
+        specifier: 0.18.1
+        version: 0.18.1
       '@mediapipe/tasks-genai':
         specifier: 0.10.29
         version: 0.10.29
@@ -955,8 +971,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@litert-lm/core@0.15.0':
-    resolution: {integrity: sha512-NWLgsQ7ktO2dCsx2z/KzX9r/1VL2Sfjl31zskCAzGwq8ujPRrBzJXz2IXCQJ1Kj29IaVa4b86SDR0aoAURuWJw==}
+  '@litert-lm/core@0.18.1':
+    resolution: {integrity: sha512-6IaBpQzb1H1Spe0FKWa8OusQl+MsN7aISjvwKAZY2WArQFxe1aH0AAWgJdrspt8jbIOYs8lrZTv8xcdzIZ4U+w==}
 
   '@litertjs/core@2.5.3':
     resolution: {integrity: sha512-PlGmbMOq9WitX7FO0jhbdJw9GthatsyuCQXjTt/wJZo0FLaw48q4tz8IwqgqCIkviYGr9OFDL1kCnN4nzWoyJQ==}
@@ -2165,7 +2181,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@litert-lm/core@0.15.0':
+  '@litert-lm/core@0.18.1':
     dependencies:
       '@litertjs/wasm-utils': 2.5.3
 
