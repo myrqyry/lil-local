@@ -14,8 +14,9 @@ const inputs = ['input_ids', 'attention_mask', 'prefix_len', 'marker_pos', 'mark
 
 function deferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((res) => { resolve = res })
-  return { promise, resolve }
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+  return { promise, resolve, reject }
 }
 
 describe('D1 ONNX cooperative load cancellation', () => {
@@ -45,6 +46,76 @@ describe('D1 ONNX cooperative load cancellation', () => {
     tokenizer.resolve({})
     await expect(loading).rejects.toMatchObject({ name: 'AbortError' })
     expect(ort.InferenceSession.create).not.toHaveBeenCalled()
+  })
+
+  it('holds all concurrent dispose callers until the same runtime release completes', async () => {
+    const gate = deferred<void>()
+    const release = vi.fn(() => gate.promise)
+    vi.mocked(AutoTokenizer.from_pretrained).mockResolvedValueOnce({} as never)
+    vi.mocked(ort.InferenceSession.create).mockResolvedValueOnce({
+      inputNames: inputs, outputNames: ['logits'], release,
+    } as never)
+
+    const instance = await D1OnnxWebGpu.load()
+    const first = instance.dispose()
+    const second = instance.dispose()
+    let firstSettled = false
+    let secondSettled = false
+    void first.then(() => { firstSettled = true })
+    void second.then(() => { secondSettled = true })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(firstSettled).toBe(false)
+    expect(secondSettled).toBe(false)
+    gate.resolve()
+    await Promise.all([first, second])
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports the same release failure to every disposal caller, including later calls', async () => {
+    const gate = deferred<void>()
+    const release = vi.fn(() => gate.promise)
+    vi.mocked(AutoTokenizer.from_pretrained).mockResolvedValueOnce({} as never)
+    vi.mocked(ort.InferenceSession.create).mockResolvedValueOnce({
+      inputNames: inputs, outputNames: ['logits'], release,
+    } as never)
+
+    const instance = await D1OnnxWebGpu.load()
+    const first = instance.dispose()
+    const second = instance.dispose()
+    const observed = Promise.allSettled([first, second])
+    const releaseError = new Error('GPU memory release failed')
+    gate.reject(releaseError)
+    const outcomes = await observed
+    expect(outcomes).toEqual([
+      { status: 'rejected', reason: releaseError },
+      { status: 'rejected', reason: releaseError },
+    ])
+    await expect(instance.dispose()).rejects.toBe(releaseError)
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps both the primary model-ABI failure and the release failure visible', async () => {
+    const releaseError = new Error('GPU release broke')
+    const release = vi.fn(async () => { throw releaseError })
+    vi.mocked(AutoTokenizer.from_pretrained).mockResolvedValueOnce({} as never)
+    vi.mocked(ort.InferenceSession.create).mockResolvedValueOnce({
+      inputNames: ['input_ids'],
+      outputNames: ['logits'],
+      release,
+    } as never)
+
+    try {
+      await D1OnnxWebGpu.load()
+      throw new Error('Expected the model load to fail')
+    } catch (error) {
+      expect(error).toMatchObject({ name: 'D1LoadCleanupError' })
+      const failures = (error as { errors: unknown[] }).errors
+      expect(failures).toHaveLength(2)
+      expect(String(failures[0])).toContain('Unexpected D1 ONNX input/output ABI')
+      expect(failures[1]).toBe(releaseError)
+    }
+    expect(release).toHaveBeenCalledOnce()
   })
 
   it('releases a graph that finishes compiling after cancellation without signaling ready', async () => {

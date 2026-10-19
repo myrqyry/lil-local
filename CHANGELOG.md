@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fix(playground)`: replace 12 empty adapters (`sam2` ×2, `vision` ×10 including `6drepnet`, `blaze-face`, `yolox`, `u2net`, `edsr`, `migan`, `style-*`) with working `prepareInputs`/`parseOutputs` (`apps/playground/src/adapters/sam2.ts:16`, `apps/playground/src/adapters/vision.ts:70`)
 
 ### Fixed
+- Share one D1 ONNX disposal result across overlapping and subsequent callers so concurrent cleanup cannot falsely report success; preserve both primary load/ABI errors and GPU-session release errors when both fail, without upgrading the ES2020 TypeScript target.
 - Keep Node 22.16 example tests and builds working by transforming public workspace TypeScript imports with Vite's runner config loader.
 - Reject failed numeric parity when matching runtime qualification expectations and promoting browser evidence to manifest qualification.
 - Validate every pinned LiteRT-LM conversion recipe option and the exact ordered rules, with CLI mutation regression coverage.

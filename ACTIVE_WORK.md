@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-18 — D1 ONNX disposal and error fidelity
+
+- **Why:** The previous cooperative cancellation work awaited cleanup through the shared substrate runner, but the D1 ONNX implementation still handled concurrent direct `dispose()` callers independently. A second caller could resolve while the first was still awaiting `InferenceSession.release()`, or even report success after that release failed. Also, when a load/ABI failure and resource release both failed, the catch path replaced the primary error with the release error.
+- **Change:** D1 ONNX now stores and reuses one disposal promise, giving every concurrent and later caller the same eventual success or failure, and releasing the session exactly once. Dual load-and-release failures retain both original errors in `D1LoadCleanupError.errors` instead of dropping either. The error class is internal and compatible with this repository's ES2020 TypeScript target; no SDK update or global runtime changes.
+- **Evidence:** Added three D1 runtime regression tests, first confirmed two failing against the old disposal path and one against error masking. Focused D1/runtime/substrate tests passed **17/17**, and the D1 package typecheck passed. Full `pnpm verify` exited **0** on the finished code, including all workspace typechecks/tests, package boundaries, packed-consumer compatibility, conversion assets, runtime qualification, and production builds. Existing Vite chunk-size warnings were advisory.
+- **Scope:** No model weights fetched, no inference or actual WebGPU release measured, no changes to model provenance/quantization, no RikkaHub/phone changes. This is deterministic lifecycle correctness rather than a claim of better generation performance.
+
+
 ## 2026-10-18 — Cooperative browser substrate load cancellation
 
 - **Objective:** Strengthen the shared `BrowserSubstrateRunner` and the real D1 ONNX integration without conflating runtime identity, model format, requested GPU backend, or independent model inference evidence.

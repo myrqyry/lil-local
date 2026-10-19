@@ -23,6 +23,16 @@ const EXPECTED_INPUTS = [
 
 export type D1LoadPhase = 'tokenizer' | 'graph' | 'ready'
 
+/** ES2020-compatible preservation of both failures in a failed model load. */
+class D1LoadCleanupError extends Error {
+  readonly errors: readonly unknown[]
+  constructor(loadError: unknown, cleanupError: unknown) {
+    super('D1 ONNX load and runtime cleanup both failed')
+    this.name = 'D1LoadCleanupError'
+    this.errors = [loadError, cleanupError]
+  }
+}
+
 function checkLoadSignal(signal?: AbortSignal): void {
   if (!signal?.aborted) return
   const error = new Error('D1 ONNX load aborted')
@@ -41,6 +51,7 @@ export class D1OnnxWebGpu {
   private disposed = false
   private busy = false
   private whenIdle: Array<() => void> = []
+  private disposing: Promise<void> | null = null
 
   static async load(onPhase?: (phase: D1LoadPhase) => void, signal?: AbortSignal): Promise<D1OnnxWebGpu> {
     checkLoadSignal(signal)
@@ -79,7 +90,12 @@ export class D1OnnxWebGpu {
       checkLoadSignal(signal)
       return instance
     } catch (error) {
-      await instance.dispose()
+      try {
+        await instance.dispose()
+      } catch (releaseError) {
+        // Neither a bad model ABI nor a failed GPU release is disposable evidence.
+        throw new D1LoadCleanupError(error, releaseError)
+      }
       throw error
     }
   }
@@ -127,17 +143,23 @@ export class D1OnnxWebGpu {
     }
   }
 
-  async dispose(): Promise<void> {
+  dispose(): Promise<void> {
+    // Every caller observes the same cleanup result, including a failed release.
+    // Otherwise a second dispose() can report success before (or despite) GPU cleanup.
+    if (this.disposing) return this.disposing
     this.disposed = true
-    // A navigation/unmount may occur while inference is running. Never release
-    // ORT buffers out from under an active session.run().
-    if (this.busy) {
-      await new Promise<void>(resolve => this.whenIdle.push(resolve))
-    }
-    const session = this.session
-    this.session = null
-    this.tokenizer = null
-    this.ort = null
-    if (session) await session.release()
+    this.disposing = (async () => {
+      // A navigation/unmount may occur while inference is running. Never release
+      // ORT buffers out from under an active session.run().
+      if (this.busy) {
+        await new Promise<void>(resolve => this.whenIdle.push(resolve))
+      }
+      const session = this.session
+      this.session = null
+      this.tokenizer = null
+      this.ort = null
+      if (session) await session.release()
+    })()
+    return this.disposing
   }
 }
