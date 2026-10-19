@@ -13,11 +13,12 @@ import {
   selectTextGenerationManifest,
 } from "./manifest";
 
-const { mockPipeline, mockEngineCreate, mockCreateConversation, mockSendMessageStreaming } = vi.hoisted(() => ({
+const { mockPipeline, mockEngineCreate, mockCreateConversation, mockSendMessageStreaming, mockWasmLoad } = vi.hoisted(() => ({
   mockPipeline: vi.fn(),
   mockEngineCreate: vi.fn(),
   mockCreateConversation: vi.fn(),
   mockSendMessageStreaming: vi.fn(),
+  mockWasmLoad: vi.fn(),
 }));
 
 vi.mock("@huggingface/transformers", () => ({
@@ -28,6 +29,7 @@ vi.mock("@litert-lm/core", () => ({
   Engine: {
     create: mockEngineCreate,
   },
+  getOrLoadGlobalLiteRtLm: mockWasmLoad,
 }));
 
 function fakeContext(): RuntimeContext {
@@ -84,6 +86,8 @@ function streamOf(chunks: string[]): ReadableStream<{ text: string }> {  return 
 beforeEach(() => {
   mockPipeline.mockReset();
   mockEngineCreate.mockReset();
+  mockWasmLoad.mockReset();
+  mockWasmLoad.mockResolvedValue(undefined);
   mockCreateConversation.mockReset();
   mockSendMessageStreaming.mockReset();
 
@@ -107,6 +111,35 @@ beforeEach(() => {
     streamOf(["Hel", "lo", " from ", "litert-lm"])
   );
 });
+
+describe('LiteRT-LM WASM asset provenance', () => {
+  it('loads version-matched runtime assets before creating a text engine', async () => {
+    const p = new LiteRtLmTextPipeline(litertLmManifest, { model: new Blob(['fake model']) })
+    await p.loadForBackend('wasm')
+    expect(mockWasmLoad).toHaveBeenCalledExactlyOnceWith(
+      'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm',
+    )
+    expect(mockWasmLoad.mock.invocationCallOrder[0])
+      .toBeLessThan(mockEngineCreate.mock.invocationCallOrder[0])
+    await p.dispose()
+  })
+
+  it('accepts a caller-hosted WASM base without touching upstream CDN', async () => {
+    const p = new LiteRtLmTextPipeline(litertLmManifest, {
+      model: new Blob(['fake model']), wasmBase: '/self-hosted/litert-lm/',
+    })
+    await p.loadForBackend('wasm')
+    expect(mockWasmLoad).toHaveBeenCalledExactlyOnceWith('/self-hosted/litert-lm/')
+    await p.dispose()
+  })
+
+  it('refuses model engine creation if the selected WASM runtime failed to load', async () => {
+    mockWasmLoad.mockRejectedValueOnce(new Error('WASM path incompatible'))
+    const p = new LiteRtLmTextPipeline(litertLmManifest, { model: new Blob(['fake model']) })
+    await expect(p.loadForBackend('wasm')).rejects.toThrow('WASM path incompatible')
+    expect(mockEngineCreate).not.toHaveBeenCalled()
+  })
+})
 
 describe("TransformersTextPipeline", () => {
   it("throws on run before load", async () => {

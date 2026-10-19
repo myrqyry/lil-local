@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fix(playground)`: replace 12 empty adapters (`sam2` ×2, `vision` ×10 including `6drepnet`, `blaze-face`, `yolox`, `u2net`, `edsr`, `migan`, `style-*`) with working `prepareInputs`/`parseOutputs` (`apps/playground/src/adapters/sam2.ts:16`, `apps/playground/src/adapters/vision.ts:70`)
 
 ### Fixed
+- Prevent the new LiteRT-LM 0.18.1 text and EmbeddingGemma 2 paths from implicitly loading the upstream SDK's stale 0.12.1 WASM runtime. Explicitly select matching 0.18.1 JS/WASM assets before model creation, support caller-hosted offline asset bases in the main pipeline, worker and embedding adapter, and enforce version alignment with regression tests. Real Chromium verified WASM initialization without model weights; full inference remains unqualified.
 - Pin browser LiteRT-LM JavaScript core to `0.18.1` (from `0.15.0`) in the shared text-generation package; preserve existing worker, streaming, tool-call, and cancellation contracts and retest the packed external surface. Real model inference on this new version remains to be qualified.
 - Share one D1 ONNX disposal result across overlapping and subsequent callers so concurrent cleanup cannot falsely report success; preserve both primary load/ABI errors and GPU-session release errors when both fail, without upgrading the ES2020 TypeScript target.
 - Keep Node 22.16 example tests and builds working by transforming public workspace TypeScript imports with Vite's runner config loader.

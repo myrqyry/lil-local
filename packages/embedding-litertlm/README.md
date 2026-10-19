@@ -28,6 +28,16 @@ try {
 }
 ```
 
+**WASM version guard:** `@litert-lm/core@0.18.1` still embeds a default
+URL for `@litert-lm/core@0.12.1/wasm`. This adapter explicitly loads
+the matching `0.18.1` JS/WASM bundle before model creation; it fails
+rather than silently inheriting a runtime initialized from a conflicting path.
+By default, the matching runtime comes from jsDelivr (network required).
+For local-first/offline deployments, copy **all four JS/WASM variants** from
+the installed `@litert-lm/core@0.18.1/wasm/` package into a served directory
+and pass `wasmBase: '/litert-lm-wasm/'`. Do not mix SDK and WASM versions;
+nor reinitialize a shared JS realm from a different base.
+
 The adapter uses WebGPU explicitly and enables only the text encoder. The
 model source is caller-supplied; the exported Hub URL is a convenient
 revision-pinned source but not a verified file SHA-256. For HTTP(S) inputs the

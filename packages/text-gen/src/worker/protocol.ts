@@ -29,6 +29,8 @@ export interface LiteRtLmWorkerMediaPipeLoadOptions {
 
 export interface LiteRtLmWorkerLoadOptions {
   engine?: LiteRtLmWorkerEngine;
+  /** Self-hosted JS/WASM base for LiteRT-LM; defaults to a version-matched CDN. */
+  wasmBase?: string;
   mediaPipe?: LiteRtLmWorkerMediaPipeLoadOptions;
   /**
    * Optional caller-owned identity for Blob-backed models. Supply this when

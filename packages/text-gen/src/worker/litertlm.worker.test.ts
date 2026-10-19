@@ -10,6 +10,7 @@ const mediaPipe = vi.hoisted(() => ({
 
 const liteRt = vi.hoisted(() => ({
   createEngine: vi.fn(),
+  wasmLoad: vi.fn(),
   createConversation: vi.fn(),
   engineDelete: vi.fn(),
   conversationCancel: vi.fn(),
@@ -20,6 +21,7 @@ const liteRt = vi.hoisted(() => ({
 
 vi.mock('@litert-lm/core', () => ({
   Engine: { create: liteRt.createEngine },
+  getOrLoadGlobalLiteRtLm: liteRt.wasmLoad,
 }));
 
 vi.mock('./mediapipe-engine', () => ({
@@ -75,6 +77,7 @@ describe('LiteRT-LM worker dispatch', () => {
     mediaPipe.load.mockResolvedValue(undefined);
     mediaPipe.generate.mockResolvedValue('');
 
+    liteRt.wasmLoad.mockResolvedValue(undefined);
     liteRt.sendMessage.mockResolvedValue({ text: '' });
     liteRt.sendMessageStreaming.mockReturnValue(
       new ReadableStream({
@@ -98,6 +101,25 @@ describe('LiteRT-LM worker dispatch', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+
+  it('initializes version-aligned LiteRT-LM WASM before worker model creation', async () => {
+    const { scope, messages } = await bootWorker()
+    send(scope, { type: 'load', model: 'local.litertlm', options: { wasmBase: '/local-litert-lm-wasm/' } })
+    await flushWorker()
+    expect(liteRt.wasmLoad).toHaveBeenCalledExactlyOnceWith('/local-litert-lm-wasm/')
+    expect(liteRt.wasmLoad.mock.invocationCallOrder[0])
+      .toBeLessThan(liteRt.createEngine.mock.invocationCallOrder[0])
+    expect(messages).toContainEqual({ type: 'ready' })
+  })
+
+  it('does not open a worker model after an incompatible WASM load', async () => {
+    liteRt.wasmLoad.mockRejectedValueOnce(new Error('WASM version mismatch'))
+    const { scope, messages } = await bootWorker()
+    send(scope, { type: 'load', model: 'local.litertlm' })
+    await flushWorker()
+    expect(liteRt.createEngine).not.toHaveBeenCalled()
+    expect(messages).toContainEqual(expect.objectContaining({ type: 'error', message: expect.stringContaining('WASM version mismatch') }))
+  })
 
   it('rejects MediaPipe per-generation config instead of silently dropping it', async () => {
     const { scope, messages } = await bootWorker();

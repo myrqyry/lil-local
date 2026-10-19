@@ -30,7 +30,10 @@ import {
   gemma4E4bManifest,
 } from './manifest';
 
+const LITERT_LM_0181_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm';
+
 interface LiteRtLmModule {
+  getOrLoadGlobalLiteRtLm(path: string): Promise<unknown>;
   Engine: {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
@@ -301,6 +304,12 @@ export interface LiteRtLmTextPipelineOptions {
   // Base the manifest's repo-relative asset path is resolved against. Omit to
   // pass the path through unchanged.
   modelBase?: string;
+  /**
+   * Host the matching LiteRT-LM 0.18.1 WASM/JS assets yourself for offline use.
+   * Omitted: version-pinned jsDelivr assets (the upstream SDK still defaults to 0.12.1).
+   * A page must initialize LiteRT-LM from one consistent base per JS realm.
+   */
+  wasmBase?: string;
   // Downstream consumers may already own/persist model bytes. A stream is
   // intentionally supplied through a factory because ReadableStream is one-shot
   // and a cancelled/failed load must be able to request a fresh source on retry.
@@ -414,6 +423,12 @@ export class LiteRtLmTextPipeline
             ? configuredModel()
             : configuredModel
           : await this.resolveModelInput(modelPath, controller.signal);
+      if (cancelled()) {
+        throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
+      }
+      // Do not allow SDK 0.18.1 to silently load its baked-in 0.12.1 WASM URL.
+      // This also rejects a conflicting already-initialized runtime path.
+      await module.getOrLoadGlobalLiteRtLm(this.options.wasmBase ?? LITERT_LM_0181_WASM_BASE);
       if (cancelled()) {
         throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
       }

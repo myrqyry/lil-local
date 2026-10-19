@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-18 — LiteRT-LM JS/WASM version alignment and real Chromium preload
+
+- **Trigger:** After the 0.18.1 SDK upgrade, source inspection of its installed `dist/litertlm_web.js` revealed that upstream `LiteRtLm.DEFAULT_WASM_PATH` still targets `@litert-lm/core@0.12.1/wasm`. Upgrading the JS package alone did **not** verify which native WASM executed.
+- **Fix:** The text pipeline, text worker and EmbeddingGemma 2 adapter now explicitly await upstream `getOrLoadGlobalLiteRtLm()` with matching `@litert-lm/core@0.18.1/wasm` assets, rather than accepting its old default. Each path accepts a caller-owned `wasmBase` so a consumer can serve its own same-version WASM/JS bundle for offline operation. A prior global module from a conflicting path is rejected, not silently reused. Added cross-package version-drift and failure/ordering regression coverage.
+- **Verification:** Six new focused cases failed against the previous implementation and passed after correction; 64 focused direct/worker/embedding tests and 17 package-boundary tests passed. **Real Chromium** dynamically imported the installed 0.18.1 SDK, successfully initialized native WASM from version-pinned jsDelivr (observed both matching JS and WASM URL requests, zero page errors, no 0.12.1 requests). This is runtime-asset proof, **not** a real model generation or EmbeddingGemma vector test. Final full `pnpm verify` exited **0** on completed code, including all workspace typechecks and unit tests, boundary and runtime qualification tests, packed external-consumer checks, conversion assets and production builds. Only existing Vite chunk-size advisories remained.
+- **Boundaries:** Default assets still require network unless caller self-hosts; a complete offline local-hosted browser smoke is not yet qualified. No model weights downloaded, no RikkaHub/phone/model-cache changes, no push. Detailed reproducible evidence: `docs/verification/2026-10-18-litertlm-wasm-alignment.md`.
+
+
 ## 2026-10-18 — LiteRT-LM JS 0.18.1 and EmbeddingGemma 2 opt-in adapter
 
 - **Why:** Upstream shipped `@litert-lm/core@0.18.1` with the real JavaScript `EmbeddingEngine`; Lil Tart was still using `0.15.0`, and its existing `encoder` is a distinct Transformers/LiteRT path, not a LiteRT-LM model.

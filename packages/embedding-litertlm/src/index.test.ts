@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
-import { EmbeddingEngine, Backend } from '@litert-lm/core'
+import { EmbeddingEngine, Backend, getOrLoadGlobalLiteRtLm } from '@litert-lm/core'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text, EMBEDDING_GEMMA2_MODEL_URL, EMBEDDING_GEMMA2_REVISION } from './index'
 
 vi.mock('@litert-lm/core', () => ({
   Backend: { GPU: 2 },
   EmbeddingEngine: { create: vi.fn() },
+  getOrLoadGlobalLiteRtLm: vi.fn(async () => undefined),
 }))
 
 function deferred<T>() {
@@ -15,8 +16,27 @@ function deferred<T>() {
 }
 
 describe('LiteRT-LM EmbeddingGemma 2 browser adapter', () => {
-  beforeEach(() => vi.mocked(EmbeddingEngine.create).mockReset())
+  beforeEach(() => {
+    vi.mocked(EmbeddingEngine.create).mockReset()
+    vi.mocked(getOrLoadGlobalLiteRtLm).mockReset()
+    vi.mocked(getOrLoadGlobalLiteRtLm).mockResolvedValue(undefined as never)
+  })
   afterEach(() => vi.unstubAllGlobals())
+
+  it('chooses a matching 0.18.1 WASM runtime before creating the embedding engine', async () => {
+    const runner = new BrowserSubstrateRunner(createEmbeddingGemma2Substrate({
+      model: new Blob(['model']),
+      wasmBase: '/offline/litert-lm/',
+    }))
+    vi.mocked(EmbeddingEngine.create).mockResolvedValueOnce({
+      delete: vi.fn(async () => undefined),
+    } as never)
+    await runner.load()
+    expect(getOrLoadGlobalLiteRtLm).toHaveBeenCalledWith('/offline/litert-lm/')
+    expect(vi.mocked(getOrLoadGlobalLiteRtLm).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(EmbeddingEngine.create).mock.invocationCallOrder[0])
+    await runner.dispose()
+  })
 
   it('never fetches a model until explicitly loaded and returns real validated 256d output', async () => {
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({

@@ -88,6 +88,28 @@ describe('workspace package boundaries', () => {
   })
 
 
+  it('pins LiteRT-LM JS and actual WASM base to one upstream version across consumers', async () => {
+    const textManifest = JSON.parse(await text('packages/text-gen/package.json')) as {
+      dependencies: Record<string, string>
+    }
+    const embeddingManifest = JSON.parse(await text('packages/embedding-litertlm/package.json')) as {
+      dependencies: Record<string, string>
+    }
+    const version = textManifest.dependencies['@litert-lm/core']
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(embeddingManifest.dependencies['@litert-lm/core']).toBe(version)
+    const expectedWasmBase = `@litert-lm/core@${version}/wasm`
+    for (const file of [
+      'packages/text-gen/src/litertlm-pipeline.ts',
+      'packages/text-gen/src/worker/litertlm.worker.ts',
+      'packages/embedding-litertlm/src/index.ts',
+    ]) {
+      const source = await text(file)
+      expect(source, file).toContain(expectedWasmBase)
+      expect(source, file).toContain('getOrLoadGlobalLiteRtLm')
+    }
+  })
+
   it('keeps encoder and retrieval externally consumable through the shared core contract', async () => {
     for (const packageName of ['encoder', 'retrieval']) {
       const manifest = JSON.parse(await text(`packages/${packageName}/package.json`)) as {
