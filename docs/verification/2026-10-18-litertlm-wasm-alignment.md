@@ -43,7 +43,7 @@ The eventual full `pnpm verify` exit is recorded in `ACTIVE_WORK.md`.
 
 In an isolated headless system Chromium session against the Vite dev server
 on localhost, a dynamic import of the *actual installed*
-`@litert-lm/core@0.18.1/dist/index.js` was used (not a mock).
+`@litert-lm/core@0.18.1/dist/index.js` was used (not a test double).
 Calling
 `getOrLoadGlobalLiteRtLm('https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm')`
 completed with status **loaded**.

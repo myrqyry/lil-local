@@ -13,7 +13,7 @@ This package owns generic runtime concerns. Product-specific concepts belong in 
 - Compiled-model caching and concurrent-load deduplication.
 - Shared inference serialization through `InferenceCoordinator`.
 - Named-signature and ordinary model inference.
-- Model preflight with input/output inspection and bounded fake-input generation.
+- Model preflight with input/output inspection and bounded synthetic-input generation.
 - Compile, inference, fallback, output-count, and tensor-copy telemetry.
 - Bounded telemetry history for long-running apps.
 - Cancellation and stable `InferenceError` categories.
@@ -57,7 +57,7 @@ Per-model restrictions can be supplied with `supportedBackends`.
 
 Dynamic or unusually large inputs should provide `createInputs` instead of relying on generated inputs.
 
-Preflight is intentionally explicit. Consumers should not automatically execute potentially expensive fake inference merely by listing a model.
+Preflight is intentionally explicit. Consumers should not automatically execute potentially expensive synthetic preflight inference merely by listing a model.
 
 ## Coordination
 
