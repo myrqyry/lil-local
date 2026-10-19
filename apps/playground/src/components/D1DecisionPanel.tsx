@@ -37,13 +37,21 @@ export function D1DecisionPanel() {
   const [loading, setLoading] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const pipeline = useRef<BrowserSubstrateRunner<D1SubstrateInput, D1Decision, D1LoadPhase> | null>(null)
+  const pendingLoad = useRef<BrowserSubstrateRunner<D1SubstrateInput, D1Decision, D1LoadPhase> | null>(null)
+  const loadAbort = useRef<AbortController | null>(null)
+  const [stopping, setStopping] = useState(false)
   const generation = useRef(0)
 
   useEffect(() => () => {
     generation.current += 1
+    loadAbort.current?.abort()
+    const pending = pendingLoad.current
+    pendingLoad.current = null
+    loadAbort.current = null
+    if (pending) void pending.dispose().catch(error => console.error('Pending D1 release failed:', error))
     const instance = pipeline.current
     pipeline.current = null
-    if (instance) void instance.dispose()
+    if (instance) void instance.dispose().catch(error => console.error('D1 release failed:', error))
   }, [])
 
   async function load() {
@@ -53,8 +61,11 @@ export function D1DecisionPanel() {
     setError('')
     setAnswer(null)
     setStatus('Starting explicit WebGPU load…')
+    const controller = new AbortController()
+    const loaded = new BrowserSubstrateRunner(d1OnnxSubstrate)
+    loadAbort.current = controller
+    pendingLoad.current = loaded
     try {
-      const loaded = new BrowserSubstrateRunner(d1OnnxSubstrate)
       await loaded.load(phase => {
         if (requestId === generation.current) {
           setStatus(phase === 'tokenizer'
@@ -63,19 +74,54 @@ export function D1DecisionPanel() {
               ? 'Fetching and compiling ~406 MB Q8 ONNX weights…'
               : 'Ready (WebGPU provider requested)')
         }
-      })
-      if (requestId !== generation.current) {
+      }, controller.signal)
+      if (requestId !== generation.current || controller.signal.aborted) {
         await loaded.dispose()
         return
       }
+      // Prevent a last-moment Stop click from disposing a successfully adopted session.
+      if (pendingLoad.current === loaded) pendingLoad.current = null
       pipeline.current = loaded
     } catch (reason) {
       if (requestId === generation.current) {
-        setError(String(reason))
-        setStatus('Load failed')
+        if (controller.signal.aborted) {
+          setStatus('Load stopped; model not loaded')
+          if ((reason as Error)?.name !== 'AbortError') {
+            // Preserve a concurrent network/loader/cleanup failure as evidence.
+            setError('Loading also failed: ' + String(reason))
+          }
+        } else {
+          setError(String(reason))
+          setStatus('Load failed')
+        }
       }
     } finally {
-      if (requestId === generation.current) setLoading(false)
+      if (pendingLoad.current === loaded) pendingLoad.current = null
+      if (loadAbort.current === controller) loadAbort.current = null
+      if (requestId === generation.current) {
+        setLoading(false)
+        setStopping(false)
+      }
+    }
+  }
+
+  async function stopLoading() {
+    const instance = pendingLoad.current
+    if (!instance || stopping) return
+    const requestId = generation.current
+    setStopping(true)
+    setStatus('Stopping; waiting for the current ONNX load step and cleanup…')
+    loadAbort.current?.abort()
+    try {
+      // ORT's InferenceSession.create may not interrupt its active download;
+      // releasing the late result is the only guarantee here.
+      await instance.dispose()
+      // The load promise owns the terminal status, including loader/cleanup errors.
+    } catch (reason) {
+      if (requestId === generation.current) {
+        setError('Runtime cleanup failed: ' + String(reason))
+        setStatus('Load cleanup failed')
+      }
     }
   }
 
@@ -138,6 +184,15 @@ export function D1DecisionPanel() {
           onClick={() => { void load() }}
           className="rounded-lg bg-primary px-4 py-2 text-on-primary disabled:opacity-50"
         >Load WebGPU model</button>
+        {loading && (
+          <button
+            type="button"
+            disabled={stopping}
+            onClick={() => { void stopLoading() }}
+            className="rounded-lg border border-outline px-3 py-2 text-sm disabled:opacity-50"
+            title="Stop as soon as the current ONNX Runtime loading step permits cleanup"
+          >{stopping ? 'Stopping…' : 'Stop loading'}</button>
+        )}
         <button
           type="button"
           disabled={loading || deciding || !pipeline.current}
@@ -202,7 +257,7 @@ export function D1DecisionPanel() {
       )}
       <p className="text-xs text-on-surface-variant">
         Requires browser WebGPU and substantial free GPU memory. No silent WASM fallback.
-        A successful run here is session evidence, not a verified model claim.
+        Stop loading prevents a late model from becoming ready and releases its resources, but an ONNX download or compilation already in progress may continue until the library call returns. A successful run here is session evidence, not a verified model claim.
       </p>
     </section>
   )

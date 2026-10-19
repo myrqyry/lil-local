@@ -11,7 +11,7 @@ export interface BrowserSubstrate<I, O, Progress = never> {
   readonly capabilities: readonly Capability[]
   readonly requestedBackends: readonly Backend[]
   /** Called only by explicit load(); discovery never imports weights or starts inference. */
-  create(onProgress?: (progress: Progress) => void): Promise<LoadedBrowserSubstrate<I, O>>
+  create(onProgress?: (progress: Progress) => void, signal?: AbortSignal): Promise<LoadedBrowserSubstrate<I, O>>
 }
 
 export interface LoadedBrowserSubstrate<I, O> {
@@ -19,7 +19,13 @@ export interface LoadedBrowserSubstrate<I, O> {
   dispose(): Promise<void>
 }
 
-export type SubstrateStatus = 'idle' | 'loading' | 'ready' | 'running' | 'disposing' | 'disposed'
+export type SubstrateStatus = 'idle' | 'loading' | 'ready' | 'running' | 'failed' | 'disposing' | 'disposed'
+
+function loadAborted(): Error {
+  const error = new Error('Substrate load aborted')
+  error.name = 'AbortError'
+  return error
+}
 
 /**
  * Owns exactly one substrate/model session. No implicit model downloads,
@@ -32,7 +38,7 @@ export class BrowserSubstrateRunner<I, O, Progress = never> {
   private running: Promise<O> | null = null
   private disposing: Promise<void> | null = null
   private currentStatus: SubstrateStatus = 'idle'
-  private lateCleanupError: unknown = null
+  private lateCleanupFailure: { error: unknown } | null = null
 
   constructor(readonly substrate: BrowserSubstrate<I, O, Progress>) {
     if (!substrate.id.trim() || !substrate.format.trim() ||
@@ -45,29 +51,34 @@ export class BrowserSubstrateRunner<I, O, Progress = never> {
     return this.currentStatus
   }
 
-  async load(onProgress?: (progress: Progress) => void): Promise<void> {
+  async load(onProgress?: (progress: Progress) => void, signal?: AbortSignal): Promise<void> {
     if (this.currentStatus !== 'idle') {
       throw new Error(`Cannot load substrate in ${this.currentStatus} state`)
     }
+    // Pre-aborted calls must not start a download or allocate any runtime resources.
+    if (signal?.aborted) throw loadAborted()
     this.currentStatus = 'loading'
     const promise = (async () => {
       try {
         const instance = await this.substrate.create((progress) => {
-          if (this.currentStatus === 'loading') onProgress?.(progress)
-        })
-        if (this.currentStatus !== 'loading') {
+          if (this.currentStatus === 'loading' && !signal?.aborted) onProgress?.(progress)
+        }, signal)
+        if (this.currentStatus !== 'loading' || signal?.aborted) {
           try {
             await instance.dispose()
           } catch (error) {
-            this.lateCleanupError = error
+            this.lateCleanupFailure = { error }
             throw error
           }
+          if (signal?.aborted) throw loadAborted()
           throw new Error('Substrate disposed during load')
         }
         this.instance = instance
         this.currentStatus = 'ready'
       } catch (error) {
-        if (this.currentStatus === 'loading') this.currentStatus = 'idle'
+        if (this.currentStatus === 'loading') {
+          this.currentStatus = this.lateCleanupFailure ? 'failed' : 'idle'
+        }
         throw error
       }
     })()
@@ -103,7 +114,7 @@ export class BrowserSubstrateRunner<I, O, Progress = never> {
         // A late load must release its instance; a running inference must
         // finish before its underlying runtime buffers can be freed.
         await this.loading?.catch(() => undefined)
-        if (this.lateCleanupError !== null) throw this.lateCleanupError
+        if (this.lateCleanupFailure) throw this.lateCleanupFailure.error
         await this.running?.catch(() => undefined)
         const instance = this.instance
         this.instance = null

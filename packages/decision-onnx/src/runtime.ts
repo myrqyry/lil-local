@@ -23,6 +23,13 @@ const EXPECTED_INPUTS = [
 
 export type D1LoadPhase = 'tokenizer' | 'graph' | 'ready'
 
+function checkLoadSignal(signal?: AbortSignal): void {
+  if (!signal?.aborted) return
+  const error = new Error('D1 ONNX load aborted')
+  error.name = 'AbortError'
+  throw error
+}
+
 /**
  * Download and load only after an explicit user gesture. No model is downloaded
  * by module import, render, discovery, or preflight. No implicit WASM fallback.
@@ -35,34 +42,41 @@ export class D1OnnxWebGpu {
   private busy = false
   private whenIdle: Array<() => void> = []
 
-  static async load(onPhase?: (phase: D1LoadPhase) => void): Promise<D1OnnxWebGpu> {
+  static async load(onPhase?: (phase: D1LoadPhase) => void, signal?: AbortSignal): Promise<D1OnnxWebGpu> {
+    checkLoadSignal(signal)
     if (typeof navigator === 'undefined' || !navigator.gpu) {
       throw new Error('WebGPU is unavailable in this browser; D1 ONNX load refused (no implicit CPU fallback)')
     }
     const instance = new D1OnnxWebGpu()
     try {
       onPhase?.('tokenizer')
+      checkLoadSignal(signal)
       const [{ AutoTokenizer }, ort] = await Promise.all([
         import('@huggingface/transformers'),
         import('onnxruntime-web/webgpu'),
       ])
+      checkLoadSignal(signal)
       const tokenizer = await AutoTokenizer.from_pretrained(D1_MODEL_ID, {
         revision: D1_MODEL_REVISION,
       })
+      checkLoadSignal(signal)
       instance.tokenizer = tokenizer as unknown as D1Tokenizer
       instance.ort = ort
       onPhase?.('graph')
+      checkLoadSignal(signal)
       const session = await ort.InferenceSession.create(GRAPH, {
         executionProviders: ['webgpu'],
         graphOptimizationLevel: 'all',
         externalData: [{ path: 'model_quantized.onnx_data', data: WEIGHTS }],
       })
       instance.session = session
+      checkLoadSignal(signal)
       if (EXPECTED_INPUTS.some(name => !session.inputNames.includes(name)) ||
           !session.outputNames.includes('logits')) {
         throw new Error('Unexpected D1 ONNX input/output ABI; model update requires review')
       }
       onPhase?.('ready')
+      checkLoadSignal(signal)
       return instance
     } catch (error) {
       await instance.dispose()

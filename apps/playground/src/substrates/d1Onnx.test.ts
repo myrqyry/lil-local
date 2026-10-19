@@ -24,7 +24,9 @@ describe('ONNX Runtime Web substrate integration', () => {
     expect(d1OnnxSubstrate.format).toBe('onnx')
     expect(D1OnnxWebGpu.load).not.toHaveBeenCalled()
     const phase = vi.fn()
-    await runner.load(phase)
+    const controller = new AbortController()
+    await runner.load(phase, controller.signal)
+    expect(D1OnnxWebGpu.load).toHaveBeenCalledExactlyOnceWith(expect.any(Function), controller.signal)
     const question = { type: 'noul', instructions: 'Is this a greeting?' } as const
     const result = await runner.run({ state: 'hello', question })
     expect(decide).toHaveBeenCalledExactlyOnceWith('hello', question)

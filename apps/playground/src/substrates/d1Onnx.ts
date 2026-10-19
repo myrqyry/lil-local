@@ -12,8 +12,8 @@ export const d1OnnxSubstrate: BrowserSubstrate<D1SubstrateInput, D1Decision, D1L
   format: 'onnx',
   capabilities: ['reasoning'],
   requestedBackends: ['webgpu'],
-  async create(onProgress) {
-    const model = await D1OnnxWebGpu.load(onProgress)
+  async create(onProgress, signal) {
+    const model = await D1OnnxWebGpu.load(onProgress, signal)
     return {
       infer: ({ state, question }) => model.decide(state, question),
       dispose: () => model.dispose(),

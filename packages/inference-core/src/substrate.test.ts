@@ -70,6 +70,71 @@ describe('BrowserSubstrateRunner', () => {
     expect(runner.status).toBe('disposed')
   })
 
+  it('refuses a pre-aborted load without calling the model loader', async () => {
+    const create = vi.fn(async () => ({
+      infer: async (x: string) => x, dispose: async () => undefined,
+    }))
+    const runner = new BrowserSubstrateRunner({ ...descriptor, create })
+    const controller = new AbortController()
+    controller.abort()
+    await expect(runner.load(undefined, controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(create).not.toHaveBeenCalled()
+    expect(runner.status).toBe('idle')
+  })
+
+  it('passes a cancellation signal to the real loader and refuses late readiness after abort', async () => {
+    const controller = new AbortController()
+    const pending = deferred<{ infer: (input: string) => Promise<string>; dispose: () => Promise<void> }>()
+    const dispose = vi.fn(async () => undefined)
+    const receivedSignal = vi.fn()
+    const runner = new BrowserSubstrateRunner({
+      ...descriptor,
+      create: async (_progress, signal) => {
+        receivedSignal(signal)
+        return pending.promise
+      },
+    })
+    const progress = vi.fn()
+    const loading = runner.load(progress, controller.signal)
+    expect(runner.status).toBe('loading')
+    controller.abort()
+    pending.resolve({ infer: async (text) => text, dispose })
+    await expect(loading).rejects.toMatchObject({ name: 'AbortError' })
+    expect(receivedSignal).toHaveBeenCalledExactlyOnceWith(controller.signal)
+    expect(dispose).toHaveBeenCalledOnce()
+    expect(runner.status).toBe('idle')
+    await runner.dispose()
+    expect(dispose).toHaveBeenCalledOnce()
+  })
+
+  it('does not forward late progress after abort and does not mask a failed cancellation cleanup', async () => {
+    const controller = new AbortController()
+    const pending = deferred<{ infer: (input: string) => Promise<string>; dispose: () => Promise<void> }>()
+    let publishProgress: (value: string) => void = () => undefined
+    const onProgress = vi.fn()
+    const runner = new BrowserSubstrateRunner({
+      ...descriptor,
+      create: async (report?: (value: string) => void) => {
+        publishProgress = report ?? publishProgress
+        return pending.promise
+      },
+    })
+    const loading = runner.load(onProgress, controller.signal)
+    publishProgress('fetching')
+    controller.abort()
+    publishProgress('ready')
+    pending.resolve({
+      infer: async (text) => text,
+      dispose: async () => { throw new Error('resource cleanup failed') },
+    })
+    await expect(loading).rejects.toThrow('resource cleanup failed')
+    expect(onProgress).toHaveBeenCalledExactlyOnceWith('fetching')
+    expect(runner.status).toBe('failed')
+    await expect(runner.load()).rejects.toThrow('failed')
+    await expect(runner.dispose()).rejects.toThrow('resource cleanup failed')
+    expect(runner.status).toBe('disposed')
+  })
+
   it('releases late-loaded instances rather than publishing a ready state', async () => {
     const pending = deferred<{ infer: (input: string) => Promise<string>; dispose: () => Promise<void> }>()
     const dispose = vi.fn(async () => undefined)

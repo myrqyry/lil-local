@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add optional cooperative load cancellation to the public browser-substrate runner and the real D1 ONNX adapter: pre-abort rejection, signal-forwarding across tokenizer/graph stages, suppression of late ready/progress, and awaited disposal of late-compiled sessions. The D1 panel now has an explicit Stop loading action that preserves concurrent loader failures; ONNX Runtime's in-progress graph fetch/compile is not claimed to be interruptible.
 - Introduce a substrate-neutral typed browser model lifecycle in `inference-core`; route the existing D1 ONNX Runtime Web panel through its real load/infer/dispose adapter without modifying the LiteRT runner. Cover disposal races and packed-consumer compatibility. Fresh D1 browser smoke after the UI bridge remains to be verified.
 - Add MoGe-2 LiteRT to the existing depth-estimation package: pinned FP16 WebGPU / FP32 WASM models, true multi-output point/normal/mask/scale decoding, asynchronous GPU readback, relative depth conversion into the canonical DepthFrame, and a caller-owned shared runtime integration. The adapter remains separate from DA3, with no Veyax or OBS product dependencies.
 - Add opt-in priority scheduling to the shared LiteRT inference coordinator, including `inferencePriority` on inference and preflight requests; existing callers retain FIFO ordering, queued abort remains effective, and active inference is never preempted.
