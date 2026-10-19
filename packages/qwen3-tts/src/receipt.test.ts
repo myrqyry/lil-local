@@ -38,8 +38,8 @@ vi.mock('./phases/decoder', () => ({
   },
 }))
 
-vi.mock('@litert-playground/inference-core', async () => ({
-  ...(await vi.importActual<typeof import('@litert-playground/inference-core')>('@litert-playground/inference-core')),
+vi.mock('@lil-local/inference-core', async () => ({
+  ...(await vi.importActual<typeof import('@lil-local/inference-core')>('@lil-local/inference-core')),
   checkAudioValid: () => [],
 }))
 

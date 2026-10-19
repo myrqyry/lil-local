@@ -4,7 +4,7 @@ import {
   type PipelineStatus,
   type RuntimeContext,
   type TextInferenceResult,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 import {
   TEXT_GENERATION_DEFAULTS,
   type TextGenerationConfig,

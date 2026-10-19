@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/image-embedding",
+  "name": "@lil-local/image-embedding",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -12,15 +12,15 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@litert-playground/inference-core": "0.1.x",
-    "@litert-playground/runtime-litert": "0.1.x"
+    "@lil-local/inference-core": "0.1.x",
+    "@lil-local/runtime-litert": "0.1.x"
   },
   "dependencies": {
     "@litertjs/core": "^2.5.3"
   },
   "devDependencies": {
-    "@litert-playground/inference-core": "workspace:*",
-    "@litert-playground/runtime-litert": "workspace:*",
+    "@lil-local/inference-core": "workspace:*",
+    "@lil-local/runtime-litert": "workspace:*",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
+import { BrowserSubstrateRunner } from '@lil-local/inference-core'
 import { EmbeddingEngine, Backend, getOrLoadGlobalLiteRtLm } from '@litert-lm/core'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text, EMBEDDING_GEMMA2_MODEL_URL, EMBEDDING_GEMMA2_REVISION } from './index'
 

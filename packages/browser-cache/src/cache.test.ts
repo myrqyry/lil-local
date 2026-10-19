@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AssetProgress, AssetResolver, ModelManifest } from '@litert-playground/inference-core'
+import type { AssetProgress, AssetResolver, ModelManifest } from '@lil-local/inference-core'
 import {
   createAssetObjectUrl,
   createBrowserCacheAssetResolver,

@@ -1,16 +1,16 @@
 # EmbeddingGemma 2 via LiteRT-LM Web (experimental)
 
 A reusable **text-only** browser adapter using Google's actual
-`@litert-lm/core@0.18.1` `EmbeddingEngine`, exposed through Lil Tart's
+`@litert-lm/core@0.18.1` `EmbeddingEngine`, exposed through Lil Local's
 `BrowserSubstrateRunner`. Nothing is downloaded on import or construction.
 
 ```ts
-import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
+import { BrowserSubstrateRunner } from '@lil-local/inference-core'
 import {
   createEmbeddingGemma2Substrate,
   formatEmbeddingGemma2Text,
   EMBEDDING_GEMMA2_MODEL_URL,
-} from '@litert-playground/embedding-litertlm'
+} from '@lil-local/embedding-litertlm'
 
 const runner = new BrowserSubstrateRunner(createEmbeddingGemma2Substrate({
   model: EMBEDDING_GEMMA2_MODEL_URL, // Immutable Hub revision; not downloaded yet

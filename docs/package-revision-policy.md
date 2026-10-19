@@ -1,20 +1,23 @@
 # Package revision policy
 
-Consuming applications must use one **Lil Tart** Git revision for all shared
+Consuming applications must use one **Lil Local** Git revision for all shared
 inference packages. This keeps package contracts, runtime behavior, model
 manifests, and qualification metadata aligned.
 
-The repository was renamed from `myrqyry/litert-playground` to
-`myrqyry/lil-tart`. The package namespace remains
-`@litert-playground/*` intentionally so the repository rename does not force a
-package-API rename.
+The repository was previously named `myrqyry/litert-playground`, then
+`myrqyry/lil-tart`, and is now `myrqyry/lil-local`. This change also
+renames the shared package namespace from `@litert-playground/*` to
+`@lil-local/*`. Older pinned commits retain their older package names and
+may continue to be consumed by existing applications without an automatic
+migration. Historical `@litert-playground/*` packages belong to their old pinned SHA;
+GitHub repository URL redirects do not change those package manifests. Do **not** mix old and new namespace packages in one consumer.
 
 ## Rules
 
-- Select one Lil Tart Git SHA for each consuming application.
-- Resolve every Lil Tart package used by that application from the same SHA.
-- Use the canonical repository name `myrqyry/lil-tart` in new dependency specs.
-- Do not mix packages from different Lil Tart revisions.
+- Select one Lil Local Git SHA for each consuming application.
+- Resolve every Lil Local package used by that application from the same SHA.
+- Use the canonical repository name `myrqyry/lil-local` in new dependency specs.
+- Do not mix packages from different Lil Local revisions.
 - Use SHA pinning as the supported revision mechanism today.
 - Treat peer dependency ranges as compatibility information, not as permission
   to mix revisions.
@@ -27,9 +30,9 @@ A Git-pinned consumer entry looks like:
 
 ```json
 {
-  "@litert-playground/inference-core": "github:myrqyry/lil-tart#<sha>&path:packages/inference-core",
-  "@litert-playground/runtime-litert": "github:myrqyry/lil-tart#<sha>&path:packages/runtime-litert",
-  "@litert-playground/browser-cache": "github:myrqyry/lil-tart#<sha>&path:packages/browser-cache"
+  "@lil-local/inference-core": "github:myrqyry/lil-local#<sha>&path:packages/inference-core",
+  "@lil-local/runtime-litert": "github:myrqyry/lil-local#<sha>&path:packages/runtime-litert",
+  "@lil-local/browser-cache": "github:myrqyry/lil-local#<sha>&path:packages/browser-cache"
 }
 ```
 
@@ -43,25 +46,25 @@ surface merely because it exists in the workspace; it belongs here only when the
 compatibility harness can install, type-check, and build it from its public
 entrypoint.
 
-- `@litert-playground/inference-core`
-- `@litert-playground/runtime-litert`
-- `@litert-playground/browser-cache`
-- `@litert-playground/text-gen`
-- `@litert-playground/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
-- `@litert-playground/encoder`
-- `@litert-playground/retrieval`
-- `@litert-playground/kokoro`
-- `@litert-playground/qwen3-tts`
-- `@litert-playground/image-embedding`
-- `@litert-playground/video-classification`
-- `@litert-playground/depth-estimation`
+- `@lil-local/inference-core`
+- `@lil-local/runtime-litert`
+- `@lil-local/browser-cache`
+- `@lil-local/text-gen`
+- `@lil-local/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
+- `@lil-local/encoder`
+- `@lil-local/retrieval`
+- `@lil-local/kokoro`
+- `@lil-local/qwen3-tts`
+- `@lil-local/image-embedding`
+- `@lil-local/video-classification`
+- `@lil-local/depth-estimation`
 
 Subpath entrypoints are part of the supported surface on the same terms as the
 `.` entrypoint: a subpath is supported only when the compatibility harness
 resolves it through the packed tarball. Consumers must not reach past a published
 subpath into a package's `src` directory.
 
-- `@litert-playground/retrieval/scoring` — late-interaction scoring without the
+- `@lil-local/retrieval/scoring` — late-interaction scoring without the
   ColBERT pipeline entrypoint
 
 For the local conversational-inference stack specifically, the reusable boundary
@@ -82,5 +85,5 @@ Shared packages own reusable worker transport and runtime mechanics when those
 mechanics are part of the supported inference surface. Product applications
 still own when and why inference runs, model/persona selection, UI state,
 conversation and product semantics, audio playback policy, and app-specific
-persistence. Those product concerns should not leak back into Lil Tart's
+persistence. Those product concerns should not leak back into Lil Local's
 shared packages.

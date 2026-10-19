@@ -17,7 +17,7 @@ describe('text-gen dependency boundary', () => {
   it('does not import runtime or model-specific code', async () => {
     const files = await sourceFiles(new URL('.', import.meta.url).pathname)
     const contents = await Promise.all(files.map((file) => readFile(file, 'utf8')))
-    const forbidden = /(?:@litertjs\/core|@litert-playground\/(?:runtime-litert|kokoro|qwen3-tts)|apps\/playground|podqast)/
+    const forbidden = /(?:@litertjs\/core|@lil-local\/(?:runtime-litert|kokoro|qwen3-tts)|apps\/playground|podqast)/
     expect(contents.some((content) => forbidden.test(content))).toBe(false)
   })
 })

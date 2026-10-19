@@ -1,13 +1,13 @@
 import { Tensor } from '@litertjs/core';
-import { InferenceError } from '@litert-playground/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import type {
   ModelManifest,
   Pipeline,
   PipelineProgress,
   PipelineStatus,
   RuntimeContext,
-} from '@litert-playground/inference-core';
-import type { ManagedLiteRtRuntime } from '@litert-playground/runtime-litert';
+} from '@lil-local/inference-core';
+import type { ManagedLiteRtRuntime } from '@lil-local/runtime-litert';
 import { clipImageEmbeddingManifest } from './manifest';
 
 const INPUT_SIZE = 224;

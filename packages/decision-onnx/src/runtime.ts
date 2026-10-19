@@ -1,6 +1,6 @@
 /**
  * Explicit browser WebGPU D1 Omni text-decision experiment.
- * Separate from Lil Tart's LiteRT runtime: different graph format/ABI.
+ * Separate from Lil Local's LiteRT runtime: different graph format/ABI.
  */
 import type { PreTrainedTokenizer } from '@huggingface/transformers'
 import type * as Ort from 'onnxruntime-web'

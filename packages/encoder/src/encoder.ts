@@ -6,7 +6,7 @@ import {
   type PipelineProgress,
   type PipelineStatus,
   type RuntimeContext,
-} from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
 import { encoder230mManifest } from './manifest'
 
 export interface EncoderInput {

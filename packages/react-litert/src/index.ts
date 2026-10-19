@@ -5,7 +5,7 @@ import type {
   LiteRtModelOptions,
   LiteRtModelOutput,
   ManagedLiteRtRuntime,
-} from '@litert-playground/runtime-litert'
+} from '@lil-local/runtime-litert'
 
 export type ManagedModelStatus = 'idle' | 'loading' | 'ready' | 'error'
 

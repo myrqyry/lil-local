@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
-import { D1OnnxWebGpu } from '@litert-playground/decision-onnx'
+import { BrowserSubstrateRunner } from '@lil-local/inference-core'
+import { D1OnnxWebGpu } from '@lil-local/decision-onnx'
 import { d1OnnxSubstrate } from './d1Onnx'
 
-vi.mock('@litert-playground/decision-onnx', () => ({
+vi.mock('@lil-local/decision-onnx', () => ({
   D1OnnxWebGpu: { load: vi.fn() },
 }))
 

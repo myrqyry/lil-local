@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import type {ManagedLiteRtRuntime, ManagedLiteRtRuntimeContext} from '@litert-playground/runtime-litert'
+import type {ManagedLiteRtRuntime, ManagedLiteRtRuntimeContext} from '@lil-local/runtime-litert'
 import {estimateMoGeGeometry, MOGE_GPU_URL, MOGE_CPU_URL, releaseMoGeModels} from './mogeGeometryService'
 import {MOGE_PIXELS} from './mogeGeometry'
 

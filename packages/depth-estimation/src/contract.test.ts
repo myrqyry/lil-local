@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InferenceError } from '@litert-playground/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import {
   assertSourceAspectCompatible,
   createDepthFrame,

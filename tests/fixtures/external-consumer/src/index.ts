@@ -1,23 +1,23 @@
-import { BrowserSubstrateRunner, InferenceError, createHttpAssetResolver, type BrowserSubstrate } from '@litert-playground/inference-core'
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
-import { ManagedLiteRtModelController, useManagedLiteRtModel } from '@litert-playground/react-litert'
-import { createBrowserCacheAssetResolver } from '@litert-playground/browser-cache'
+import { BrowserSubstrateRunner, InferenceError, createHttpAssetResolver, type BrowserSubstrate } from '@lil-local/inference-core'
+import { createLiteRtRuntime } from '@lil-local/runtime-litert'
+import { ManagedLiteRtModelController, useManagedLiteRtModel } from '@lil-local/react-litert'
+import { createBrowserCacheAssetResolver } from '@lil-local/browser-cache'
 import {
   LiteRtLmTextPipeline,
   LiteRtLmWorkerClient,
   type LiteRtLmTextPipelineOptions,
   type LiteRtLmWorkerLoadOptions,
   type LiteRtLmWorkerPrompt,
-} from '@litert-playground/text-gen'
-import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@litert-playground/embedding-litertlm'
-import { EncoderPipeline } from '@litert-playground/encoder'
-import { D1OnnxWebGpu, type D1Question } from '@litert-playground/decision-onnx'
-import { ColBertPipeline } from '@litert-playground/retrieval'
-import { maxSim, rankDense } from '@litert-playground/retrieval/scoring'
-import { KokoroPipeline } from '@litert-playground/kokoro'
-import { Qwen3TtsPipeline } from '@litert-playground/qwen3-tts'
-import { ClipImageEmbeddingPipeline } from '@litert-playground/image-embedding'
-import { MoViNetPipeline } from '@litert-playground/video-classification'
+} from '@lil-local/text-gen'
+import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
+import { EncoderPipeline } from '@lil-local/encoder'
+import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
+import { ColBertPipeline } from '@lil-local/retrieval'
+import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
+import { KokoroPipeline } from '@lil-local/kokoro'
+import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
+import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
+import { MoViNetPipeline } from '@lil-local/video-classification'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -27,7 +27,7 @@ import {
   MOGE_REVISION,
   type MoGeGeometry,
   type DepthFrame,
-} from '@litert-playground/depth-estimation'
+} from '@lil-local/depth-estimation'
 
 // Substrate-neutral public API must work from a *packed* consumer, without
 // pulling in a specific LiteRT/ONNX/GGUF implementation at import time.

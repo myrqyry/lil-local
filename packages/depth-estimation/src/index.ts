@@ -19,7 +19,7 @@ export type {
   DepthFrame,
   DepthNearFarConvention,
   DepthUvTransform,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 
 export {
   estimateMoGeGeometry,

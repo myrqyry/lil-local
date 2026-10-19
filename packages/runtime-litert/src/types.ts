@@ -1,4 +1,4 @@
-import type { Backend, InferenceDiagnostics, RuntimeContext } from '@litert-playground/inference-core'
+import type { Backend, InferenceDiagnostics, RuntimeContext } from '@lil-local/inference-core'
 import type { CompiledModel, Tensor, TensorDetails } from '@litertjs/core'
 import type { BackendPreference } from './capabilities'
 import type { InferenceCoordinator } from './coordinator'

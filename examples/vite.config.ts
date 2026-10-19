@@ -7,7 +7,7 @@ import type { Connect, Plugin } from 'vite'
 import {
   QWEN3_TTS_UPSTREAM_REPOSITORY,
   QWEN3_TTS_UPSTREAM_REVISION,
-} from '@litert-playground/qwen3-tts/provenance'
+} from '@lil-local/qwen3-tts/provenance'
 
 // Example commands use the runner loader to transform public workspace TS imports
 // on Node 22.16, where native type stripping is not enabled by default.

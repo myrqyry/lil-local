@@ -1,13 +1,13 @@
 import { Tensor } from '@litertjs/core';
-import { InferenceError } from '@litert-playground/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import type {
   ModelManifest,
   Pipeline,
   PipelineProgress,
   PipelineStatus,
   RuntimeContext,
-} from '@litert-playground/inference-core';
-import type { ManagedLiteRtRuntime } from '@litert-playground/runtime-litert';
+} from '@lil-local/inference-core';
+import type { ManagedLiteRtRuntime } from '@lil-local/runtime-litert';
 import { moViNetManifest } from './manifest';
 import kinetics600Labels from './kinetics600_labels.json';
 

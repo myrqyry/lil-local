@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeCapabilities } from '@litert-playground/inference-core'
+import type { RuntimeCapabilities } from '@lil-local/inference-core'
 import { AUTO_BACKEND_ORDER, probeRuntimeCapabilities, rankBackends, selectBackend } from './capabilities'
 
 const allAvailable: RuntimeCapabilities = {

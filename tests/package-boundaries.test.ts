@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 async function text(path: string): Promise<string> {
@@ -6,6 +6,32 @@ async function text(path: string): Promise<string> {
 }
 
 describe('workspace package boundaries', () => {
+  it('uses the Lil Local package namespace and product identity without changing persistent cache keys', async () => {
+    const root = JSON.parse(await text('package.json')) as {name: string}
+    expect(root.name).toBe('lil-local')
+    const packageDirs = await readdir(new URL('../packages/', import.meta.url))
+    for (const dir of packageDirs) {
+      const manifest = JSON.parse(await text(`packages/${dir}/package.json`)) as {
+        name: string, dependencies?: Record<string,string>,
+        peerDependencies?: Record<string,string>, devDependencies?: Record<string,string>,
+      }
+      expect(manifest.name, dir).toBe(`@lil-local/${dir}`)
+      for (const k of Object.keys({
+        ...manifest.dependencies, ...manifest.peerDependencies, ...manifest.devDependencies,
+      })) {
+        expect(k, `${dir} depends on ${k}`).not.toMatch(/^@litert-playground\//)
+      }
+    }
+    const page = await text('apps/playground/index.html')
+    expect(page).toContain('Lil Local')
+    expect(page).not.toContain('Lil Tart')
+    // Identity changes must never orphan existing Cache Storage or OPFS models.
+    expect(await text('apps/playground/src/modelStorage.ts'))
+      .toContain("'lil-tart-model-library-v1'")
+    expect(await text('packages/browser-cache/src/cache.ts'))
+      .toContain("directoryName = 'litert-playground'")
+  })
+
   it('keeps examples on public package entrypoints', async () => {
     const qwen = await text('examples/minimal-qwen3-tts/main.tsx')
     const kokoro = await text('examples/minimal-kokoro/main.ts')
@@ -21,14 +47,14 @@ describe('workspace package boundaries', () => {
     const kokoro = await text('packages/kokoro/package.json')
     const qwen = await text('packages/qwen3-tts/package.json')
     expect(core).not.toMatch(/kokoro|qwen3-tts|@litertjs\/core/)
-    expect(runtime).toContain('@litert-playground/inference-core')
-    expect(kokoro).toContain('@litert-playground/inference-core')
-    expect(qwen).toContain('@litert-playground/inference-core')
+    expect(runtime).toContain('@lil-local/inference-core')
+    expect(kokoro).toContain('@lil-local/inference-core')
+    expect(qwen).toContain('@lil-local/inference-core')
   })
 
   it('keeps the playground on the shared managed runtime instead of rebuilding LiteRT plumbing', async () => {
     const runner = await text('apps/playground/src/hooks/useModelRunner.ts')
-    expect(runner).toContain("from '@litert-playground/runtime-litert'")
+    expect(runner).toContain("from '@lil-local/runtime-litert'")
     expect(runner).toContain('createLiteRtRuntime')
     expect(runner).not.toMatch(/\bloadLiteRt\b|\bloadAndCompile\b/)
   })
@@ -54,11 +80,11 @@ describe('workspace package boundaries', () => {
     const entrypoint = await text('packages/kokoro/src/index.ts')
 
     expect(manifest.dependencies).toMatchObject({ 'kokoro-js': '^1.2.1' })
-    expect(manifest.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(manifest.peerDependencies).toMatchObject({ '@litert-playground/inference-core': '0.1.x' })
-    expect(manifest.devDependencies).toMatchObject({ '@litert-playground/inference-core': 'workspace:*' })
+    expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(manifest.peerDependencies).toMatchObject({ '@lil-local/inference-core': '0.1.x' })
+    expect(manifest.devDependencies).toMatchObject({ '@lil-local/inference-core': 'workspace:*' })
     expect(source).toMatch(
-      /from ['"]@litert-playground\/inference-core['"]/,
+      /from ['"]@lil-local\/inference-core['"]/,
     )
     expect(entrypoint).toContain('KokoroPipeline')
     expect(entrypoint).toContain('kokoroManifest')
@@ -76,10 +102,10 @@ describe('workspace package boundaries', () => {
     const entrypoint = await text('packages/text-gen/src/index.ts')
 
     expect(manifest.dependencies).toMatchObject({ '@litert-lm/core': '0.18.1' })
-    expect(manifest.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(manifest.peerDependencies).toMatchObject({ '@litert-playground/inference-core': '0.1.x' })
-    expect(manifest.devDependencies).toMatchObject({ '@litert-playground/inference-core': 'workspace:*' })
-    expect(pipeline).toMatch(/from ['"]@litert-playground\/inference-core['"]/)
+    expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(manifest.peerDependencies).toMatchObject({ '@lil-local/inference-core': '0.1.x' })
+    expect(manifest.devDependencies).toMatchObject({ '@lil-local/inference-core': 'workspace:*' })
+    expect(pipeline).toMatch(/from ['"]@lil-local\/inference-core['"]/)
     expect(entrypoint).toContain('LiteRtLmTextPipeline')
     expect(entrypoint).toContain('litertLmManifest')
     expect(entrypoint).toContain('selectTextGenerationManifest')
@@ -121,12 +147,12 @@ describe('workspace package boundaries', () => {
       expect(manifest.dependencies).toMatchObject({
         '@huggingface/transformers': '^3.8.1',
       })
-      expect(manifest.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
+      expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
       expect(manifest.peerDependencies).toMatchObject({
-        '@litert-playground/inference-core': '0.1.x',
+        '@lil-local/inference-core': '0.1.x',
       })
       expect(manifest.devDependencies).toMatchObject({
-        '@litert-playground/inference-core': 'workspace:*',
+        '@lil-local/inference-core': 'workspace:*',
       })
     }
 
@@ -200,7 +226,7 @@ describe('workspace package boundaries', () => {
     expect(scoringEntrypoint).not.toContain('@huggingface/transformers')
 
     const externalConsumer = await text('tests/fixtures/external-consumer/src/index.ts')
-    expect(externalConsumer).toContain("from '@litert-playground/retrieval/scoring'")
+    expect(externalConsumer).toContain("from '@lil-local/retrieval/scoring'")
   })
 
   it('keeps runtime and Qwen packages externally consumable through peer contracts', async () => {
@@ -215,19 +241,19 @@ describe('workspace package boundaries', () => {
       devDependencies?: Record<string, string>
     }
 
-    expect(runtime.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(runtime.peerDependencies).toMatchObject({ '@litert-playground/inference-core': '0.1.x' })
-    expect(runtime.devDependencies).toMatchObject({ '@litert-playground/inference-core': 'workspace:*' })
+    expect(runtime.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(runtime.peerDependencies).toMatchObject({ '@lil-local/inference-core': '0.1.x' })
+    expect(runtime.devDependencies).toMatchObject({ '@lil-local/inference-core': 'workspace:*' })
 
-    expect(qwen.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(qwen.dependencies?.['@litert-playground/runtime-litert']).toBeUndefined()
+    expect(qwen.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(qwen.dependencies?.['@lil-local/runtime-litert']).toBeUndefined()
     expect(qwen.peerDependencies).toMatchObject({
-      '@litert-playground/inference-core': '0.1.x',
-      '@litert-playground/runtime-litert': '0.1.x',
+      '@lil-local/inference-core': '0.1.x',
+      '@lil-local/runtime-litert': '0.1.x',
     })
     expect(qwen.devDependencies).toMatchObject({
-      '@litert-playground/inference-core': 'workspace:*',
-      '@litert-playground/runtime-litert': 'workspace:*',
+      '@lil-local/inference-core': 'workspace:*',
+      '@lil-local/runtime-litert': 'workspace:*',
     })
     expect(qwen.dependencies?.['@litertjs/core']).toBe('^2.5.3')
   })
@@ -242,17 +268,17 @@ describe('workspace package boundaries', () => {
     const entrypoint = await text('packages/video-classification/src/index.ts')
 
     expect(manifest.dependencies?.['@litertjs/core']).toBe('^2.5.3')
-    expect(manifest.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(manifest.dependencies?.['@litert-playground/runtime-litert']).toBeUndefined()
+    expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(manifest.dependencies?.['@lil-local/runtime-litert']).toBeUndefined()
     expect(manifest.peerDependencies).toMatchObject({
-      '@litert-playground/inference-core': '0.1.x',
-      '@litert-playground/runtime-litert': '0.1.x',
+      '@lil-local/inference-core': '0.1.x',
+      '@lil-local/runtime-litert': '0.1.x',
     })
     expect(manifest.devDependencies).toMatchObject({
-      '@litert-playground/inference-core': 'workspace:*',
-      '@litert-playground/runtime-litert': 'workspace:*',
+      '@lil-local/inference-core': 'workspace:*',
+      '@lil-local/runtime-litert': 'workspace:*',
     })
-    expect(pipeline).toMatch(/from ['"]@litert-playground\/inference-core['"]/)
+    expect(pipeline).toMatch(/from ['"]@lil-local\/inference-core['"]/)
     expect(entrypoint).toContain('MoViNetPipeline')
     expect(entrypoint).toContain('moViNetManifest')
     expect(entrypoint).toContain('MoViNetInput')
@@ -269,17 +295,17 @@ describe('workspace package boundaries', () => {
     const entrypoint = await text('packages/image-embedding/src/index.ts')
 
     expect(manifest.dependencies?.['@litertjs/core']).toBe('^2.5.3')
-    expect(manifest.dependencies?.['@litert-playground/inference-core']).toBeUndefined()
-    expect(manifest.dependencies?.['@litert-playground/runtime-litert']).toBeUndefined()
+    expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
+    expect(manifest.dependencies?.['@lil-local/runtime-litert']).toBeUndefined()
     expect(manifest.peerDependencies).toMatchObject({
-      '@litert-playground/inference-core': '0.1.x',
-      '@litert-playground/runtime-litert': '0.1.x',
+      '@lil-local/inference-core': '0.1.x',
+      '@lil-local/runtime-litert': '0.1.x',
     })
     expect(manifest.devDependencies).toMatchObject({
-      '@litert-playground/inference-core': 'workspace:*',
-      '@litert-playground/runtime-litert': 'workspace:*',
+      '@lil-local/inference-core': 'workspace:*',
+      '@lil-local/runtime-litert': 'workspace:*',
     })
-    expect(pipeline).toMatch(/from ['"]@litert-playground\/inference-core['"]/)
+    expect(pipeline).toMatch(/from ['"]@lil-local\/inference-core['"]/)
     expect(entrypoint).toContain('ClipImageEmbeddingPipeline')
     expect(entrypoint).toContain('clipImageEmbeddingManifest')
     expect(entrypoint).toContain('ClipImageInput')
@@ -298,12 +324,12 @@ describe('workspace package boundaries', () => {
 
     expect(manifest.dependencies?.['@litertjs/core']).toBeUndefined()
     expect(manifest.peerDependencies).toMatchObject({
-      '@litert-playground/inference-core': '0.1.x',
-      '@litert-playground/runtime-litert': '0.1.x',
+      '@lil-local/inference-core': '0.1.x',
+      '@lil-local/runtime-litert': '0.1.x',
     })
     expect(manifest.devDependencies).toMatchObject({
-      '@litert-playground/inference-core': 'workspace:*',
-      '@litert-playground/runtime-litert': 'workspace:*',
+      '@lil-local/inference-core': 'workspace:*',
+      '@lil-local/runtime-litert': 'workspace:*',
     })
     expect(pipeline).toContain('ManagedLiteRtRuntime')
     expect(pipeline).not.toMatch(/\bloadLiteRt\b|\bloadAndCompile\b/)
@@ -333,7 +359,7 @@ describe('workspace package boundaries', () => {
       'video-classification',
       'depth-estimation',
     ]) {
-      expect(consumer).toContain(`from '@litert-playground/${packageName}'`)
+      expect(consumer).toContain(`from '@lil-local/${packageName}'`)
     }
 
     expect(consumer).not.toMatch(/packages\/.*\/src/)
@@ -360,9 +386,9 @@ describe('workspace package boundaries', () => {
 
     expect(browserCacheManifest.dependencies).toBeUndefined()
     expect(browserCacheManifest.peerDependencies).toMatchObject({
-      '@litert-playground/inference-core': '0.1.x',
+      '@lil-local/inference-core': '0.1.x',
     })
-    expect(browserCache).toMatch(/from ['"]@litert-playground\/inference-core['"]/)
+    expect(browserCache).toMatch(/from ['"]@lil-local\/inference-core['"]/)
     expect(browserCache).toContain('createOpfsAssetStore')
     expect(core).not.toMatch(/browser-cache|navigator\.storage|FileSystemDirectoryHandle/)
     expect(runtime).not.toMatch(/browser-cache|navigator\.storage|FileSystemDirectoryHandle/)

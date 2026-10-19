@@ -51,7 +51,7 @@ export function getTartGuideMessage(snapshot: TartGuideSnapshot): TartGuideMessa
   if (snapshot.error) {
     return {
       tone: 'error',
-      kicker: 'Lil Tart noticed a problem',
+      kicker: 'Lil Local noticed a problem',
       title: 'Something got a little singed.',
       message: snapshot.error,
     }
@@ -94,7 +94,7 @@ export function getTartGuideMessage(snapshot: TartGuideSnapshot): TartGuideMessa
   if (!snapshot.selectedModelName) {
     return {
       tone: 'idle',
-      kicker: 'Lil Tart guide',
+      kicker: 'Lil Local guide',
       title: 'Pick what you want to run.',
       message: 'Choose a model and I’ll follow the real runtime state: download, backend resolution, preflight, inference, and anything that goes sideways.',
     }
@@ -115,7 +115,7 @@ export function getTartGuideMessage(snapshot: TartGuideSnapshot): TartGuideMessa
       title: snapshot.backendOverrides.length === 1
         ? 'This model has a correctness-pinned graph.'
         : 'This model has correctness-pinned graphs.',
-      message: 'You selected ' + selected + '. Lil Tart overrides ' + overrides + '.' + fallbackMessage,
+      message: 'You selected ' + selected + '. Lil Local overrides ' + overrides + '.' + fallbackMessage,
       action: snapshot.preflightComplete ? undefined : 'preflight',
       actionLabel: snapshot.preflightComplete ? undefined : 'Run preflight',
     }
@@ -172,7 +172,7 @@ export function getTartGuideMessage(snapshot: TartGuideSnapshot): TartGuideMessa
 
   return {
     tone: 'idle',
-    kicker: 'Lil Tart guide',
+    kicker: 'Lil Local guide',
     title: snapshot.selectedModelName + ' is selected.',
     message: 'Load the model and I’ll stay with the runtime instead of giving you generic setup advice.',
   }

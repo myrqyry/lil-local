@@ -1,4 +1,4 @@
-# @litert-playground/runtime-litert
+# @lil-local/runtime-litert
 
 Shared managed LiteRT.js runtime for browser inference consumers.
 
@@ -23,8 +23,8 @@ This package owns generic runtime concerns. Product-specific concepts belong in 
 ## Basic usage
 
 ```ts
-import { createHttpAssetResolver } from '@litert-playground/inference-core'
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
+import { createHttpAssetResolver } from '@lil-local/inference-core'
+import { createLiteRtRuntime } from '@lil-local/runtime-litert'
 
 const context = await createLiteRtRuntime({
   backend: 'auto',

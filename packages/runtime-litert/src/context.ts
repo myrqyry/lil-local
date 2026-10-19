@@ -11,7 +11,7 @@ import {
   type InferenceDiagnostics,
   type Backend,
   type RuntimeCapabilities,
-} from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
 import { rankBackends, probeRuntimeCapabilities, selectBackend } from './capabilities'
 import { inferenceCoordinator as defaultCoordinator } from './coordinator'
 import { parseNpy } from './npy'
@@ -457,7 +457,7 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
         this.resolvedBackend = backend
         const { model: _model, ...info } = entry
         this.diagnostics.set(key, {
-          packageName: this.options.packageName ?? '@litert-playground/runtime-litert',
+          packageName: this.options.packageName ?? '@lil-local/runtime-litert',
           modelId: path,
           requestedBackend,
           resolvedBackend: backend,
@@ -518,7 +518,7 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
 
       const inferenceDurationMs = performance.now() - startedAt
       this.diagnostics.set(key, {
-        packageName: this.options.packageName ?? '@litert-playground/runtime-litert',
+        packageName: this.options.packageName ?? '@lil-local/runtime-litert',
         modelId: path,
         requestedBackend: info.requestedBackend,
         resolvedBackend: info.resolvedBackend,
@@ -547,7 +547,7 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
             { stage: 'inference', cause },
           )
       this.diagnostics.set(key, {
-        packageName: this.options.packageName ?? '@litert-playground/runtime-litert',
+        packageName: this.options.packageName ?? '@lil-local/runtime-litert',
         modelId: path,
         requestedBackend: info.requestedBackend,
         resolvedBackend: info.resolvedBackend,
@@ -685,4 +685,4 @@ export async function createLiteRtRuntime(options: LiteRtRuntimeOptions): Promis
   }
 }
 
-export type { RuntimeContext } from '@litert-playground/inference-core'
+export type { RuntimeContext } from '@lil-local/inference-core'

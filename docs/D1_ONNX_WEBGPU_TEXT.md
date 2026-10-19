@@ -1,7 +1,7 @@
 # D1 Omni 600M ONNX WebGPU — opt-in text decision slice
 
 Status: **real text-choice inference verified once on NVIDIA/Turing WebGPU** (2026-10-12); not calibrated, production-qualified, or verified for vision/audio.
-This is a separate runtime family from Lil Tart's LiteRT.js inference, and
+This is a separate runtime family from Lil Local's LiteRT.js inference, and
 separate from Veyax's existing native GGUF/llama.cpp visual proof.
 
 ## Source and scope
@@ -13,7 +13,7 @@ separate from Veyax's existing native GGUF/llama.cpp visual proof.
 - Execution: ONNX Runtime Web, **WebGPU requested explicitly**, no implicit fallback configured
 - Questions: text state + one `choice` (2–16 options) or `noul` yes/no statement per run; never generation.
 - Score processing: source-trained question-count temperatures; softmax across all options, with `noul` option order `false`, `true`. The UI reports raw **uncalibrated** probabilities, not decision authorization.
-- Download: only after Load click. Text input stays in the browser. Model assets are read from Hugging Face; weight caching is managed by the browser/ONNX stack, not Lil Tart's LiteRT model library.
+- Download: only after Load click. Text input stays in the browser. Model assets are read from Hugging Face; weight caching is managed by the browser/ONNX stack, not Lil Local's LiteRT model library.
 - **No image/audio:** the upstream ONNX model includes vision and audio encoder graphs; this deliberately scoped slice does not implement them.
 - License: weights are © Liquid AI, Inc. under **LFM Open License v1.0**; check its attribution and commercial-use terms before redistribution. Our adapter code is Apache-2.0.
 
@@ -31,8 +31,8 @@ Neither passing a typecheck nor successful graph compilation counts as successfu
 ### Repeatable checks
 
 ```bash
-pnpm --filter @litert-playground/decision-onnx typecheck
-pnpm --filter @litert-playground/decision-onnx test
+pnpm --filter @lil-local/decision-onnx typecheck
+pnpm --filter @lil-local/decision-onnx test
 pnpm --filter playground typecheck
 pnpm verify
 ```

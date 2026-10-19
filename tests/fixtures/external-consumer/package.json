@@ -1,5 +1,5 @@
 {
-  "name": "lil-tart-external-consumer-fixture",
+  "name": "lil-local-external-consumer-fixture",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,20 +7,20 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@litert-playground/inference-core": "file:./archives/inference-core.tgz",
-    "@litert-playground/runtime-litert": "file:./archives/runtime-litert.tgz",
-    "@litert-playground/browser-cache": "file:./archives/browser-cache.tgz",
-    "@litert-playground/text-gen": "file:./archives/text-gen.tgz",
-    "@litert-playground/embedding-litertlm": "file:./archives/embedding-litertlm.tgz",
-    "@litert-playground/decision-onnx": "file:./archives/decision-onnx.tgz",
-    "@litert-playground/encoder": "file:./archives/encoder.tgz",
-    "@litert-playground/retrieval": "file:./archives/retrieval.tgz",
-    "@litert-playground/kokoro": "file:./archives/kokoro.tgz",
-    "@litert-playground/qwen3-tts": "file:./archives/qwen3-tts.tgz",
-    "@litert-playground/image-embedding": "file:./archives/image-embedding.tgz",
-    "@litert-playground/video-classification": "file:./archives/video-classification.tgz",
-    "@litert-playground/depth-estimation": "file:./archives/depth-estimation.tgz",
-    "@litert-playground/react-litert": "file:./archives/react-litert.tgz",
+    "@lil-local/inference-core": "file:./archives/inference-core.tgz",
+    "@lil-local/runtime-litert": "file:./archives/runtime-litert.tgz",
+    "@lil-local/browser-cache": "file:./archives/browser-cache.tgz",
+    "@lil-local/text-gen": "file:./archives/text-gen.tgz",
+    "@lil-local/embedding-litertlm": "file:./archives/embedding-litertlm.tgz",
+    "@lil-local/decision-onnx": "file:./archives/decision-onnx.tgz",
+    "@lil-local/encoder": "file:./archives/encoder.tgz",
+    "@lil-local/retrieval": "file:./archives/retrieval.tgz",
+    "@lil-local/kokoro": "file:./archives/kokoro.tgz",
+    "@lil-local/qwen3-tts": "file:./archives/qwen3-tts.tgz",
+    "@lil-local/image-embedding": "file:./archives/image-embedding.tgz",
+    "@lil-local/video-classification": "file:./archives/video-classification.tgz",
+    "@lil-local/depth-estimation": "file:./archives/depth-estimation.tgz",
+    "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RuntimeContext } from '@litert-playground/inference-core';
+import type { RuntimeContext } from '@lil-local/inference-core';
 import { TransformersTextPipeline } from "./transformers-pipeline";
 import { LiteRtLmTextPipeline } from "./litertlm-pipeline";
 import {

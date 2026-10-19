@@ -40,7 +40,7 @@ describe('inference receipts', () => {
 
   it('passes diagnostics through when provided', () => {
     const diagnostics = {
-      packageName: '@litert-playground/test',
+      packageName: '@lil-local/test',
       modelId: 'model',
       requestedBackend: 'auto' as const,
       resolvedBackend: 'wasm' as const,

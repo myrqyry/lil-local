@@ -4,8 +4,8 @@ import {
   type PipelineProgress,
   type PipelineStatus,
   type RuntimeContext,
-} from '@litert-playground/inference-core'
-import type { MultiVectorEmbeddingResult } from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
+import type { MultiVectorEmbeddingResult } from '@lil-local/inference-core'
 import { colbertManifest } from './manifest'
 
 export interface ColBertInput {

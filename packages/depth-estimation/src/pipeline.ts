@@ -1,4 +1,4 @@
-import { InferenceError } from '@litert-playground/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import type {
   Backend,
   DepthFrame,
@@ -8,11 +8,11 @@ import type {
   PipelineProgress,
   PipelineStatus,
   RuntimeContext,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 import type {
   LiteRtModelOptions,
   ManagedLiteRtRuntime,
-} from '@litert-playground/runtime-litert';
+} from '@lil-local/runtime-litert';
 import {
   assertSourceAspectCompatible,
   createDepthFrame,

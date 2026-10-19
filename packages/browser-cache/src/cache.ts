@@ -4,7 +4,7 @@ import {
   type AssetResolver,
   type ModelAsset,
   type ModelManifest,
-} from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
 
 export interface BrowserCacheIdentity {
   modelId: string

@@ -1,4 +1,4 @@
-import type { EmbeddingInferenceResult, MultiVectorEmbeddingResult, RetrievalResult } from '@litert-playground/inference-core'
+import type { EmbeddingInferenceResult, MultiVectorEmbeddingResult, RetrievalResult } from '@lil-local/inference-core'
 
 export function dot(a: Float32Array, b: Float32Array, startA = 0, startB = 0, dim = a.length): number {
   let sum = 0

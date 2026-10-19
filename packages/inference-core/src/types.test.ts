@@ -107,7 +107,7 @@ describe('inference core', () => {
 
   it('keeps diagnostics and receipt values serializable', () => {
     const diagnostics: InferenceDiagnostics = {
-      packageName: '@litert-playground/test',
+      packageName: '@lil-local/test',
       modelId: 'model',
       requestedBackend: 'auto',
       resolvedBackend: 'wasm',

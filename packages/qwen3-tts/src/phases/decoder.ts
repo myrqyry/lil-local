@@ -2,8 +2,8 @@ import type {
   RuntimeContext,
   PipelineProgress,
   ModelManifest,
-} from '@litert-playground/inference-core';
-import { InferenceError } from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import { CodecDecoder } from '../codec';
 import { discoverCodecShapes } from '../shape-discovery';
 import {

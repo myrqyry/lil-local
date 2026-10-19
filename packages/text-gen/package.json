@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/text-gen",
+  "name": "@lil-local/text-gen",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@litert-playground/inference-core": "0.1.x"
+    "@lil-local/inference-core": "0.1.x"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
@@ -20,7 +20,7 @@
     "@mediapipe/tasks-genai": "0.10.29"
   },
   "devDependencies": {
-    "@litert-playground/inference-core": "workspace:*",
+    "@lil-local/inference-core": "workspace:*",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

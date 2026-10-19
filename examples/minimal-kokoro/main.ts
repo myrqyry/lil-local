@@ -1,5 +1,5 @@
-import { createHttpAssetResolver, type RuntimeContext } from '@litert-playground/inference-core'
-import { KokoroPipeline } from '@litert-playground/kokoro'
+import { createHttpAssetResolver, type RuntimeContext } from '@lil-local/inference-core'
+import { KokoroPipeline } from '@lil-local/kokoro'
 import './app.css'
 
 const status = document.querySelector<HTMLElement>('#status')!

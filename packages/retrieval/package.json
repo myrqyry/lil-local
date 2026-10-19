@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/retrieval",
+  "name": "@lil-local/retrieval",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -18,9 +18,9 @@
   "devDependencies": {
     "typescript": "^7.0.2",
     "vitest": "^4.1.10",
-    "@litert-playground/inference-core": "workspace:*"
+    "@lil-local/inference-core": "workspace:*"
   },
   "peerDependencies": {
-    "@litert-playground/inference-core": "0.1.x"
+    "@lil-local/inference-core": "0.1.x"
   }
 }

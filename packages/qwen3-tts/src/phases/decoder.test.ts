@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import type { RuntimeContext, LiteRtRuntime, AssetResolver } from '@litert-playground/inference-core';
+import type { RuntimeContext, LiteRtRuntime, AssetResolver } from '@lil-local/inference-core';
 
 vi.mock('../codec', () => ({
   CodecDecoder: class {

@@ -1,26 +1,17 @@
-#
-``` 
- ██▓     ██▓  ██▓       ▄▄▄█████▓ ▄▄▄      ██▀███  ▄▄▄█████▓
- ▓██▒   ▒▓██▒ ▓██▒       ▓  ██▒ ▓▒▒████▄   ▓██ ▒ ██▒▓  ██▒ ▓▒
- ▒██░   ▒▒██▒ ▒██░       ▒ ▓██░ ▒░▒██  ▀█▄ ▓██ ░▄█ ▒▒ ▓██░ ▒░
- ▒██░   ░░██░ ▒██░       ░ ▓██▓ ░ ░██▄▄▄▄██▒██▀▀█▄  ░ ▓██▓ ░ 
-▒░██████░░██░▒░██████      ▒██▒ ░ ▒▓█   ▓██░██▓ ▒██▒  ▒██▒ ░ 
-░░ ▒░▓   ░▓  ░░ ▒░▓        ▒ ░░   ░▒▒   ▓▒█░ ▒▓ ░▒▓░  ▒ ░░   
-░░ ░ ▒  ░ ▒ ░░░ ░ ▒          ░    ░ ░   ▒▒   ░▒ ░ ▒     ░    
-   ░ ░  ░ ▒ ░   ░ ░        ░        ░   ▒    ░░   ░   ░      
-░    ░    ░  ░    ░                     ░     ░              
-```
+# Lil Local
+
+**Small footprint. Real local inference.**
 
 A local-first browser inference lab, model launcher, runtime qualification workspace, and reusable LiteRT.js ecosystem.
 
-Lil Tart is the interactive browser app in `apps/playground`. The repository still
-uses the `@litert-playground/*` package namespace underneath it, because the app and
-the reusable runtime/packages are two sides of the same project.
+Lil Local is both the interactive browser app in `apps/playground` and the
+reusable `@lil-local/*` library family. The app and packages are two faces of
+the same project.
 
 The goal is simple: **prove a capability once, package it once, and consume it
 everywhere** instead of rebuilding browser inference plumbing in every app.
 
-Lil Tart is built around a deliberately boring workflow:
+Lil Local is built around a deliberately boring workflow:
 
 1. browse models without triggering a download
 2. explicitly download and load the model you actually want
@@ -33,13 +24,13 @@ embeddings, video classification, and related local inference workloads.
 
 ## What it provides
 
-### Lil Tart model library
+### Lil Local model library
 
 The playground is a model launcher rather than a click-to-download catalog.
 
 - selecting a model is side-effect free
 - downloads happen only from an explicit model action
-- downloaded assets are tracked in Lil Tart's own browser Cache Storage library
+- downloaded assets are tracked in Lil Local's own browser Cache Storage library
 - downloaded bytes and compiled in-memory state are treated separately
 - a stored model can be loaded again without redownloading
 - models can be unloaded from memory without deleting their downloaded assets
@@ -51,7 +42,7 @@ Special multi-graph experiences such as Qwen3-TTS and the Gemma/LFM pipeline pag
 also require an explicit load/prepare action instead of doing heavy runtime work just
 because the page was opened.
 
-### Lil Tart guide
+### Lil Local guide
 
 The Tart mascot is bound to real runtime state rather than a separate assistant layer
 state machine. It reacts to model selection, download/compile progress, backend
@@ -66,7 +57,7 @@ an "add this to my app" recipe without guessing from UI state.
 
 ### Browser inference substrates
 
-Lil Tart is growing beyond LiteRT: `inference-core` now exposes a
+Lil Local is growing beyond LiteRT: `inference-core` now exposes a
 `BrowserSubstrateRunner` interface for explicitly loaded browser engines.
 The existing real D1 ONNX Runtime Web panel uses it; the established LiteRT
 runner remains unchanged. GGUF and other engines remain unqualified candidates,
@@ -77,7 +68,7 @@ boundaries, evidence requirements, and further paths.
 
 ### Shared LiteRT runtime
 
-`@litert-playground/runtime-litert` wraps `@litertjs/core` with the lifecycle and
+`@lil-local/runtime-litert` wraps `@litertjs/core` with the lifecycle and
 runtime behavior needed by real applications:
 
 - WebGPU, WebNN, and WASM capability probing
@@ -102,10 +93,10 @@ runtime is additive rather than a replacement for those package contracts.
 
 ### Playground dogfooding
 
-The React playground uses `@litert-playground/runtime-litert` itself. It does not
+The React playground uses `@lil-local/runtime-litert` itself. It does not
 maintain a separate private LiteRT loader.
 
-That means runtime behavior exercised in Lil Tart is the same behavior intended for
+That means runtime behavior exercised in Lil Local is the same behavior intended for
 downstream consumers. The UI exposes:
 
 - requested vs. resolved accelerator
@@ -117,7 +108,7 @@ downstream consumers. The UI exposes:
 - current-session runtime path proof
 - durable adapter verification evidence separately from current-session runtime state
 
-Changing the requested accelerator unloads the current model. Lil Tart does not
+Changing the requested accelerator unloads the current model. Lil Local does not
 silently recompile or download a different path behind the user's back; loading is an
 explicit action.
 
@@ -125,15 +116,15 @@ explicit action.
 
 ```mermaid
 flowchart TD
-    core["@litert-playground/inference-core\ncontracts · assets · receipts · validation"]
-    runtime["@litert-playground/runtime-litert\nLiteRT lifecycle · backends · preflight · telemetry"]
-    cache["@litert-playground/browser-cache\nOPFS-backed asset caching"]
-    text["@litert-playground/text-gen\nLiteRT-LM / Transformers text generation"]
-    encoder["@litert-playground/encoder\ntext embeddings · classification"]
-    retrieval["@litert-playground/retrieval\nColBERT · reranking"]
-    kokoro["@litert-playground/kokoro\nverified browser TTS"]
-    qwen["@litert-playground/qwen3-tts\nphased LiteRT TTS"]
-    playground["Lil Tart\napps/playground"]
+    core["@lil-local/inference-core\ncontracts · assets · receipts · validation"]
+    runtime["@lil-local/runtime-litert\nLiteRT lifecycle · backends · preflight · telemetry"]
+    cache["@lil-local/browser-cache\nOPFS-backed asset caching"]
+    text["@lil-local/text-gen\nLiteRT-LM / Transformers text generation"]
+    encoder["@lil-local/encoder\ntext embeddings · classification"]
+    retrieval["@lil-local/retrieval\nColBERT · reranking"]
+    kokoro["@lil-local/kokoro\nverified browser TTS"]
+    qwen["@lil-local/qwen3-tts\nphased LiteRT TTS"]
+    playground["Lil Local\napps/playground"]
     consumers["external consumers\nPodQast · Live Streamer · future apps"]
 
     core --> runtime
@@ -170,20 +161,20 @@ in consuming applications rather than in the shared runtime packages.
 
 | Path | Package | Purpose |
 |------|---------|---------|
-| `apps/playground` | `playground` | **Lil Tart** — React + Vite + Tailwind model launcher and qualification UI |
-| `packages/inference-core` | `@litert-playground/inference-core` | Model manifests, asset resolvers, receipts, capability selection, validation, errors, shared contracts |
-| `packages/runtime-litert` | `@litert-playground/runtime-litert` | Managed LiteRT.js runtime, backend selection, compiled-model lifecycle, preflight, coordination, telemetry |
-| `packages/browser-cache` | `@litert-playground/browser-cache` | Browser-side model/tensor cache primitives for reusable consumers |
-| `packages/kokoro` | `@litert-playground/kokoro` | Kokoro TTS through `kokoro-js` using q8/WASM |
-| `packages/qwen3-tts` | `@litert-playground/qwen3-tts` | Phased Qwen3-TTS pipeline over talker, MTP, and codec LiteRT graphs |
-| `packages/text-gen` | `@litert-playground/text-gen` | `LiteRtLmTextPipeline` over `@litert-lm/core` plus LFM2.5, Gemma 4, and Qwen3 manifests |
-| `packages/retrieval` | `@litert-playground/retrieval` | `ColBertPipeline`, multi-vector embeddings, and late-interaction scoring |
-| `packages/encoder` | `@litert-playground/encoder` | Text embeddings and token-classification pipelines |
-| `packages/image-embedding` | `@litert-playground/image-embedding` | Reusable image-embedding package |
-| `packages/video-classification` | `@litert-playground/video-classification` | Browser video-classification support and runtime checks |
-| `packages/depth-estimation` | `@litert-playground/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
-| `examples/minimal-kokoro` | `@litert-playground/example-kokoro` | Minimal standalone Kokoro browser example |
-| `examples/minimal-qwen3-tts` | `@litert-playground/example-qwen3-tts` | Minimal Qwen3-TTS example and compatibility harness |
+| `apps/playground` | `playground` | **Lil Local** — React + Vite + Tailwind model launcher and qualification UI |
+| `packages/inference-core` | `@lil-local/inference-core` | Model manifests, asset resolvers, receipts, capability selection, validation, errors, shared contracts |
+| `packages/runtime-litert` | `@lil-local/runtime-litert` | Managed LiteRT.js runtime, backend selection, compiled-model lifecycle, preflight, coordination, telemetry |
+| `packages/browser-cache` | `@lil-local/browser-cache` | Browser-side model/tensor cache primitives for reusable consumers |
+| `packages/kokoro` | `@lil-local/kokoro` | Kokoro TTS through `kokoro-js` using q8/WASM |
+| `packages/qwen3-tts` | `@lil-local/qwen3-tts` | Phased Qwen3-TTS pipeline over talker, MTP, and codec LiteRT graphs |
+| `packages/text-gen` | `@lil-local/text-gen` | `LiteRtLmTextPipeline` over `@litert-lm/core` plus LFM2.5, Gemma 4, and Qwen3 manifests |
+| `packages/retrieval` | `@lil-local/retrieval` | `ColBertPipeline`, multi-vector embeddings, and late-interaction scoring |
+| `packages/encoder` | `@lil-local/encoder` | Text embeddings and token-classification pipelines |
+| `packages/image-embedding` | `@lil-local/image-embedding` | Reusable image-embedding package |
+| `packages/video-classification` | `@lil-local/video-classification` | Browser video-classification support and runtime checks |
+| `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
+| `examples/minimal-kokoro` | `@lil-local/example-kokoro` | Minimal standalone Kokoro browser example |
+| `examples/minimal-qwen3-tts` | `@lil-local/example-qwen3-tts` | Minimal Qwen3-TTS example and compatibility harness |
 
 Workspace globs cover `apps/*`, `packages/*`, and `examples/*`.
 
@@ -199,11 +190,11 @@ pnpm install
 pnpm dev
 ```
 
-The development command starts Lil Tart from `apps/playground`.
+The development command starts Lil Local from `apps/playground`.
 
 ### MediaPipe worker engine
 
-`@litert-playground/text-gen` also exposes a shared worker surface with an
+`@lil-local/text-gen` also exposes a shared worker surface with an
 explicit `mediapipe` engine for structured text/image/audio prompts. Image
 Blobs are decoded to worker-native `ImageBitmap` sources; audio crosses the
 worker boundary as PCM `Float32Array` samples plus an explicit sample rate.
@@ -214,7 +205,7 @@ consumers should account for that copy when sending long clips.
 Blob-backed model loads use object identity by default. Consumers that may
 recreate the same cached Blob while a load is already in flight can provide a
 stable `loadKey` in the worker load options to opt into safe deduplication;
-Lil Tart does not guess model identity from Blob size/MIME metadata.
+Lil Local does not guess model identity from Blob size/MIME metadata.
 The worker's `advertisedEngines` list is a build-time statement only; consumers
 must treat a successful `load()` as the runtime availability check for the
 chosen browser, model, WebGPU environment, and host policy. Direct worker
@@ -258,8 +249,8 @@ qualification is a separate evidence-producing step; see [Verification philosoph
 | `pnpm verify` | Typecheck + tests + boundaries + compatibility + conversion assets + qualification contracts + builds |
 
 Conversion inputs and candidate evidence live under `conversion/`. Android
-CompiledModel observations can guide what Lil Tart tries next, but they do not
-promote browser verification metadata; browser claims still require Lil Tart's
+CompiledModel observations can guide what Lil Local tries next, but they do not
+promote browser verification metadata; browser claims still require Lil Local's
 own recorded qualification evidence.
 
 GitHub Actions runs the deterministic `pnpm verify` gate for pull requests. The
@@ -272,8 +263,8 @@ Inside the workspace, a managed LiteRT runtime can be created from the shared
 asset resolver and runtime packages:
 
 ```ts
-import { createHttpAssetResolver } from '@litert-playground/inference-core'
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
+import { createHttpAssetResolver } from '@lil-local/inference-core'
+import { createLiteRtRuntime } from '@lil-local/runtime-litert'
 
 const context = await createLiteRtRuntime({
   backend: 'auto',
@@ -315,7 +306,7 @@ callback remain caller-owned.
 Kokoro is the current verified browser TTS path. The package has produced real
 audible browser output, not merely a successful build or mocked inference call.
 
-`@litert-playground/kokoro` also serves as the first real external shared-package
+`@lil-local/kokoro` also serves as the first real external shared-package
 consumer path from this repository.
 
 ### Qwen3-TTS
@@ -350,7 +341,7 @@ The repository separates:
 - output validation
 - manual audible/visual verification where appropriate
 
-Lil Tart makes the same distinction in adapter metadata. Every adapter has
+Lil Local makes the same distinction in adapter metadata. Every adapter has
 an evidence level; adapters without an explicit `verification` record are shown
 as **Registered** rather than implicitly treated as working.
 
@@ -397,8 +388,8 @@ A useful extraction rule is:
 ## External consumption
 
 Consuming applications should pin every shared inference package to one **Lil
-Tart** Git SHA. The canonical repository is `myrqyry/lil-tart`; the package
-namespace intentionally remains `@litert-playground/*` so the repository rename
+Tart** Git SHA. The canonical repository is `myrqyry/lil-local`; the package
+namespace was renamed to `@lil-local/*` alongside the project so the repository rename
 does not create a gratuitous package-API migration.
 
 See [Package revision policy](docs/package-revision-policy.md) for the exact
@@ -423,7 +414,7 @@ persistence stay in the consuming application.
 
 ## Project direction
 
-Lil Tart is intended to be the qualification and shared-infrastructure home for
+Lil Local is intended to be the qualification and shared-infrastructure home for
 reusable local inference capabilities:
 
 ```text

@@ -63,7 +63,7 @@ export function parseCommunityModels(payload: unknown): CommunityModel[] {
 }
 
 /**
- * A repository match is only evidence that Lil Tart has a model-specific adapter.
+ * A repository match is only evidence that Lil Local has a model-specific adapter.
  * It is NOT evidence of actual inference; callers must show adapter verification separately.
  */
 export function findCommunityAdapter(id: string, adapters: readonly ModelAdapter[]): ModelAdapter | null {

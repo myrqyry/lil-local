@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert';
+import { createLiteRtRuntime } from '@lil-local/runtime-litert';
 import {
   createCachingAssetResolver,
   createHttpAssetResolver,
   createManifestVerifyingAssetResolver,
   type ModelManifest,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 import { GeneratorPhase } from '../phases/generator';
 import type { GeneratorWorkerRequest, GeneratorWorkerResponse } from './protocol';
 import { serializeError } from './protocol';

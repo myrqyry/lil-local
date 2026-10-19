@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ModelManifest } from '@litert-playground/inference-core'
-import { createLiteRtRuntime, type ManagedLiteRtRuntimeContext } from '@litert-playground/runtime-litert'
+import type { ModelManifest } from '@lil-local/inference-core'
+import { createLiteRtRuntime, type ManagedLiteRtRuntimeContext } from '@lil-local/runtime-litert'
 import {
   createModelLibraryAssetResolver,
   listStoredModels,
@@ -16,8 +16,8 @@ import {
   gemma4E2bManifest,
   gemma4E4bManifest,
   type TextGenerationInput,
-} from '@litert-playground/text-gen'
-import { ColBertPipeline, colbertManifest, rankColBert, type ColBertConfig } from '@litert-playground/retrieval'
+} from '@lil-local/text-gen'
+import { ColBertPipeline, colbertManifest, rankColBert, type ColBertConfig } from '@lil-local/retrieval'
 import {
   EncoderPipeline,
   encoder230mManifest,
@@ -25,7 +25,7 @@ import {
   encoderPolicyLinterManifest,
   type EncoderConfig,
   type EncoderResult,
-} from '@litert-playground/encoder'
+} from '@lil-local/encoder'
 
 interface LfmModelEntry {
   id: string

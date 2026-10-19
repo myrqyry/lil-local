@@ -7,7 +7,7 @@ import {
   type PipelineStatus,
   type RuntimeContext,
   type TextInferenceResult,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 import type {
   ConversationConfig,
   SamplerParameters,

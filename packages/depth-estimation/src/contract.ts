@@ -1,10 +1,10 @@
-import { InferenceError } from '@litert-playground/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import type {
   Backend,
   DepthFrame,
   DepthNearFarConvention,
   ModelManifest,
-} from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
 
 export interface DepthModelSpec {
   manifest: ModelManifest;

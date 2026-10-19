@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ModelManifest } from '@litert-playground/inference-core'
+import type { ModelManifest } from '@lil-local/inference-core'
 import {
   createModelLibraryAssetResolver,
   registerModelAssets,

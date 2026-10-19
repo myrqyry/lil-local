@@ -23,7 +23,7 @@ const packages = [
   ['depth-estimation', 'depth-estimation.tgz'],
 ]
 
-const tempRoot = await mkdtemp(join(tmpdir(), 'lil-tart-compat-'))
+const tempRoot = await mkdtemp(join(tmpdir(), 'lil-local-compat-'))
 
 try {
   const packRoot = join(tempRoot, 'packs')

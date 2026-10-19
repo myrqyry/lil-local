@@ -1,4 +1,4 @@
-import type { BrowserSubstrate, EmbeddingInferenceResult } from '@litert-playground/inference-core'
+import type { BrowserSubstrate, EmbeddingInferenceResult } from '@lil-local/inference-core'
 import type { EmbeddingEngineSettings } from '@litert-lm/core'
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { MultiVectorEmbeddingResult } from '@litert-playground/inference-core'
+import type { MultiVectorEmbeddingResult } from '@lil-local/inference-core'
 import { cosineSimilarity, dot, maxSim, rankColBert, rankDense } from './scoring'
 import { ColBertPipeline } from './colbert'
 import { colbertManifest } from './manifest'

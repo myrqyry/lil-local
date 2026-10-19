@@ -1,4 +1,4 @@
-import type { ModelManifest } from '@litert-playground/inference-core'
+import type { ModelManifest } from '@lil-local/inference-core'
 
 const REPO = 'litert-community/LFM2.5-ColBERT-350M'
 

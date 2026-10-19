@@ -6,8 +6,8 @@ import {
   type PipelineStatus,
   type RuntimeContext,
   createInferenceReceipt,
-} from '@litert-playground/inference-core';
-import { checkAudioValid } from '@litert-playground/inference-core';
+} from '@lil-local/inference-core';
+import { checkAudioValid } from '@lil-local/inference-core';
 import { kokoroManifest } from "./manifest";
 
 export interface KokoroInput {

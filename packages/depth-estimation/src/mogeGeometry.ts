@@ -1,4 +1,4 @@
-import type { DepthFrame } from '@litert-playground/inference-core';
+import type { DepthFrame } from '@lil-local/inference-core';
 
 /**
  * MoGe-2 ViT-S tensor contract. No inferred depth values or simulated geometry.

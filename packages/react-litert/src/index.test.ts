@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { renderToString } from 'react-dom/server'
-import type { ManagedLiteRtRuntime } from '@litert-playground/runtime-litert'
+import type { ManagedLiteRtRuntime } from '@lil-local/runtime-litert'
 import {
   ManagedLiteRtModelController, ModelRequestCancelledError, useManagedLiteRtModel,
 } from './index'

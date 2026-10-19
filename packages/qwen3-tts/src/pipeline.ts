@@ -6,7 +6,7 @@ import {
   InferenceError,
   checkAudioValid,
   createInferenceReceipt,
-} from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
 import { createQwen3TtsManifest, qwen3TtsVariants, type Qwen3TtsVariant } from './manifest'
 import { DEFAULTS, type QwenTtsInput, type QwenTtsConfig } from './types'
 import { GeneratorPhase } from './phases/generator'

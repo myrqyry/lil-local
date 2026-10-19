@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Brand/package rename:** Lil Local and `@lil-local/*` supersede Lil Tart / `@litert-playground/*` in the current workspace; consumer packages and all direct imports move together, while preexisting browser model cache keys and historical revisions remain accessible.
+
 ### Added
 - Add a separate, opt-in EmbeddingGemma 2 WebGPU text-embedding adapter around the real LiteRT-LM `EmbeddingEngine`, with caller-owned revision-pinned model sources, lazy/streamed cancellable downloads, validated native vectors, and packed downstream-consumer coverage. Runtime model execution and GPU placement remain unqualified.
 - Add optional cooperative load cancellation to the public browser-substrate runner and the real D1 ONNX adapter: pre-abort rejection, signal-forwarding across tokenizer/graph stages, suppression of late ready/progress, and awaited disposal of late-compiled sessions. The D1 panel now has an explicit Stop loading action that preserves concurrent loader failures; ONNX Runtime's in-progress graph fetch/compile is not claimed to be interruptible.
@@ -16,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a pinned conversion-evidence lane from `john-rocky/LiteRT-Models@460d52221c22388b6a9a8e8a44b61dde72976b4e`: reproducible blockwise LiteRT-LM int4 recipes, a machine-readable candidate catalog that keeps Android evidence separate from browser qualification, and a deterministic validator included in `pnpm verify`.
 - Runtime qualification observations can now carry numeric parity evidence (absolute/relative error, non-finite counts, failing element counts, and tolerances) so compile/run success cannot silently stand in for output correctness.
 - `text-gen`'s shared worker client now has an explicit MediaPipe GenAI engine for browser multimodal prompts. Existing LiteRT-LM callers stay text-only and unchanged; multimodal consumers can send structured text/image/audio parts, while remote model URLs are handed directly to MediaPipe and Blob models are streamed through a reader instead of being materialized into another full ArrayBuffer.
-- `@litert-playground/text-gen` now forwards LiteRT-LM tool definitions and streamed tool calls through its public pipeline callbacks.
-- `@litert-playground/text-gen` now accepts caller-owned LiteRT-LM model inputs (URL, Blob, or stream), exposes `loadForBackend()`, and carries tool declarations plus streamed tool calls so downstream apps can reuse their persistent model cache and tool-capable conversations without fabricating unrelated runtime services.
+- `@lil-local/text-gen` now forwards LiteRT-LM tool definitions and streamed tool calls through its public pipeline callbacks.
+- `@lil-local/text-gen` now accepts caller-owned LiteRT-LM model inputs (URL, Blob, or stream), exposes `loadForBackend()`, and carries tool declarations plus streamed tool calls so downstream apps can reuse their persistent model cache and tool-capable conversations without fabricating unrelated runtime services.
 - Shared downstream inference compatibility now covers browser cache, text generation, encoder embeddings, ColBERT retrieval, Kokoro, Qwen3-TTS, image embeddings, and video classification from their packed public entrypoints.
 - `feat(playground)`: wire adapters to Hugging Face and flag missing models (`apps/playground/src/adapters/*`, `types.ts`, `ModelList.tsx`, `ModelRunner.tsx`)
 - `feat`: add model-server base URL input to `ModelRunner` (`apps/playground/src/hooks/useModelRunner.ts`, `ModelRunner.tsx`)
@@ -73,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Correct the `pipeline-load-cancellation` probe to call production `resolve()` with progress-triggered abort; its prior browser observation covered only the unused `stream()` entrypoint. Add real HTTP positive/negative checks and startup/cleanup regressions. Generate the fixture and open its server lazily, handle missing/read-failed assets, and check the actual Git ignore rule. Browser evidence for the corrected probe remains pending; see `docs/verification/2026-09-28-model-load-cancellation.md`
 
 ### Docs
-- Canonical Git dependency examples now use the renamed `myrqyry/lil-tart` repository while preserving the stable `@litert-playground/*` package namespace.
+- Canonical Git dependency examples now use the renamed `myrqyry/lil-local` repository while preserving the stable `@lil-local/*` package namespace.
 - `docs`: add root `AGENTS.md` and nested package guidance
 
 ## [1.0.0] - 2026-09-01

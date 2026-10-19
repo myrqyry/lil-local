@@ -2,9 +2,9 @@
 // Run: npx vitest run src/core/validation.test.ts src/adapters/qwen3-tts/pipeline.test.ts
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { createCachingAssetResolver, createHttpAssetResolver } from '@litert-playground/inference-core'
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
-import { Qwen3TtsPipeline, qwen3TtsManifest, type QwenTtsInput, type QwenTtsConfig } from '@litert-playground/qwen3-tts'
+import { createCachingAssetResolver, createHttpAssetResolver } from '@lil-local/inference-core'
+import { createLiteRtRuntime } from '@lil-local/runtime-litert'
+import { Qwen3TtsPipeline, qwen3TtsManifest, type QwenTtsInput, type QwenTtsConfig } from '@lil-local/qwen3-tts'
 
 describe('minimal Qwen3-TTS extraction', () => {
   it('creates pipeline with manifest', () => {

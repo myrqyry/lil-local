@@ -1,4 +1,4 @@
-import type { Backend, RuntimeCapabilities } from '@litert-playground/inference-core'
+import type { Backend, RuntimeCapabilities } from '@lil-local/inference-core'
 
 type WebGpu = {
   requestAdapter(): Promise<{ requestDevice(): Promise<unknown> } | null>

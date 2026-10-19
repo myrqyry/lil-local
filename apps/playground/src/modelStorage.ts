@@ -7,7 +7,7 @@ import {
   type AssetResolver,
   type ModelAsset,
   type ModelManifest,
-} from '@litert-playground/inference-core'
+} from '@lil-local/inference-core'
 
 const CACHE_NAME = 'lil-tart-model-library-v1'
 const CACHE_PATH = '/__lil_tart_model_cache__/'

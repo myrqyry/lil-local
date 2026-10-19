@@ -1,5 +1,5 @@
 import { Tensor } from '@litertjs/core';
-import type { RuntimeContext } from '@litert-playground/inference-core';
+import type { RuntimeContext } from '@lil-local/inference-core';
 import { describe, expect, it, vi } from 'vitest';
 import { MoViNetPipeline } from './pipeline';
 

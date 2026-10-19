@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/example-kokoro",
+  "name": "@lil-local/example-kokoro",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@litert-playground/inference-core": "workspace:*",
-    "@litert-playground/kokoro": "workspace:*"
+    "@lil-local/inference-core": "workspace:*",
+    "@lil-local/kokoro": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

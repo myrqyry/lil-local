@@ -1,4 +1,4 @@
-import type { LiteRtModelInfo, LiteRtTelemetryRecord } from '@litert-playground/runtime-litert'
+import type { LiteRtModelInfo, LiteRtTelemetryRecord } from '@lil-local/runtime-litert'
 import type { ModelAdapter, ModelVerification } from './adapters/types'
 
 export type RuntimeOperation = 'idle' | 'model-load' | 'preflight' | 'inference'

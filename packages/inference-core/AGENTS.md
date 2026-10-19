@@ -12,6 +12,6 @@ Contracts, asset resolvers, receipts, and validation. No model-specific logic.
 ## Verification
 
 ```bash
-pnpm --filter @litert-playground/inference-core typecheck
-pnpm --filter @litert-playground/inference-core test
+pnpm --filter @lil-local/inference-core typecheck
+pnpm --filter @lil-local/inference-core test
 ```

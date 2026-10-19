@@ -1,4 +1,4 @@
-import type { ModelManifest } from '@litert-playground/inference-core'
+import type { ModelManifest } from '@lil-local/inference-core'
 
 const REPO_230M = 'litert-community/LFM2.5-Encoder-230M'
 const REPO_SPELLCHECKER = 'litert-community/LFM2.5-Encoder-350M-Spellchecker'

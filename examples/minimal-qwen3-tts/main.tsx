@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import { useEffect, useState } from 'react'
-import { createCachingAssetResolver, createHttpAssetResolver, type AudioInferenceResult, type PipelineProgress } from '@litert-playground/inference-core'
-import { createLiteRtRuntime } from '@litert-playground/runtime-litert'
-import { qwen3TtsVariants, Qwen3TtsPipeline } from '@litert-playground/qwen3-tts'
+import { createCachingAssetResolver, createHttpAssetResolver, type AudioInferenceResult, type PipelineProgress } from '@lil-local/inference-core'
+import { createLiteRtRuntime } from '@lil-local/runtime-litert'
+import { qwen3TtsVariants, Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import './app.css'
 
 const modelBase = new URL('/models/qwen3-tts/', window.location.href).href

@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/kokoro",
+  "name": "@lil-local/kokoro",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -12,13 +12,13 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@litert-playground/inference-core": "0.1.x"
+    "@lil-local/inference-core": "0.1.x"
   },
   "dependencies": {
     "kokoro-js": "^1.2.1"
   },
   "devDependencies": {
-    "@litert-playground/inference-core": "workspace:*",
+    "@lil-local/inference-core": "workspace:*",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

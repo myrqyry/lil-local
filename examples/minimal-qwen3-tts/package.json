@@ -1,5 +1,5 @@
 {
-  "name": "@litert-playground/example-qwen3-tts",
+  "name": "@lil-local/example-qwen3-tts",
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@litert-playground/inference-core": "workspace:*",
-    "@litert-playground/qwen3-tts": "workspace:*",
-    "@litert-playground/runtime-litert": "workspace:*",
+    "@lil-local/inference-core": "workspace:*",
+    "@lil-local/qwen3-tts": "workspace:*",
+    "@lil-local/runtime-litert": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

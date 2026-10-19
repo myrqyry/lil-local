@@ -1,4 +1,4 @@
-import type { ModelManifest } from '@litert-playground/inference-core';
+import type { ModelManifest } from '@lil-local/inference-core';
 
 const UPSTREAM_REVISION = '5cd25d936e3fde2edef68f53b4123401454ac9c8';
 const MODEL_URL =

@@ -1,4 +1,4 @@
-# Lil Tart
+# Lil Local
 
 pnpm monorepo for browser inference and runtime qualification; LiteRT.js is the established runtime, with opt-in ONNX and future substrate lanes. Node 22+, pnpm 11+.
 
@@ -43,9 +43,11 @@ Product concepts (episodes, OBS, UI) belong in consuming apps, not shared packag
 
 ## Conventions
 
-- Shared packages keep the existing `@litert-playground/*` namespace even though
-  the repository is now `myrqyry/lil-tart`; do not rename package imports as a
-  side effect of repository branding.
+- The canonical project and package names are Lil Local / `@lil-local/*`.
+  This migration is intentional and atomic; future naming changes must update
+  the packed external-consumer contract and pinned downstream consumers.
+- Preserve legacy browser Cache Storage and OPFS identifiers as aliases for
+  existing downloaded assets until an explicit tested data migration exists.
 - All packages: `private: true`, `type: module`, `exports: ".": "./src/index.ts"`.
   Packages ship as TypeScript source; there is no per-package build step.
 - Any package intended for downstream apps must pass `pnpm test:compatibility`.

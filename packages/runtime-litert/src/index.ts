@@ -22,4 +22,4 @@ export type {
   ManagedLiteRtRuntimeContext,
   WebNNRuntimeOptions,
 } from './types'
-export type { RuntimeContext } from '@litert-playground/inference-core'
+export type { RuntimeContext } from '@lil-local/inference-core'

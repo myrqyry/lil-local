@@ -7,9 +7,9 @@ authority, that authority wins and this file should be updated to match it.
 
 ## Purpose
 
-Lil Tart is a local-first browser inference workspace with two faces that are
+Lil Local is a local-first browser inference workspace with two faces that are
 one project: the interactive app in `apps/playground` (a model launcher and
-runtime qualification lab) and the reusable `@litert-playground/*` packages
+runtime qualification lab) and the reusable `@lil-local/*` packages
 that app is built from.
 
 The distinctive premise (from `README.md`): **prove a capability once, package
@@ -26,15 +26,16 @@ embeddings, and video classification.
 
 - `pnpm verify` is the authoritative pre-merge gate. Boundary and qualification
   suites are not optional extras.
-- The shared packages keep the `@litert-playground/*` namespace even though the
-  repository is `myrqyry/lil-tart`. Branding did not rename package imports.
+- The shared packages use `@lil-local/*` and the canonical repo is
+  `myrqyry/lil-local`. The scope was deliberately renamed alongside branding;
+  downstream consumers must migrate all pins together.
 - Packages ship TypeScript source: no per-package build step,
   `exports: ".": "./src/index.ts"`, all `private: true` and `type: module`.
 - A package is only part of the supported downstream surface when
   `pnpm test:compatibility` can pack, install, type-check, and build it from its
   public entrypoint. Workspace-only dependencies must not leak as `workspace:*`
   into packed metadata.
-- Consumers pin one Lil Tart Git SHA per application and resolve every Lil Tart
+- Consumers pin one Lil Local Git SHA per application and resolve every Lil Local
   package from that same SHA. Do not mix revisions; peer ranges are compatibility
   information, not permission to mix.
 - Product concerns (episodes, OBS, UI, orchestration, conversation semantics)
@@ -130,4 +131,4 @@ has been shown to fail for the right reason.
 Resolved during this branch: whether subpath exports count as supported surface.
 The policy document now states that subpaths are supported on the same terms as
 `.` — that is, only when `pnpm test:compatibility` resolves them through the
-packed tarball — and lists `@litert-playground/retrieval/scoring`.
+packed tarball — and lists `@lil-local/retrieval/scoring`.

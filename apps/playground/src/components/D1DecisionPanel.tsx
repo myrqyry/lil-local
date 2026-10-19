@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { BrowserSubstrateRunner } from '@litert-playground/inference-core'
+import { BrowserSubstrateRunner } from '@lil-local/inference-core'
 import {
   D1_MODEL_REVISION,
   type D1Decision,
   type D1Question,
   type D1LoadPhase,
-} from '@litert-playground/decision-onnx'
+} from '@lil-local/decision-onnx'
 import { d1OnnxSubstrate, type D1SubstrateInput } from '../substrates/d1Onnx'
 
 const defaultState = 'I was charged twice for the same order. I need a refund.'

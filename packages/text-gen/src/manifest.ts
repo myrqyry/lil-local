@@ -1,4 +1,4 @@
-import { type ModelAsset, type ModelManifest } from '@litert-playground/inference-core';
+import { type ModelAsset, type ModelManifest } from '@lil-local/inference-core';
 
 interface PinnedLiteRtLmArtifact {
   repository: string;

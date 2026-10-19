@@ -10,6 +10,6 @@ MoViNet video classification pipeline.
 ## Verification
 
 ```bash
-pnpm --filter @litert-playground/video-classification typecheck
-pnpm --filter @litert-playground/video-classification test
+pnpm --filter @lil-local/video-classification typecheck
+pnpm --filter @lil-local/video-classification test
 ```

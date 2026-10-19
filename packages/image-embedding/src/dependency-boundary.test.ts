@@ -15,7 +15,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
   return files;
 }
 
-const FORBIDDEN = /@litert-playground\/(?:kokoro|qwen3-tts|text-gen|retrieval|encoder)|apps\/playground|podqast/;
+const FORBIDDEN = /@lil-local\/(?:kokoro|qwen3-tts|text-gen|retrieval|encoder)|apps\/playground|podqast/;
 
 describe('image-embedding dependency boundary', () => {
   it('does not import runtime or model-specific code', async () => {

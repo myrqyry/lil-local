@@ -1,4 +1,4 @@
-import { type InferencePhaseReceipt, InferenceError } from '@litert-playground/inference-core';
+import { type InferencePhaseReceipt, InferenceError } from '@lil-local/inference-core';
 import type { CodecFrames } from '../codec-frames';
 import type { QwenTtsInput, QwenTtsConfig } from '../types';
 import type { Qwen3TtsVariant } from '../manifest';

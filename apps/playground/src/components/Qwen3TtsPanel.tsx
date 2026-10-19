@@ -6,10 +6,10 @@ import {
   qwen3TtsVariants,
   type Qwen3TtsVariantId,
   type QwenTtsConfig,
-} from '@litert-playground/qwen3-tts'
-import { createLiteRtRuntime, type ManagedLiteRtRuntimeContext } from '@litert-playground/runtime-litert'
+} from '@lil-local/qwen3-tts'
+import { createLiteRtRuntime, type ManagedLiteRtRuntimeContext } from '@lil-local/runtime-litert'
 import { createModelLibraryAssetResolver, registerModelAssets } from '../modelStorage'
-import { type PipelineProgress } from '@litert-playground/inference-core'
+import { type PipelineProgress } from '@lil-local/inference-core'
 
 let pipeline: Qwen3TtsPipeline | null = null
 

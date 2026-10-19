@@ -1,5 +1,5 @@
-import type { RuntimeContext, PipelineProgress, ModelManifest } from '@litert-playground/inference-core';
-import { InferenceError } from '@litert-playground/inference-core';
+import type { RuntimeContext, PipelineProgress, ModelManifest } from '@lil-local/inference-core';
+import { InferenceError } from '@lil-local/inference-core';
 import { BPETokenizer } from '../tokenizer';
 import { Talker } from '../talker';
 import { MTP } from '../mtp';

@@ -1,4 +1,4 @@
-import type { ModelManifest } from '@litert-playground/inference-core';
+import type { ModelManifest } from '@lil-local/inference-core';
 
 const MODEL_URL =
   'https://huggingface.co/litert-community/MoViNet-A0-Stream-LiteRT/resolve/c2ceda0efa7344ba5a95c3eeaa9925cb0940e453/movinet_a0_stream.tflite';

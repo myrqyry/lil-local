@@ -1,6 +1,16 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+
+## 2026-10-18 — Rename Lil Tart / @litert-playground to Lil Local / @lil-local
+
+- **Intent:** Give the browser model lab and reusable package family one coherent identity, `Lil Local`, namespace `@lil-local/*`, canonical repo `myrqyry/lil-local`; protect the established inference APIs and downstream apps.
+- **Change:** Renamed all current workspace package manifests, peer links, source imports, examples, tests, packed external-consumer fixture, documentation, and visible browser title/guide copy. Lockfile regenerated with pnpm. The project remains a runtime qualification lab and local-first model launcher, not a Veyax cognitive organ.
+- **Storage preservation:** Existing browser Cache Storage namespace `lil-tart-model-library-v1`, `/__lil_tart_model_cache__/` route and `x-lil-tart-*` cache metadata remain intentionally unchanged; so does default `createOpfsAssetStore('litert-playground')`. No model cache deletion/move is performed. A focused boundary regression test protects these identifiers.
+- **Evidence:** New contract test initially failed under old root/package identity, then passed with the migrated namespace. `pnpm verify` exited 0, including real packed consumer installation + TypeScript build, tests, boundaries, conversion, qualification and production builds. No new model inference was claimed. Existing Vite chunk-size notices remain advisories.
+- **Cross-repo boundary:** Older pinned commits retain their historical `@litert-playground/*` names. All Veyax Git dependencies must be switched as one revision to `@lil-local/*` with the matching new repo SHA; the updated worker's `advertisedEngines` and PCM audio prompt contract also differ from Veyax's historical pin. Preserve historical docs, existing local worktrees, and old consumer installs until their own explicit migration.
+
+
 ## 2026-10-18 — LiteRT-LM JS/WASM version alignment and real Chromium preload
 
 - **Trigger:** After the 0.18.1 SDK upgrade, source inspection of its installed `dist/litertlm_web.js` revealed that upstream `LiteRtLm.DEFAULT_WASM_PATH` still targets `@litert-lm/core@0.12.1/wasm`. Upgrading the JS package alone did **not** verify which native WASM executed.

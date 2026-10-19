@@ -6,7 +6,7 @@ import {
   type LiteRtPreflightResult,
   type LiteRtTelemetryRecord,
   type ManagedLiteRtRuntimeContext,
-} from '@litert-playground/runtime-litert'
+} from '@lil-local/runtime-litert'
 import type { Tensor } from '@litertjs/core'
 import type { InferenceContext, ModelAdapter, TensorSpec } from '../adapters/types'
 import { createModelLibraryAssetResolver, registerModelAssets } from '../modelStorage'

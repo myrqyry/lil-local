@@ -1,6 +1,6 @@
-import type { ManagedLiteRtRuntime } from '@litert-playground/runtime-litert';
+import type { ManagedLiteRtRuntime } from '@lil-local/runtime-litert';
 
-import type { ManagedLiteRtRuntimeContext } from '@litert-playground/runtime-litert';
+import type { ManagedLiteRtRuntimeContext } from '@lil-local/runtime-litert';
 import {
   decodeMoGeOutputs,
   MOGE_MODEL_ID,
@@ -111,7 +111,7 @@ async function runOnBackend(
 }
 
 /**
- * Real MoGe-2 inference through a caller-owned shared Lil Tart runtime.
+ * Real MoGe-2 inference through a caller-owned shared Lil Local runtime.
  * Lazy: downloads the model only when explicitly called.
  *
  * Affine 3D points are NOT metric coordinates. The returned relativeDepth

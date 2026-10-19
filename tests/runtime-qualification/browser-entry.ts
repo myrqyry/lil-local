@@ -193,7 +193,7 @@ Object.assign(window, {
       const runtime = await createLiteRtRuntime({
         assets: resolver,
         backend: request.backend,
-        packageName: '@litert-playground/qwen3-tts',
+        packageName: '@lil-local/qwen3-tts',
         assetBase: '/node_modules/@litertjs/core/',
       })
       const phase = new GeneratorPhase(request.variant, {

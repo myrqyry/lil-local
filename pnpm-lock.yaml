@@ -226,7 +226,7 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3
     devDependencies:
-      '@litert-playground/qwen3-tts':
+      '@lil-local/qwen3-tts':
         specifier: workspace:*
         version: link:packages/qwen3-tts
       '@types/node':
@@ -262,28 +262,28 @@ importers:
       '@fontsource-variable/bricolage-grotesque':
         specifier: ^5.3.0
         version: 5.3.0
-      '@litert-playground/decision-onnx':
+      '@lil-local/decision-onnx':
         specifier: workspace:*
         version: link:../../packages/decision-onnx
-      '@litert-playground/encoder':
+      '@lil-local/encoder':
         specifier: workspace:*
         version: link:../../packages/encoder
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../../packages/inference-core
-      '@litert-playground/kokoro':
+      '@lil-local/kokoro':
         specifier: workspace:*
         version: link:../../packages/kokoro
-      '@litert-playground/qwen3-tts':
+      '@lil-local/qwen3-tts':
         specifier: workspace:*
         version: link:../../packages/qwen3-tts
-      '@litert-playground/retrieval':
+      '@lil-local/retrieval':
         specifier: workspace:*
         version: link:../../packages/retrieval
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../../packages/runtime-litert
-      '@litert-playground/text-gen':
+      '@lil-local/text-gen':
         specifier: workspace:*
         version: link:../../packages/text-gen
       '@litertjs/core':
@@ -332,10 +332,10 @@ importers:
 
   examples/minimal-kokoro:
     dependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../../packages/inference-core
-      '@litert-playground/kokoro':
+      '@lil-local/kokoro':
         specifier: workspace:*
         version: link:../../packages/kokoro
     devDependencies:
@@ -351,13 +351,13 @@ importers:
 
   examples/minimal-qwen3-tts:
     dependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../../packages/inference-core
-      '@litert-playground/qwen3-tts':
+      '@lil-local/qwen3-tts':
         specifier: workspace:*
         version: link:../../packages/qwen3-tts
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../../packages/runtime-litert
       react:
@@ -388,7 +388,7 @@ importers:
 
   packages/browser-cache:
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -416,10 +416,10 @@ importers:
 
   packages/depth-estimation:
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../runtime-litert
       typescript:
@@ -435,7 +435,7 @@ importers:
         specifier: 0.18.1
         version: 0.18.1
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -451,7 +451,7 @@ importers:
         specifier: ^3.8.1
         version: 3.8.1
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -467,10 +467,10 @@ importers:
         specifier: ^2.5.3
         version: 2.5.3
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../runtime-litert
       typescript:
@@ -495,7 +495,7 @@ importers:
         specifier: ^1.2.1
         version: 1.2.1
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -511,10 +511,10 @@ importers:
         specifier: ^2.5.3
         version: 2.5.3
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../runtime-litert
       typescript:
@@ -526,7 +526,7 @@ importers:
 
   packages/react-litert:
     devDependencies:
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../runtime-litert
       '@types/react':
@@ -554,7 +554,7 @@ importers:
         specifier: ^3.8.1
         version: 3.8.1
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -570,7 +570,7 @@ importers:
         specifier: ^2.5.3
         version: 2.5.3
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -592,7 +592,7 @@ importers:
         specifier: 0.10.29
         version: 0.10.29
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
       typescript:
@@ -608,10 +608,10 @@ importers:
         specifier: ^2.5.3
         version: 2.5.3
     devDependencies:
-      '@litert-playground/inference-core':
+      '@lil-local/inference-core':
         specifier: workspace:*
         version: link:../inference-core
-      '@litert-playground/runtime-litert':
+      '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../runtime-litert
       typescript:

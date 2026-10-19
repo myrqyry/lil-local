@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LiteRtTelemetryRecord } from '@litert-playground/runtime-litert'
+import type { LiteRtTelemetryRecord } from '@lil-local/runtime-litert'
 import { createRuntimePathProof } from './runtimePathProof'
 
 const adapter = {

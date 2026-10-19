@@ -1,4 +1,4 @@
-import type { ModelManifest } from '@litert-playground/inference-core';
+import type { ModelManifest } from '@lil-local/inference-core';
 
 const MODEL_BASE = 'https://huggingface.co/mlboydaisuke/clip-vit-b32-litert/resolve/c9253a36391d0881d4349f07d14e8b2d2054a955';
 

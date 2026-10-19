@@ -20,7 +20,7 @@ function readSize() {
 const size = readSize()
 const server = createServer((_request, response) => {
   response.writeHead(200, { 'content-type': 'text/html' })
-  response.end('<!doctype html><title>Lil Tart WebGPU probe</title>')
+  response.end('<!doctype html><title>Lil Local WebGPU probe</title>')
 })
 let browser
 try {
