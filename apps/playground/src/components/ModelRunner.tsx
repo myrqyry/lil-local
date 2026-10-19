@@ -14,6 +14,7 @@ import {
   type StoredModelInfo,
 } from '../modelStorage'
 import ModelList from './ModelList'
+import CommunityBrowser from './CommunityBrowser'
 import InputEditor from './InputEditor'
 import ImageInput from './ImageInput'
 import AudioInput from './AudioInput'
@@ -90,6 +91,7 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
   const [selectedAdapter, setSelectedAdapter] = useState<ModelAdapter | null>(null)
   const [inputValues, setInputValues] = useState<Record<string, unknown>>({})
   const [search, setSearch] = useState('')
+  const [communityOpen, setCommunityOpen] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null)
   const [storedModels, setStoredModels] = useState<StoredModelInfo[]>([])
@@ -540,15 +542,25 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
         <main className="min-w-0">
 
           <div className="mb-3 flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Search name, task, or model id…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="neo-search min-w-0 flex-1 px-4 py-3 text-[15px] text-on-surface placeholder:text-on-surface-muted focus:outline-none"
-            />
+            {!communityOpen && (
+              <input
+                type="text"
+                placeholder="Search name, task, or model id…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="neo-search min-w-0 flex-1 px-4 py-3 text-[15px] text-on-surface placeholder:text-on-surface-muted focus:outline-none"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setCommunityOpen((open) => !open)}
+              aria-expanded={communityOpen}
+              className="neo-button shrink-0 px-3 py-3 text-xs font-medium"
+            >
+              {communityOpen ? '← Model library' : 'Explore community'}
+            </button>
 
-            {(storedModels.length > 0 || orphanedModels.length > 0) && (
+            {!communityOpen && (storedModels.length > 0 || orphanedModels.length > 0) && (
               <div className="neo-badge flex shrink-0 items-center gap-1.5 px-2 py-1.5 text-xs text-on-surface-variant">
                 <StorageRegular className="h-4 w-4 text-secondary" />
                 <span className="font-medium text-on-surface">{storedModels.length}</span>
@@ -567,7 +579,7 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
             )}
           </div>
 
-          {orphanedModels.length > 0 && (
+          {!communityOpen && orphanedModels.length > 0 && (
             <div className="mb-2">
               <p className="mb-1.5 text-[11px] text-on-surface-muted">
                 {orphanedModels.length} previous-base or unverified {orphanedModels.length === 1 ? 'download' : 'downloads'} · {formatBytes(orphanedBytes)}
@@ -589,24 +601,36 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
             </div>
           )}
 
-          <ModelList
-            adapters={filtered}
-            onSelect={handleSelect}
-            onLoad={(adapter) => void handleLoad(adapter)}
-            onUnload={(adapter) => void handleUnload(adapter)}
-            onOpenPipeline={(modelId) => onSelect?.(modelId)}
-            onRemoveStored={(modelId) => void handleRemoveStored(modelId)}
-            disabled={loading}
-            storageBusy={storageBusy}
-            loadingModelId={downloadingId}
-            downloadProgress={downloadingId ? downloadProgress : null}
-            selectedModelId={selectedAdapter?.modelId ?? null}
-            loadedModelId={loaded && loadedModelId ? loadedModelId : null}
-            storedModels={storedModelMap}
-            searching={search.trim().length > 0}
-          />
+          {communityOpen ? (
+            <CommunityBrowser
+              adapters={adapters}
+              onInspect={(adapter) => {
+                setSelectedAdapter(adapter)
+                setInputValues({})
+                setSearch('')
+                setCommunityOpen(false)
+              }}
+            />
+          ) : (
+            <ModelList
+              adapters={filtered}
+              onSelect={handleSelect}
+              onLoad={(adapter) => void handleLoad(adapter)}
+              onUnload={(adapter) => void handleUnload(adapter)}
+              onOpenPipeline={(modelId) => onSelect?.(modelId)}
+              onRemoveStored={(modelId) => void handleRemoveStored(modelId)}
+              disabled={loading}
+              storageBusy={storageBusy}
+              loadingModelId={downloadingId}
+              downloadProgress={downloadingId ? downloadProgress : null}
+              selectedModelId={selectedAdapter?.modelId ?? null}
+              loadedModelId={loaded && loadedModelId ? loadedModelId : null}
+              storedModels={storedModelMap}
+              searching={search.trim().length > 0}
+            />
+          )}
 
-          {selectedAdapter && downloadingId === selectedAdapter.modelId && operation === 'model-load' && (
+          {!communityOpen && selectedAdapter && downloadingId === selectedAdapter.modelId && operation === 'model-load' && (
             <div className="neo-pod mt-3 p-4">
               <div className="flex items-center justify-between gap-2 text-xs text-on-surface-variant">
                 <span>Loading {selectedAdapter.metadata.name}</span>

@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-18 — LiteRT Community read-only discovery (local checkpoint)
+
+- **Goal:** Extend Lil Tart's existing curated LiteRT adapter library with live browsing of the full `litert-community` Hugging Face organization, without treating arbitrary published artifacts as runnable models.
+- **Implemented:** The playground's `Explore community` mode uses the public Hub model-metadata listing (40 per page, explicit server-side search, manual pagination). Parsed IDs are constrained to the actual organization and canonical repo slugs; duplicate/private/invalid entries are filtered. A repository match is made only against existing model-specific LiteRT adapter source URLs, and the view shows that adapter's own verification status rather than manufacturing runtime support. `Inspect` navigates to the existing adapter panel. Community-only entries link to their source; no weight download, installation, cache write, or runtime activation is introduced.
+- **Evidence:** New pure unit tests were run red/green for source URL construction, ID filtering, deduplication, invalid/unknown metadata, and exact adapter matching. Focused tests, `pnpm --filter playground typecheck` and production Vite build passed. Final `pnpm verify` passed exit 0 after the display correction for unknown download counts; existing package, compatibility, boundary, qualification and production-build gates were included. Headless Chromium against the production preview loaded live community data, successfully searched for `moonshine`, and handed `moonshine-tiny` to its existing adapter panel. The observed flow made **zero weight-file requests** and had **zero page errors**.
+- **Boundaries:** RikkaHub Local and phone model storage were untouched. Catalog discovery is not LiteRT/LiteRT-LM execution qualification; the RikkaHub separate LiteRT-Models gallery and EmbeddingGemma integration remain independent. No publication/push. Remaining: separately qualify any model needing a new adapter before making it executable. Query URL pagination and metadata parsing have pure unit coverage; clicking Load more and the failure/retry UI have not been exercised in a browser. The initial search/Inspect path was exercised against the live API.
+
+
 ## Current checkpoint — five-commit Lil Tart verification — 2026-10-17
 
 - Working branch `master` began clean, **five commits ahead** of `origin/master` at `2f74ea1`, with remote `ebd3c8d`. The five commits add an opt-in D1 ONNX decision model, a verified MoGe-2 geometry package, an engine-neutral browser substrate lifecycle, and an independent WebGPU matmul feasibility probe. No other projects, model stores, or live services were edited.
