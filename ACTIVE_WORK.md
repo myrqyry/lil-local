@@ -573,3 +573,9 @@ half in a real browser; the engine half is not.
 - Scoped to `packages/text-gen`: six test-first lifecycle regressions (five RED on original) now cover single-flight initialization, device mismatch, idempotent disposal, late completion after dispose, in-flight generation cleanup, and retry after failed load. Wrapper calls the owned generator's optional `dispose()`, waits for in-flight operations, and prevents post-shutdown revival.
 - `@lil-local/text-gen` tests **91/91** and typecheck PASS; full `pnpm verify` reached playground build but **failed** on `onnxruntime-web/webgpu` in separate uncommitted Bonsai2 files. Those files were preserved, not rewritten to make the gate green.
 - No real-model WebGPU disposal/VRAM benchmark was run. Evidence and commands: `docs/verification/2026-10-20-transformers-text-lifecycle.md`. This is a local-only checkpoint; downstream consumers unchanged.
+
+## 2026-10-20 — real Transformers.js WebGPU disposal acceptance (follow-up)
+
+- Real Chrome/Chromium on NVIDIA RTX 2070 SUPER (Turing), cached Qwen3 0.6B ONNX q4 (pinned revision), **actual committed Lil Local wrapper** via temporary Vite module server; two concurrent load calls, one real generation, two idempotent dispose calls: success with no page errors. GPU usage in MiB was 4342 before model load, 5904 following generation, 4685 immediately after dispose, and 4325 after 1.4 seconds **with the browser still open**; browser close later yielded 4268. These are system-wide GPU samples, not per-process/per-buffer accounting. Output text included unfinished thinking, not an instruction-following acceptance.
+- Both test Chromium sessions and temporary Vite server were terminated; no new model download or repository app changes. Evidence: docs/verification/2026-10-20-transformers-webgpu-disposal-smoke.md.
+- Full pnpm verify is **still blocked** by separate uncommitted Bonsai2 onnxruntime-web/webgpu resolution. Current other-app work remains untouched.
