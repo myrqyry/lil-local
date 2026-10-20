@@ -26,6 +26,7 @@ vi.mock("@huggingface/transformers", () => ({
 }));
 
 vi.mock("@litert-lm/core", () => ({
+  Backend: { GPU_ARTISAN: 2, CPU_ARTISAN: 1 },
   Engine: {
     create: mockEngineCreate,
   },
@@ -481,7 +482,7 @@ describe("LiteRtLmTextPipeline", () => {
       expect.objectContaining({
         model:
           "litert-community/LFM2.5-1.2B-Thinking/resolve/1b1e49ad9dccdededc9d03bc0fe3071d83595d75/LFM2.5-1.2B-Thinking_int4.litertlm",
-        backend: "wasm",
+        backend: 1,
       })
     );
   });
@@ -503,7 +504,7 @@ describe("LiteRtLmTextPipeline", () => {
       expect(mockEngineCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           model: cachedModel,
-          backend: "webgpu",
+          backend: 2,
           mainExecutorSettings: { maxNumTokens: 8192 },
         })
       );
@@ -512,13 +513,19 @@ describe("LiteRtLmTextPipeline", () => {
     }
   });
 
+  it("maps generic WebGPU to LiteRT-LM GPU_ARTISAN numeric backend so the native streaming loader is used", async () => {
+    const p = new LiteRtLmTextPipeline(litertLmManifest, {model:new Blob(['checkpoint'])});
+    await p.loadForBackend("webgpu");
+    expect(mockEngineCreate).toHaveBeenCalledWith(expect.objectContaining({ backend: 2 }));
+  });
+
   it("loads from a backend without requiring unrelated runtime services", async () => {
     const p = new LiteRtLmTextPipeline(lfm2_5ThinkingManifest);
     await p.loadForBackend("wasm");
 
     expect(p.status).toBe("ready");
     expect(mockEngineCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ backend: "wasm" })
+      expect.objectContaining({ backend: 1 })
     );
   });
 

@@ -553,3 +553,10 @@ half in a real browser; the engine half is not.
   workflow rules, and the nested-agent-file list. Now that the subpath rule had
   to be written into the policy doc, the duplication cost something concrete.
   Collapsing them into one authority is a real decision still unmade.
+
+## 2026-10-19 — Native LiteRT-LM backend enum repair for downstream app
+
+- **Trigger:** Creator's Insight Engine loaded 0.18.1 WASM on real NVIDIA/Turing WebGPU and completed SHA-256-verified Qwen3 0.6B model download, then failed with `wasm.ModelAssets.create is not a function`.
+- **Root cause:** `LiteRtLmTextPipeline` forwarded the generic backend string `webgpu`, but SDK Engine.create requires numeric `Backend.GPU_ARTISAN=2`; the string selected a wrong non-streaming branch. `wasm` similarly needs `Backend.CPU_ARTISAN=1`.
+- **Fix:** Translate at SDK boundary without changing the consumer API; regressions assert numeric native values. Removed three unused members reported by strict downstream TS source consumption.
+- **Evidence:** RED 3/80, GREEN 80/80 focused text package tests, package typecheck and full `pnpm verify` exit 0. Verified native checkpoint inference still pending rerun in the downstream app. See `docs/verification/2026-10-19-litertlm-numeric-backend.md`.

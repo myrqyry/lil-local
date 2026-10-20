@@ -8,6 +8,7 @@ import {
   type RuntimeContext,
   type TextInferenceResult,
 } from '@lil-local/inference-core';
+import { Backend as LiteRtLmSdkBackend } from '@litert-lm/core';
 import type {
   ConversationConfig,
   SamplerParameters,
@@ -37,7 +38,7 @@ interface LiteRtLmModule {
   Engine: {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
-      backend?: 'webgpu' | 'wasm' | 'cpu';
+      backend?: number;
       mainExecutorSettings?: { maxNumTokens?: number };
     }) => Promise<LiteRtLmEngine>;
   };
@@ -327,7 +328,6 @@ export class LiteRtLmTextPipeline
   private engine: LiteRtLmEngine | null = null;
   private conversation: LiteRtLmConversation | null = null;
   private conversationCleanup: Promise<void> | null = null;
-  private loadMs = 0;
   private loadAbort: AbortController | null = null;
   private loadToken = 0;
   private disposed = false;
@@ -400,7 +400,6 @@ export class LiteRtLmTextPipeline
       );
     }
     this.status = 'loading';
-    const loadStart = performance.now();
     const controller = new AbortController();
     this.loadAbort = controller;
     const token = ++this.loadToken;
@@ -432,9 +431,18 @@ export class LiteRtLmTextPipeline
       if (cancelled()) {
         throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
       }
+      // Lil Local exposes portable backend labels, but @litert-lm/core@0.18.1
+      // requires its numeric Backend enum. Passing the string `webgpu` made
+      // Engine.create take the non-streaming CPU branch, which calls
+      // wasm.ModelAssets.create() and fails on the GPU Artisan-only binding.
+      const nativeBackend = backend === 'webgpu'
+        ? LiteRtLmSdkBackend.GPU_ARTISAN
+        : backend === 'wasm'
+          ? LiteRtLmSdkBackend.CPU_ARTISAN
+          : undefined;
       const engine = await module.Engine.create({
         model,
-        backend,
+        backend: nativeBackend,
         mainExecutorSettings: {
           maxNumTokens: this.options.maxContextTokens ?? DEFAULTS.maxContextTokens,
         },
@@ -451,7 +459,6 @@ export class LiteRtLmTextPipeline
         throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
       }
       this.engine = engine;
-      this.loadMs = performance.now() - loadStart;
       this.status = 'ready';
     } catch (e) {
       this.status = this.disposed ? 'disposed' : controller.signal.aborted ? 'idle' : 'error';

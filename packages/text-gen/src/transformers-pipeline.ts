@@ -63,15 +63,11 @@ export class TransformersTextPipeline
   status: PipelineStatus = 'idle';
   onProgress?: (progress: PipelineProgress) => void;
 
-  private context: RuntimeContext | null = null;
   private generator: TransformersGenerator | null = null;
-  private loadMs = 0;
 
-  async load(context: RuntimeContext): Promise<void> {
+  async load(_context: RuntimeContext): Promise<void> {
     if (this.status === 'ready') return;
     this.status = 'loading';
-    this.context = context;
-    const loadStart = performance.now();
     try {
       this.report({ phase: 'loading', step: 1, total: 2 });
       const transformers = (await import('@huggingface/transformers')) as unknown as TransformersModule;
@@ -81,7 +77,6 @@ export class TransformersTextPipeline
         dtype: DEFAULTS.dtype,
         progress_callback: () => {},
       });
-      this.loadMs = performance.now() - loadStart;
       this.status = 'ready';
     } catch (e) {
       this.status = 'error';
@@ -129,7 +124,6 @@ export class TransformersTextPipeline
 
   async dispose(): Promise<void> {
     this.generator = null;
-    this.context = null;
     this.status = 'disposed';
   }
 
