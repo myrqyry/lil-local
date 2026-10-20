@@ -173,6 +173,40 @@ describe("TransformersTextPipeline", () => {
     );
   });
 
+  it("uses explicit WebGPU settings and pinned revision for real Transformers.js Qwen", async () => {
+    const p = new TransformersTextPipeline({
+      modelId: 'onnx-community/Qwen3-0.6B-ONNX',
+      device: 'webgpu',
+      dtype: 'q4',
+      revision: '58ca03a5e7b354b480b1a82b34bde8dc7b854cc0',
+    });
+    await p.loadForDevice('webgpu');
+    expect(mockPipeline).toHaveBeenCalledWith('text-generation',
+      'onnx-community/Qwen3-0.6B-ONNX', expect.objectContaining({
+        device:'webgpu',dtype:'q4',revision:'58ca03a5e7b354b480b1a82b34bde8dc7b854cc0',
+      }));
+  });
+
+  it("provides a true backend-only WebGPU load without fabricated runtime services", async () => {
+    const p = new TransformersTextPipeline({device:'webgpu',dtype:'q4'});
+    await p.loadForDevice('webgpu');
+    expect(mockPipeline).toHaveBeenCalledWith('text-generation',
+      'onnx-community/Qwen3-0.6B-ONNX', expect.objectContaining({device:'webgpu'}));
+  });
+
+  it("extracts assistant content instead of treating chat-array output as empty", async () => {
+    mockPipeline.mockResolvedValue(async () => [{
+      generated_text: [
+        {role:'user',content:'What is 2 + 2?'},
+        {role:'assistant',content:'4.'},
+      ],
+    }]);
+    const p = new TransformersTextPipeline({device:'webgpu',dtype:'q4'});
+    await p.load(fakeContext());
+    const result = await p.run({messages:[{role:'user',content:'What is 2 + 2?'}]});
+    expect(result).toEqual({kind:'text',text:'4.'});
+  });
+
   it("honors an aborted signal", async () => {
     const p = new TransformersTextPipeline();
     await p.load(fakeContext());

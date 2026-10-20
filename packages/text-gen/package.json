@@ -15,7 +15,7 @@
     "@lil-local/inference-core": "0.1.x"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.8.1",
+    "@huggingface/transformers": "^4.2.0",
     "@litert-lm/core": "0.18.1",
     "@mediapipe/tasks-genai": "0.10.29"
   },

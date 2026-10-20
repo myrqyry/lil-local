@@ -560,3 +560,10 @@ half in a real browser; the engine half is not.
 - **Root cause:** `LiteRtLmTextPipeline` forwarded the generic backend string `webgpu`, but SDK Engine.create requires numeric `Backend.GPU_ARTISAN=2`; the string selected a wrong non-streaming branch. `wasm` similarly needs `Backend.CPU_ARTISAN=1`.
 - **Fix:** Translate at SDK boundary without changing the consumer API; regressions assert numeric native values. Removed three unused members reported by strict downstream TS source consumption.
 - **Evidence:** RED 3/80, GREEN 80/80 focused text package tests, package typecheck and full `pnpm verify` exit 0. Verified native checkpoint inference still pending rerun in the downstream app. See `docs/verification/2026-10-19-litertlm-numeric-backend.md`.
+
+## 2026-10-19 — Qwen3 0.6B WebGPU through Transformers.js
+
+- **Evidence:** Actual Chromium on NVIDIA Turing loaded the pinned ONNX Qwen3 0.6B checkpoint with Transformers.js 4.2.0 and generated an assistant response. The prompt's 48-token budget was consumed by its thinking content, so this is model-execution proof, not grounded creator-summary quality proof.
+- **SDK limitation:** LiteRT-LM 0.18.1 native bindings failed `wasmEngineSettings.delete is not a function` after the generic backend mapping fix. Its JS and WASM exports disagree; no native LiteRT-LM text inference was claimed.
+- **Shared fix:** Refreshed text-gen Transformers.js wrapper for v4 result shape, opt-in WebGPU/dtype/immutable revision/progress callback and `loadForDevice` without fabricated runtime context. 83 focused text tests and full `pnpm verify` passed.
+- **Follow-up:** Downstream Creator's Insight Engine switches its experimental Lil Local browser provider to this supported ONNX WebGPU lane; qualify its app-level generation and cache use separately before recommending it as a production streamer model. See `docs/verification/2026-10-19-qwen3-webgpu-transformers-qualification.md`.
