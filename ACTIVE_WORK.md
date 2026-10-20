@@ -567,3 +567,9 @@ half in a real browser; the engine half is not.
 - **SDK limitation:** LiteRT-LM 0.18.1 native bindings failed `wasmEngineSettings.delete is not a function` after the generic backend mapping fix. Its JS and WASM exports disagree; no native LiteRT-LM text inference was claimed.
 - **Shared fix:** Refreshed text-gen Transformers.js wrapper for v4 result shape, opt-in WebGPU/dtype/immutable revision/progress callback and `loadForDevice` without fabricated runtime context. 83 focused text tests and full `pnpm verify` passed.
 - **Follow-up:** Downstream Creator's Insight Engine switches its experimental Lil Local browser provider to this supported ONNX WebGPU lane; qualify its app-level generation and cache use separately before recommending it as a production streamer model. See `docs/verification/2026-10-19-qwen3-webgpu-transformers-qualification.md`.
+
+## 2026-10-20 — Transformers.js text lifecycle hardening
+
+- Scoped to `packages/text-gen`: six test-first lifecycle regressions (five RED on original) now cover single-flight initialization, device mismatch, idempotent disposal, late completion after dispose, in-flight generation cleanup, and retry after failed load. Wrapper calls the owned generator's optional `dispose()`, waits for in-flight operations, and prevents post-shutdown revival.
+- `@lil-local/text-gen` tests **91/91** and typecheck PASS; full `pnpm verify` reached playground build but **failed** on `onnxruntime-web/webgpu` in separate uncommitted Bonsai2 files. Those files were preserved, not rewritten to make the gate green.
+- No real-model WebGPU disposal/VRAM benchmark was run. Evidence and commands: `docs/verification/2026-10-20-transformers-text-lifecycle.md`. This is a local-only checkpoint; downstream consumers unchanged.

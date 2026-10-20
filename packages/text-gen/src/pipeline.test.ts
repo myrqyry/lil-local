@@ -261,6 +261,89 @@ describe("TransformersTextPipeline", () => {
   });
 });
 
+describe("TransformersTextPipeline lifecycle", () => {
+  it("coalesces concurrent same-device loads rather than allocating two models", async () => {
+    let finish!: (generator: unknown) => void;
+    mockPipeline.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const p = new TransformersTextPipeline();
+    const first = p.loadForDevice("webgpu");
+    const second = p.loadForDevice("webgpu");
+    await waitFor(() => mockPipeline.mock.calls.length > 0, "initial model load");
+    expect(mockPipeline).toHaveBeenCalledTimes(1);
+    finish(vi.fn(async () => [{generated_text:"hi"}]));
+    await Promise.all([first, second]);
+    expect(p.status).toBe("ready");
+  });
+
+  it("rejects a second backend while the original model is loading or ready", async () => {
+    let finish!: (generator: unknown) => void;
+    mockPipeline.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const p = new TransformersTextPipeline();
+    const first = p.loadForDevice("wasm");
+    await expect(p.loadForDevice("webgpu")).rejects.toThrow(/device|backend|loaded/i);
+    finish(vi.fn(async () => [{generated_text:"hi"}]));
+    await first;
+    await expect(p.loadForDevice("webgpu")).rejects.toThrow(/device|backend|loaded/i);
+    expect(mockPipeline).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls the underlying Transformers model dispose exactly once", async () => {
+    const release = vi.fn(async () => {});
+    const generator = Object.assign(vi.fn(async () => [{generated_text:"hi"}]), {dispose:release});
+    mockPipeline.mockResolvedValue(generator);
+    const p = new TransformersTextPipeline();
+    await p.loadForDevice("wasm");
+    await Promise.all([p.dispose(), p.dispose()]);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(p.status).toBe("disposed");
+    await expect(p.loadForDevice("wasm")).rejects.toThrow(/disposed/i);
+  });
+
+  it("waits for a pending load and disposes its result without reviving ready", async () => {
+    let finish!: (generator:any) => void;
+    mockPipeline.mockReturnValue(new Promise(resolve => {finish = resolve;}));
+    const release = vi.fn(async () => {});
+    const generator = Object.assign(vi.fn(async () => [{generated_text:"hi"}]), {dispose:release});
+    const p = new TransformersTextPipeline();
+    const loading = p.loadForDevice("wasm");
+    const disposing = p.dispose();
+    finish(generator);
+    await expect(loading).rejects.toThrow(/disposed/i);
+    await disposing;
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(p.status).toBe("disposed");
+  });
+
+  it("waits for in-flight generation before releasing its model", async () => {
+    let finish!: (value:unknown) => void;
+    const release = vi.fn(async () => {});
+    const generator = Object.assign(vi.fn(() => new Promise(resolve => {finish = resolve;})), {dispose:release});
+    mockPipeline.mockResolvedValue(generator);
+    const p = new TransformersTextPipeline();
+    await p.loadForDevice("wasm");
+    const generating = p.run({messages:[{role:"user",content:"hi"}]});
+    await waitFor(() => generator.mock.calls.length > 0, "generation");
+    const disposing = p.dispose();
+    expect(release).not.toHaveBeenCalled();
+    finish([{generated_text:"done"}]);
+    await generating;
+    await disposing;
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(p.status).toBe("disposed");
+    await expect(p.run({messages:[{role:"user",content:"hi"}]})).rejects.toThrow(/not ready/i);
+  });
+
+  it("allows a failed model load to be retried without stale in-flight state", async () => {
+    mockPipeline.mockRejectedValueOnce(new Error("WASM unavailable"));
+    const p = new TransformersTextPipeline();
+    await expect(p.loadForDevice("wasm")).rejects.toThrow("WASM unavailable");
+    mockPipeline.mockResolvedValue(vi.fn(async () => [{generated_text:"yes"}]));
+    await p.loadForDevice("wasm");
+    expect(p.status).toBe("ready");
+    expect(mockPipeline).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("LiteRtLmTextPipeline", () => {
   it("throws on run before load", async () => {
     const p = new LiteRtLmTextPipeline();

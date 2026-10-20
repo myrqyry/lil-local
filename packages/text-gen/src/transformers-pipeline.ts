@@ -28,6 +28,7 @@ interface TransformersModule {
 
 interface TransformersGenerator {
   tokenizer?: unknown;
+  dispose?: () => Promise<void> | void;
   (
     messages: Array<{ role: string; content: string }>,
     options: Record<string, unknown>,
@@ -89,6 +90,12 @@ export class TransformersTextPipeline
 
   private generator: TransformersGenerator | null = null;
   private readonly options: TransformersTextConfig;
+  private pendingLoad: Promise<void> | null = null;
+  private pendingDevice: 'webgpu' | 'wasm' | null = null;
+  private readyDevice: 'webgpu' | 'wasm' | null = null;
+  private activeRun: Promise<TextInferenceResult> | null = null;
+  private disposal: Promise<void> | null = null;
+  private disposeRequested = false;
 
   constructor(options: Partial<TransformersTextConfig> = {}) {
     this.options = { ...DEFAULTS, ...options };
@@ -103,51 +110,96 @@ export class TransformersTextPipeline
 
   /** Direct browser consumer API; no unrelated LiteRT runtime services. */
   async loadForDevice(device: 'webgpu' | 'wasm'): Promise<void> {
-    if (this.status === 'ready') return;
+    if (this.disposeRequested) throw new Error('Transformers pipeline disposed');
+    if (this.pendingLoad) {
+      if (this.pendingDevice !== device) {
+        throw new Error(`Transformers pipeline already loading on ${this.pendingDevice}; dispose before changing device`);
+      }
+      return this.pendingLoad;
+    }
+    if (this.generator) {
+      if (this.readyDevice !== device) {
+        throw new Error(`Transformers pipeline already loaded on ${this.readyDevice}; dispose before changing device`);
+      }
+      return;
+    }
     this.status = 'loading';
+    this.pendingDevice = device;
+    const loading = (async () => {
+      try {
+        this.report({ phase: 'loading', step: 1, total: 2 });
+        const transformers = (await import('@huggingface/transformers')) as unknown as TransformersModule;
+        this.report({ phase: 'loading', step: 2, total: 2 });
+        const generator = await transformers.pipeline('text-generation', this.options.modelId, {
+          device,
+          dtype: this.options.dtype,
+          ...(this.options.revision ? {revision:this.options.revision} : {}),
+          progress_callback: this.options.onProgress ?? (() => {}),
+        });
+        // Keep a completed late load reachable for dispose(), but never revive it.
+        this.generator = generator;
+        this.readyDevice = device;
+        if (this.disposeRequested) throw new Error('Transformers pipeline disposed during load');
+        this.status = 'ready';
+      } catch (e) {
+        if (!this.disposeRequested) this.status = 'error';
+        throw e instanceof Error ? e : new Error(String(e));
+      }
+    })();
+    this.pendingLoad = loading;
     try {
-      this.report({ phase: 'loading', step: 1, total: 2 });
-      const transformers = (await import('@huggingface/transformers')) as unknown as TransformersModule;
-      this.report({ phase: 'loading', step: 2, total: 2 });
-      this.generator = await transformers.pipeline('text-generation', this.options.modelId, {
-        device,
-        dtype: this.options.dtype,
-        ...(this.options.revision ? {revision:this.options.revision} : {}),
-        progress_callback: this.options.onProgress ?? (() => {}),
-      });
-      this.status = 'ready';
-    } catch (e) {
-      this.status = 'error';
-      throw e instanceof Error ? e : new Error(String(e));
+      await loading;
+    } finally {
+      if (this.pendingLoad === loading) {
+        this.pendingLoad = null;
+        this.pendingDevice = null;
+      }
     }
   }
 
-  async run(
+  run(
     input: TextGenerationInput,
     config?: Partial<TransformersTextConfig>,
     signal?: AbortSignal,
   ): Promise<TextInferenceResult> {
-    if (this.status !== 'ready') throw new Error('Pipeline not ready');
-    if (!this.generator) throw new Error('Transformers text pipeline not loaded');
+    if (this.disposeRequested || this.status !== 'ready') {
+      return Promise.reject(new Error('Pipeline not ready'));
+    }
+    if (!this.generator) return Promise.reject(new Error('Transformers text pipeline not loaded'));
     this.status = 'running';
+    const pending = this.generate(input, config, signal);
+    this.activeRun = pending;
+    return pending.finally(() => {
+      if (this.activeRun === pending) this.activeRun = null;
+      if (!this.disposeRequested) this.status = 'ready';
+    });
+  }
+
+  private async generate(
+    input: TextGenerationInput,
+    config?: Partial<TransformersTextConfig>,
+    signal?: AbortSignal,
+  ): Promise<TextInferenceResult> {
     const cfg = { ...this.options, ...config };
+    const generator = this.generator;
+    if (!generator) throw new Error('Transformers text pipeline not loaded');
     try {
       if (signal?.aborted) throw new Error('CANCELLED');
       const messages = toChatMessages(input);
       const constraint = cfg.jsonSchema
         ? await (async () => {
-          if (!this.generator?.tokenizer) {
+          if (!generator.tokenizer) {
             throw new Error('Constrained JSON requires the loaded model tokenizer.');
           }
           const { StructuredOutputProcessor } =
             await import('@huggingface/transformers-structured-output');
           return [new StructuredOutputProcessor(
-            this.generator.tokenizer as ConstructorParameters<typeof StructuredOutputProcessor>[0],
+            generator.tokenizer as ConstructorParameters<typeof StructuredOutputProcessor>[0],
             {type:'json_schema',json_schema:cfg.jsonSchema as Extract<ConstructorParameters<typeof StructuredOutputProcessor>[1], {type:'json_schema'}>['json_schema']},
           )];
         })()
         : undefined;
-      const result = await this.generator(messages, {
+      const result = await generator(messages, {
         max_new_tokens: cfg.maxTokens ?? TEXT_GENERATION_DEFAULTS.maxTokens,
         do_sample: (cfg.temperature ?? TEXT_GENERATION_DEFAULTS.temperature) > 0,
         temperature: cfg.temperature,
@@ -158,20 +210,32 @@ export class TransformersTextPipeline
       if (signal?.aborted) throw new Error('CANCELLED');
       const text = extractAssistantText(result);
       if (!text) throw new Error('Transformers pipeline did not produce assistant text');
-      this.status = 'ready';
       return {
         kind: 'text',
         text,
       } satisfies TextInferenceResult;
     } catch (e) {
-      this.status = 'ready';
       throw e instanceof Error ? e : new Error(String(e));
     }
   }
 
   async dispose(): Promise<void> {
-    this.generator = null;
-    this.status = 'disposed';
+    if (this.disposal) return this.disposal;
+    this.disposeRequested = true;
+    this.disposal = (async () => {
+      try {
+        // Model creation and generation can finish after teardown was requested.
+        // Wait for those operations before releasing the provider's actual resources.
+        if (this.pendingLoad) await this.pendingLoad.catch(() => {});
+        if (this.activeRun) await this.activeRun.catch(() => {});
+        await this.generator?.dispose?.();
+      } finally {
+        this.generator = null;
+        this.readyDevice = null;
+        this.status = 'disposed';
+      }
+    })();
+    return this.disposal;
   }
 
   private report(progress: PipelineProgress): void {
