@@ -579,3 +579,9 @@ half in a real browser; the engine half is not.
 - Real Chrome/Chromium on NVIDIA RTX 2070 SUPER (Turing), cached Qwen3 0.6B ONNX q4 (pinned revision), **actual committed Lil Local wrapper** via temporary Vite module server; two concurrent load calls, one real generation, two idempotent dispose calls: success with no page errors. GPU usage in MiB was 4342 before model load, 5904 following generation, 4685 immediately after dispose, and 4325 after 1.4 seconds **with the browser still open**; browser close later yielded 4268. These are system-wide GPU samples, not per-process/per-buffer accounting. Output text included unfinished thinking, not an instruction-following acceptance.
 - Both test Chromium sessions and temporary Vite server were terminated; no new model download or repository app changes. Evidence: docs/verification/2026-10-20-transformers-webgpu-disposal-smoke.md.
 - Full pnpm verify is **still blocked** by separate uncommitted Bonsai2 onnxruntime-web/webgpu resolution. Current other-app work remains untouched.
+
+## 2026-10-20 — Bonsai2 playground WebGPU import resolved
+
+- Reproduced real Vite build failure for `onnxruntime-web/webgpu` in concurrent uncommitted Bonsai2 candidate. Context7 official ONNX Runtime docs confirmed import syntax; root cause was missing *direct playground dependency*.
+- Added exact existing workspace `onnxruntime-web@1.30.0` to playground manifest and lockfile using offline pnpm. Full `pnpm verify`, playground build and typecheck **PASS**. No other Bonsai2 source/UI/probe edits.
+- This proves production **bundling**, not shader-f16 availability, real model execution or text generation. Evidence: `docs/verification/2026-10-20-bonsai2-onnx-webgpu-package-boundary.md`.
