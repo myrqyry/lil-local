@@ -25,6 +25,13 @@ vi.mock("@huggingface/transformers", () => ({
   pipeline: mockPipeline,
 }));
 
+vi.mock("@huggingface/transformers-structured-output",()=>({
+  StructuredOutputProcessor: class {
+    constructor(public tokenizer:unknown, public options:{json_schema:unknown}) {}
+    get schema(){return this.options.json_schema}
+  },
+}));
+
 vi.mock("@litert-lm/core", () => ({
   Backend: { GPU_ARTISAN: 2, CPU_ARTISAN: 1 },
   Engine: {
@@ -205,6 +212,36 @@ describe("TransformersTextPipeline", () => {
     await p.load(fakeContext());
     const result = await p.run({messages:[{role:'user',content:'What is 2 + 2?'}]});
     expect(result).toEqual({kind:'text',text:'4.'});
+  });
+
+  it("uses a tokenizer-aware constrained JSON logits processor when a schema is supplied", async () => {
+    const schema = {type:'object',properties:{answer:{type:'string'}},
+      required:['answer'],additionalProperties:false};
+    const tokenizer = {id:'model-tokenizer'};
+    const generator = vi.fn(async () => [{
+      generated_text: [{role:'assistant',content:'{"answer":"4"}'}],
+    }]) as ReturnType<typeof vi.fn> & {tokenizer?:unknown};
+    generator.tokenizer = tokenizer;
+    mockPipeline.mockResolvedValue(generator);
+    const p = new TransformersTextPipeline({device:'webgpu',dtype:'q4'});
+    await p.loadForDevice('webgpu');
+    const result = await p.run({messages:[{role:'user',content:'What is 2+2?'}]},{
+      jsonSchema:schema,
+    });
+    expect(result.text).toBe('{"answer":"4"}');
+    expect(generator).toHaveBeenCalledWith(expect.any(Array),
+      expect.objectContaining({logits_processor:expect.any(Array)}));
+    const processor = generator.mock.calls[0][1].logits_processor[0];
+    expect(processor.tokenizer).toBe(tokenizer);
+    expect(processor.schema).toEqual(schema);
+  });
+
+  it("refuses constrained generation if a pipeline does not expose its tokenizer",async()=>{
+    const p = new TransformersTextPipeline({device:'webgpu',dtype:'q4'});
+    await p.loadForDevice('webgpu');
+    await expect(p.run({messages:[{role:'user',content:'hi'}]},{
+      jsonSchema:{type:'object',properties:{answer:{type:'string'}}},
+    })).rejects.toThrow(/tokenizer/i);
   });
 
   it("honors an aborted signal", async () => {

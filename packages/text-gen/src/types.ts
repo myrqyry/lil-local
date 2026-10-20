@@ -16,6 +16,8 @@ export interface TextGenerationConfig {
   device?: 'webgpu' | 'wasm';
   dtype?: string;
   modelId?: string;
+  /** Experimental tokenizer-constrained JSON Schema (single sequence). */
+  jsonSchema?: Record<string,unknown>;
 }
 
 export const TEXT_GENERATION_DEFAULTS: Required<Pick<TextGenerationConfig, 'maxTokens' | 'temperature'>> = {

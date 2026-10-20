@@ -27,6 +27,7 @@ interface TransformersModule {
 }
 
 interface TransformersGenerator {
+  tokenizer?: unknown;
   (
     messages: Array<{ role: string; content: string }>,
     options: Record<string, unknown>,
@@ -123,7 +124,7 @@ export class TransformersTextPipeline
 
   async run(
     input: TextGenerationInput,
-    config?: TransformersTextConfig,
+    config?: Partial<TransformersTextConfig>,
     signal?: AbortSignal,
   ): Promise<TextInferenceResult> {
     if (this.status !== 'ready') throw new Error('Pipeline not ready');
@@ -133,12 +134,26 @@ export class TransformersTextPipeline
     try {
       if (signal?.aborted) throw new Error('CANCELLED');
       const messages = toChatMessages(input);
+      const constraint = cfg.jsonSchema
+        ? await (async () => {
+          if (!this.generator?.tokenizer) {
+            throw new Error('Constrained JSON requires the loaded model tokenizer.');
+          }
+          const { StructuredOutputProcessor } =
+            await import('@huggingface/transformers-structured-output');
+          return [new StructuredOutputProcessor(
+            this.generator.tokenizer as ConstructorParameters<typeof StructuredOutputProcessor>[0],
+            {type:'json_schema',json_schema:cfg.jsonSchema as Extract<ConstructorParameters<typeof StructuredOutputProcessor>[1], {type:'json_schema'}>['json_schema']},
+          )];
+        })()
+        : undefined;
       const result = await this.generator(messages, {
         max_new_tokens: cfg.maxTokens ?? TEXT_GENERATION_DEFAULTS.maxTokens,
         do_sample: (cfg.temperature ?? TEXT_GENERATION_DEFAULTS.temperature) > 0,
         temperature: cfg.temperature,
         top_p: cfg.topP,
         top_k: cfg.topK,
+        ...(constraint ? {logits_processor: constraint} : {}),
       });
       if (signal?.aborted) throw new Error('CANCELLED');
       const text = extractAssistantText(result);
