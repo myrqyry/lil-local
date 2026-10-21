@@ -21,6 +21,7 @@ const packages = [
   ['image-embedding', 'image-embedding.tgz'],
   ['video-classification', 'video-classification.tgz'],
   ['depth-estimation', 'depth-estimation.tgz'],
+  ['image-segmentation', 'image-segmentation.tgz'],
 ]
 
 const tempRoot = await mkdtemp(join(tmpdir(), 'lil-local-compat-'))

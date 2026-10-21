@@ -76,3 +76,32 @@ claimed by these tests.
 `apps/playground/src/substrates/d1Onnx.ts`,
 `apps/playground/src/components/D1DecisionPanel.tsx`,
 `docs/verification/2026-10-12-d1-webgpu-text.md`.
+
+## 2026-10-21 — Foreground-mask package before Forma integration
+
+**Decision:** Extract a reusable, browser-local U²-Net saliency package
+(`@lil-local/image-segmentation`) from existing Lil Local adapter knowledge
+without copying playground UI or extending Veyax's legacy dependency pins.
+The new package owns tensor preprocessing, output shape/alpha contracts,
+WASM-first runtime lifecycle, and position-preserving cropped RGBA extraction.
+
+**Why:** Forma needs an automatic foreground suggestion that can be
+corrected with its existing manual layer editor. Prior See-through GPU
+depth processing wedged the machine. Start with an 88.2 MB candidate,
+not a multi-gigabyte layered diffusion model; permit GPU qualification
+later under a controlled workload rather than prohibiting it.
+
+**Evidence/limits:** Model artifact metadata is source-verified and
+pinned by revision/SHA. The package's unit tests and external-consumer
+harness prove code/API behavior. They DO NOT prove model output or a
+completed app workflow. A full inference qualification and Veyax migration
+reconciliation are still required. Lil Local's original worktree contains
+unrelated in-progress Bonsai files and was left unchanged; this work is
+isolated in `aster/forma-image-segmentation`.
+
+**Consequence:** Do not reintroduce `@litert-playground/*` in new Veyax
+integration code and do not silently mix pinned Lil Local Git SHAs.
+Model suggestions never claim to infer missing covered-up artwork or
+semantic Live2D parts.
+
+**Supersedes:** none

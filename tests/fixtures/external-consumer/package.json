@@ -20,6 +20,7 @@
     "@lil-local/image-embedding": "file:./archives/image-embedding.tgz",
     "@lil-local/video-classification": "file:./archives/video-classification.tgz",
     "@lil-local/depth-estimation": "file:./archives/depth-estimation.tgz",
+    "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz",
     "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8"
   },

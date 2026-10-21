@@ -1,0 +1,19 @@
+{
+  "name": "@lil-local/image-segmentation",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "peerDependencies": {
+    "@lil-local/inference-core": "0.1.x",
+    "@lil-local/runtime-litert": "0.1.x"
+  },
+  "devDependencies": {
+    "@lil-local/inference-core": "workspace:*",
+    "@lil-local/runtime-litert": "workspace:*",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
