@@ -9,3 +9,7 @@ static-models/
 .idea/
 *.code-workspace
 .vercel
+
+superpowers/
+
+.superpowers/
