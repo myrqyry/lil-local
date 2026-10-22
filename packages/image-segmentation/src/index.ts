@@ -8,4 +8,6 @@ export {
 } from './contracts'
 export type { Point, SegmentationRegion, ProgressCallback } from './contracts'
 export { decodeSamMaskCandidates } from './masks'
-export { suggestFaceRegions, selectSamPoint } from './runtime'
+export { suggestFaceRegions, selectSamPoint, selectSamPoints } from './runtime'
+export { prepareSamPointPrompts, MAX_SAM_PROMPTS } from './prompts'
+export type { SamPointPrompt } from './prompts'

@@ -5,11 +5,12 @@
  */
 import { FACE_PARSING_MODEL, getSam2ModelVariant, type Sam2Variant } from './models'
 import {
-  normalizeFaceMaskLabel, validatePointInImage, validateRegion,
+  normalizeFaceMaskLabel, validateRegion,
   validateSegmentationSource, validateSourceDimensions,
   type ProgressCallback, type Point, type SegmentationRegion,
 } from './contracts'
 import { decodeSamMaskCandidates } from './masks'
+import { prepareSamPointPrompts, type SamPointPrompt } from './prompts'
 
 async function readBoundedImage(file: Blob) {
   validateSegmentationSource(file)
@@ -67,18 +68,32 @@ export async function selectSamPoint(
   variant: Sam2Variant,
   onProgress?: ProgressCallback,
 ): Promise<SegmentationRegion[]> {
+  return selectSamPoints(file, [{ ...point, label: 1 }], variant, onProgress)
+}
+
+/** Explicitly run signed include/exclude point selection in a browser worker. */
+export async function selectSamPoints(
+  file: Blob,
+  prompts: readonly SamPointPrompt[],
+  variant: Sam2Variant,
+  onProgress?: ProgressCallback,
+): Promise<SegmentationRegion[]> {
   validateSegmentationSource(file)
+  // Validate the prompt contract before the first model download or decode.
+  if (!Array.isArray(prompts) || !prompts.length || prompts.length > 16 ||
+      prompts.some(prompt => !prompt || ![0, 1].includes(prompt.label)) ||
+      !prompts.some(prompt => prompt.label === 1)) {
+    throw new Error('SAM needs one to 16 valid include/exclude points and at least one include point')
+  }
   const checkpoint = getSam2ModelVariant(variant)
   onProgress?.('Loading ' + checkpoint.label + ' on CPU (first use downloads weights)…')
   const { env, AutoProcessor, Sam2Model } = await import('@huggingface/transformers')
   env.allowLocalModels = false
   env.useBrowserCache = true
   const { image, originalWidth, originalHeight } = await readBoundedImage(file)
-  validatePointInImage(point, originalWidth, originalHeight)
-  const scaledPoint = [
-    Math.min(image.width - 1, point.x * image.width / originalWidth),
-    Math.min(image.height - 1, point.y * image.height / originalHeight),
-  ]
+  const signedPoints = prepareSamPointPrompts(
+    prompts, originalWidth, originalHeight, image.width, image.height,
+  )
   const model = await Sam2Model.from_pretrained(checkpoint.repo, {
     device: 'wasm', dtype: checkpoint.dtype, revision: checkpoint.revision,
   })
@@ -91,7 +106,7 @@ export async function selectSamPoint(
     throw new Error('Pinned SAM checkpoint returned an incompatible processor')
   }
   onProgress?.('Selecting object masks around the clicked point…')
-  const inputs = await processor(image, { input_points: [[scaledPoint]] })
+  const inputs = await processor(image, signedPoints)
   const output = await model(inputs)
   const masks = await processor.post_process_masks(
     output.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes,

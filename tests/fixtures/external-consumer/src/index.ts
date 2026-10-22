@@ -31,7 +31,8 @@ import {
 
 import {
   FACE_PARSING_MODEL, SAM2_MODEL_VARIANTS, suggestFaceRegions,
-  selectSamPoint, validateRegion, type SegmentationRegion, type Sam2Variant,
+  selectSamPoint, selectSamPoints, prepareSamPointPrompts, validateRegion,
+  type SegmentationRegion, type Sam2Variant, type SamPointPrompt,
 } from '@lil-local/image-segmentation'
 
 // Importing the public symbols cannot load model weights automatically.
@@ -39,6 +40,9 @@ export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id
 export const pointSegmentationVariants = SAM2_MODEL_VARIANTS
 export const externalFaceSegmentation = suggestFaceRegions
 export const externalPointSegmentation = selectSamPoint
+export const externalSignedPointSegmentation = selectSamPoints
+export const externalPrepareSamPoints = prepareSamPointPrompts
+export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
 export const externalValidateRegion = validateRegion
 export type ExternalSegmentationMask = SegmentationRegion
 export type ExternalSam2Variant = Sam2Variant

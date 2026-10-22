@@ -26,3 +26,14 @@ Verification tiers should remain distinct:
 
 Neither these source files nor the packed package include model weights.
 No SAM 3 GGUF or native inference runner is qualified here.
+
+## Signed-point refinement continuation (2026-10-22)
+
+Context7 `/huggingface/transformers.js` and installed Transformers.js 4.3.1
+`SamImageProcessor.add_input_labels` source confirm signed point guidance.
+`selectSamPoints` packages up to 16 include (1) / exclude (0) coordinates
+into one object prompt, keeps `selectSamPoint` backward-compatible, and
+rejects invalid labels, negative-only inputs and off-image coordinates.
+Unit and packed-consumer coverage verify the new public entrypoint;
+actual inference on both versions of the model requires an additional
+browser result before qualitative claims.
