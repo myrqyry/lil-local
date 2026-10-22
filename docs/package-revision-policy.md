@@ -58,6 +58,7 @@ entrypoint.
 - `@lil-local/image-embedding`
 - `@lil-local/video-classification`
 - `@lil-local/depth-estimation`
+- `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks)
 
 Subpath entrypoints are part of the supported surface on the same terms as the
 `.` entrypoint: a subpath is supported only when the compatibility harness

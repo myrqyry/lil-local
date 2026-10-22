@@ -52,7 +52,7 @@ Dependency flow: `inference-core → runtime-litert → model packages → playg
 - `packages/runtime-litert` — managed LiteRT runtime, backend selection, caching,
   preflight, telemetry.
 - Model packages — `text-gen`, `retrieval`, `encoder`, `image-embedding`,
-  `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`.
+  `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`, `image-segmentation`.
 - `packages/browser-cache` — browser-side model/tensor cache.
 - `apps/playground` — the consumer app (React + Vite + Tailwind).
 - `examples/` — minimal consumer examples, deliberately small.

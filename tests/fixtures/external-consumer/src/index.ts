@@ -29,6 +29,20 @@ import {
   type DepthFrame,
 } from '@lil-local/depth-estimation'
 
+import {
+  FACE_PARSING_MODEL, SAM2_MODEL_VARIANTS, suggestFaceRegions,
+  selectSamPoint, validateRegion, type SegmentationRegion, type Sam2Variant,
+} from '@lil-local/image-segmentation'
+
+// Importing the public symbols cannot load model weights automatically.
+export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id
+export const pointSegmentationVariants = SAM2_MODEL_VARIANTS
+export const externalFaceSegmentation = suggestFaceRegions
+export const externalPointSegmentation = selectSamPoint
+export const externalValidateRegion = validateRegion
+export type ExternalSegmentationMask = SegmentationRegion
+export type ExternalSam2Variant = Sam2Variant
+
 // Substrate-neutral public API must work from a *packed* consumer, without
 // pulling in a specific LiteRT/ONNX/GGUF implementation at import time.
 export const externalSubstrate: BrowserSubstrate<string, string> = {
