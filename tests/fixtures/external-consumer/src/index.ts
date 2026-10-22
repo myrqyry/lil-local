@@ -1,5 +1,6 @@
 import { BrowserSubstrateRunner, InferenceError, createHttpAssetResolver, type BrowserSubstrate } from '@lil-local/inference-core'
 import { createLiteRtRuntime } from '@lil-local/runtime-litert'
+import { SaliencySegmentationPipeline, u2NetSaliencyManifest, extractMaskLayer, type ForegroundMask } from '@lil-local/image-segmentation'
 import { ManagedLiteRtModelController, useManagedLiteRtModel } from '@lil-local/react-litert'
 import { createBrowserCacheAssetResolver } from '@lil-local/browser-cache'
 import {
@@ -122,3 +123,9 @@ export const moGeDispose = releaseMoGeModels
 export const moGeCanonicalDepth = moGeGeometryToDepthFrame
 export const moGePinnedRevision: string = MOGE_REVISION
 export type ExternalMoGeGeometry = MoGeGeometry
+
+// Packed public masks remain substrate-agnostic. Never require model download on import.
+export const foregroundPipeline = new SaliencySegmentationPipeline()
+export const foregroundManifest = u2NetSaliencyManifest
+export const foregroundLayerFactory = extractMaskLayer
+export type ExternalForegroundMask = ForegroundMask
