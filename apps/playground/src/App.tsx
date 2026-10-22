@@ -3,7 +3,6 @@ import ModelRunner from './components/ModelRunner'
 import { Qwen3TtsPanel } from './components/Qwen3TtsPanel'
 import { LfmPipelinePanel } from './components/LfmPipelinePanel'
 import { D1DecisionPanel } from './components/D1DecisionPanel'
-import { Bonsai2CandidatePanel } from './components/Bonsai2CandidatePanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -45,14 +44,15 @@ const d1Entry: ModelAdapter = {
 const bonsaiCandidate: ModelAdapter = {
   modelId: 'bonsai2-2b-onnx-webgpu-candidate',
   metadata: {
-    name: 'Bonsai 2 · 2B (ONNX audit + Native)',
-    description: 'Published ONNX decoder blocked by Scan; local PrismML GGUF server optional and not yet runtime-qualified.',
+    name: 'Bonsai 2 · 2B',
+    description: 'Disabled: ONNX decoder requires unsupported Scan; native GGUF generation remains unqualified.',
     modelPath: '',
     tags: ['language', 'experimental', 'onnx', 'webgpu', 'qualification'],
   },
   inputSpecs: [],
   outputSpecs: [],
   isPipeline: true,
+  disabled: true,
   prepareInputs: () => ({}),
   parseOutputs: async () => ({}),
 }
@@ -72,20 +72,6 @@ export default function App() {
           </button>
           <h1 className="mb-4 text-2xl font-bold text-on-surface">Qwen3-TTS</h1>
           <Qwen3TtsPanel />
-        </div>
-      </div>
-    )
-  }
-
-  if (selectedId === 'bonsai2-2b-onnx-webgpu-candidate') {
-    return (
-      <div className="min-h-screen bg-surface-dim">
-        <div className="mx-auto max-w-2xl p-4">
-          <button
-            className="mb-4 text-sm text-secondary transition-colors hover:text-on-secondary-container"
-            onClick={() => setSelectedId(null)}
-          >← Back to model list</button>
-          <Bonsai2CandidatePanel />
         </div>
       </div>
     )

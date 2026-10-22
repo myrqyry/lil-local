@@ -95,3 +95,18 @@ panel rendered the audited 18-Scan warning and opt-in local server connection.
 No generated-content button appeared before native model identity validation.
 **Zero page errors; zero external requests; no GPU inference.**
 This is a UI-routing verification, NOT a model or native-server acceptance test.
+
+## 2026-10-21 follow-up — catalog disabled
+
+Bonsai 2B remains discoverable in the Lil Local model catalog, but is
+now marked disabled, using the same Unavailable status and disabled
+action as other unqualified models. Its workspace route is disconnected,
+and the model details panel explains it cannot execute. This is
+a product availability decision; it does **not** change or qualify the
+ONNX/native runtime evidence above. The research panel and client source
+remain preserved for eventual requalification.
+
+Headless Chromium with GPU disabled confirmed: catalog entry visible,
+execution action disabled, unavailable detail shown, no Bonsai native
+connect or Generate controls, no page errors or external requests.
+Automated regression and full pnpm verify passed.

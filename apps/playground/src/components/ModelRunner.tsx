@@ -502,6 +502,10 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
                       )}
                     </section>
                     </>
+                  ) : selectedAdapter.disabled ? (
+                    <div className="rounded-lg border border-dashed border-outline-variant p-3 text-xs leading-relaxed text-on-surface-variant">
+                      Unavailable for execution. This model has not met the required runtime qualification.
+                    </div>
                   ) : selectedAdapter.isPipeline ? (
                     <div className="space-y-2 rounded-lg border border-dashed border-outline-variant p-3 text-xs leading-relaxed text-on-surface-variant">
                       <p>This entry opens its own workspace. Select Open to inspect its actual capability and verification status.</p>
