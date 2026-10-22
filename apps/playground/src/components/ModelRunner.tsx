@@ -502,6 +502,14 @@ export default function ModelRunner({ adapters, onSelect }: ModelRunnerProps) {
                       )}
                     </section>
                     </>
+                  ) : selectedAdapter.isPipeline ? (
+                    <div className="space-y-2 rounded-lg border border-dashed border-outline-variant p-3 text-xs leading-relaxed text-on-surface-variant">
+                      <p>This entry opens its own workspace. Select Open to inspect its actual capability and verification status.</p>
+                      <button type="button"
+                        onClick={() => onSelect?.(selectedAdapter.modelId)}
+                        className="expressive-secondary-button px-3 py-2 font-semibold text-on-surface"
+                      >Open {selectedAdapter.metadata.name}</button>
+                    </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-outline-variant p-3 text-xs leading-relaxed text-on-surface-variant">
                       Download and load this model from its card to unlock preflight, inference, and runtime receipts.

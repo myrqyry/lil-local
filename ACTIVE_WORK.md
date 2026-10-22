@@ -585,3 +585,30 @@ half in a real browser; the engine half is not.
 - Reproduced real Vite build failure for `onnxruntime-web/webgpu` in concurrent uncommitted Bonsai2 candidate. Context7 official ONNX Runtime docs confirmed import syntax; root cause was missing *direct playground dependency*.
 - Added exact existing workspace `onnxruntime-web@1.30.0` to playground manifest and lockfile using offline pnpm. Full `pnpm verify`, playground build and typecheck **PASS**. No other Bonsai2 source/UI/probe edits.
 - This proves production **bundling**, not shader-f16 availability, real model execution or text generation. Evidence: `docs/verification/2026-10-20-bonsai2-onnx-webgpu-package-boundary.md`.
+
+## 2026-10-21 — Bonsai 2B candidate: source and runtime evidence
+
+- Preserved the earlier uncommitted App / candidate panel / ONNX probe,
+  then replaced misleading readiness with a verified graph audit:
+  1,054,038-byte pinned decoder SHA-256 passed, 18 Scan nodes recursively
+  observed. ORT WebGPU cannot execute this prefill path efficiently.
+- Native fallback: built explicit loopback-only PrismML server client with
+  model-ID gating and bounded prompts. UI refuses fake ONNX generation,
+  explains what works, and requires a real server to expose generation.
+- Isolated pinned GGUF and official Prism native release downloaded and
+  checksum-verified. First **real CPU-only smoke aborted on model load**
+  with GGML padded-1D scale assertion before text generation (no CUDA
+  inference). This is a genuine unresolved runtime failure; see
+  `docs/verification/2026-10-21-bonsai2-candidate-qualification.md`.
+- Model/source artifacts kept out of Git and outside active system paths.
+  No Veyax, RikkaHub, GPU-driver, ComfyUI, or sibling Bonsai Image changes.
+- Pending: resolve native 2B loader compatibility (or rewrite and validate
+  ONNX Scan prefill) before promotion to a usable Lil Local model. Do not
+  infer generation from source-level or mocked tests.
+
+- **UI follow-up:** Earlier click inspected the model card rather than using
+  its separate Open corner action. Added an explicit Open action to the
+  selected pipeline's details and corrected its "download and load" hint.
+  Real Chromium (GPU-disabled) used this action to reach Bonsai's panel:
+  18-Scan warning visible, local-server connect visible, no Generate control
+  before model identity, no external requests or page errors.
