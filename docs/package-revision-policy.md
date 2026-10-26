@@ -55,6 +55,8 @@ entrypoint.
 - `@lil-local/decision-onnx` (opt-in D1 Omni ONNX WebGPU text-decision slice)
 - `@lil-local/pix2pix-webgpu` (opt-in Rust/Wasm custom WebGPU Pix2Pix; pinned edges2shoes qualification is limited)
 - `@lil-local/encoder`
+
+Experimental `@lil-local/privacy-filter` provides opt-in browser ONNX PII detection and a separate mask-copy helper. Its dedicated `pnpm test:privacy-filter-external` validates the packed public entrypoint; consider it *provisional* until the broad packed compatibility gate passes. This is not an automatic sanitization safeguard. See `docs/verification/2026-10-26-openai-privacy-filter-q4.md`.
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
 - `@lil-local/qwen3-tts`

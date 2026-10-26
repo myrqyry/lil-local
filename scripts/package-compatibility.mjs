@@ -16,6 +16,7 @@ const packages = [
   ['decision-onnx', 'decision-onnx.tgz'],
   ['pix2pix-webgpu', 'pix2pix-webgpu.tgz'],
   ['encoder', 'encoder.tgz'],
+  ['privacy-filter', 'privacy-filter.tgz'],
   ['retrieval', 'retrieval.tgz'],
   ['kokoro', 'kokoro.tgz'],
   ['phonon', 'phonon.tgz'],
