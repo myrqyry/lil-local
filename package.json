@@ -22,7 +22,8 @@
     "test:webgpu-kernel-probe": "node --test scripts/webgpu-matmul-selection.test.mjs",
     "probe:webgpu-matmul": "node scripts/probe-webgpu-matmul.mjs",
     "test:phonon-external": "node scripts/test-phonon-external.mjs",
-    "test:privacy-filter-external": "node scripts/test-privacy-filter-external.mjs"
+    "test:privacy-filter-external": "node scripts/test-privacy-filter-external.mjs",
+    "test:sharp-external": "node scripts/test-sharp-external.mjs"
   },
   "keywords": [],
   "author": "",

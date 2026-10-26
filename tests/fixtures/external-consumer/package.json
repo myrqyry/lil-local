@@ -28,7 +28,8 @@
     "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8",
     "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz",
-    "@lil-local/moderation": "file:./archives/moderation.tgz"
+    "@lil-local/moderation": "file:./archives/moderation.tgz",
+    "@lil-local/sharp-onnx": "file:./archives/sharp-onnx.tgz"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

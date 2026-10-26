@@ -8,6 +8,7 @@ Lil Local is a local-first **web inference qualification lab**, not a promise th
 | --- | --- | --- |
 | LiteRT.js | Existing managed model packages, WebGPU/WebNN/WASM selection, caching, preflight, scheduler, telemetry | Existing dedicated runtime remains unchanged, not migrated |
 | ONNX Runtime Web | Pinned D1 Omni 600M Q8 text-only decision path, explicitly WebGPU-requested | **Yes**, via `d1OnnxSubstrate` in the playground |
+| ONNX Runtime Web / Apple SHARP | Opt-in raw-predictor single-image → 3D Gaussian PLY. Model weights not bundled; hardware execution unqualified. | **Yes**, via public `@lil-local/sharp-onnx` / `createSharpSubstrate` |
 | LiteRT-LM Web | Opt-in text-only EmbeddingGemma 2 via `embedding-litertlm` (browser model execution not yet qualified) | **Yes**, as an external reusable package |
 | Transformers.js and other pipeline-owned engines | Existing task-specific packages | Not migrated |
 | GGUF/WebGPU (`paulrobello/webllm`) | Reviewed candidate, not downloaded or qualified | Not implemented |

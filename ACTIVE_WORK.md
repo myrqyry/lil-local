@@ -20,6 +20,12 @@
 - **Implementation:** Experimental `@lil-local/privacy-filter` package with `createPrivacyFilterSubstrate`, explicit model load, mutable caller choice `dtype`/`device`, `resolvePrivacySpans`, and pure optional `redactPrivacySpans`. Repeated/normalized/missing/overlapping spans fail rather than mask an arbitrary occurrence; no originals modified.
 - **Limits:** Transformers.js `simple` aggregation is **not** the model's reference constrained Viterbi decoder; model is a privacy aid, not anonymization assurance. Download needs Hub access until self-hosted; source pinned. Focused tests, independent packed consumer, browser runtime evidence documented in `docs/verification/2026-10-26-openai-privacy-filter-q4.md`. Work isolated on `aster/privacy-filter-smallest`; original dirty checkout untouched. No merge or push.
 
+## 2026-10-26 — SHARP ONNX image-to-3D external adapter (isolated checkpoint)
+
+- Experimental package `@lil-local/sharp-onnx` implements explicit WebGPU ONNX load, 1536px photo tensor ABI, Gaussian NDC→metric decoding (including covariance) and binary PLY output; exports `createSharpSubstrate` for existing Lil Local runner, not a product UI/server. Caller owns weights and camera calibration; Apple model license is research-only.
+- 9 focused tests, typecheck, isolated packed external-consumer install/typecheck/build, 18 package boundaries, 73 qualification contracts, conversion validator and application builds passed. **Full `pnpm verify` remains blocked** at broad packed compatibility by TypeScript typed-array errors in unchanged image-embedding and Qwen3-TTS packages. No actual Apple SHARP model was loaded/run; no GPU/model quality claims.
+- Local branch `aster/sharp-onnx-webgpu` isolated because the existing main checkout has unrelated changes to the same lockfile/compatibility files. No publish/push or changes to that main checkout. Full evidence: `docs/verification/2026-10-26-sharp-onnx-package.md`.
+
 
 ## 2026-10-18 — Rename Lil Tart / @litert-playground to Lil Local / @lil-local
 

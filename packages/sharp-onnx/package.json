@@ -1,0 +1,11 @@
+{
+  "name": "@lil-local/sharp-onnx",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "peerDependencies": { "onnxruntime-web": "^1.30.0", "@lil-local/inference-core": "0.1.x" },
+  "devDependencies": { "@lil-local/inference-core": "workspace:*", "onnxruntime-web": "1.30.0", "typescript": "^7.0.2", "vitest": "^4.1.10" }
+}

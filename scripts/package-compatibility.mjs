@@ -15,6 +15,7 @@ const packages = [
   ['embedding-litertlm', 'embedding-litertlm.tgz'],
   ['decision-onnx', 'decision-onnx.tgz'],
   ['pix2pix-webgpu', 'pix2pix-webgpu.tgz'],
+  ['sharp-onnx', 'sharp-onnx.tgz'],
   ['encoder', 'encoder.tgz'],
   ['privacy-filter', 'privacy-filter.tgz'],
   ['retrieval', 'retrieval.tgz'],

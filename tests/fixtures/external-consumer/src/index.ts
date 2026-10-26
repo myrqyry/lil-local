@@ -13,6 +13,7 @@ import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-
 import { EncoderPipeline } from '@lil-local/encoder'
 import { createPrivacyFilterSubstrate, redactPrivacySpans, type PrivacyResult } from '@lil-local/privacy-filter'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
+import { SharpOnnxWebGpu, buildSharpPly, decodeSharpGaussians, type SharpRunOutput } from '@lil-local/sharp-onnx'
 import {
   createPix2PixEdge2ShoesSubstrate,
   pix2pixEdge2ShoesManifest,
