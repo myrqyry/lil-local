@@ -52,6 +52,8 @@ entrypoint.
 - `@lil-local/text-gen`
 - `@lil-local/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
 - `@lil-local/encoder`
+
+Experimental `@lil-local/privacy-filter` provides opt-in browser ONNX PII detection and a separate mask-copy helper. Its dedicated `pnpm test:privacy-filter-external` validates the packed public entrypoint; consider it *provisional* until the broad packed compatibility gate passes. This is not an automatic sanitization safeguard. See `docs/verification/2026-10-26-openai-privacy-filter-q4.md`.
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
 - `@lil-local/qwen3-tts`

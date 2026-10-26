@@ -14,6 +14,7 @@
     "@lil-local/embedding-litertlm": "file:./archives/embedding-litertlm.tgz",
     "@lil-local/decision-onnx": "file:./archives/decision-onnx.tgz",
     "@lil-local/encoder": "file:./archives/encoder.tgz",
+    "@lil-local/privacy-filter": "file:./archives/privacy-filter.tgz",
     "@lil-local/retrieval": "file:./archives/retrieval.tgz",
     "@lil-local/kokoro": "file:./archives/kokoro.tgz",
     "@lil-local/qwen3-tts": "file:./archives/qwen3-tts.tgz",

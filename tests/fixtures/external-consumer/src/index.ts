@@ -11,6 +11,7 @@ import {
 } from '@lil-local/text-gen'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
 import { EncoderPipeline } from '@lil-local/encoder'
+import { createPrivacyFilterSubstrate, redactPrivacySpans, type PrivacyResult } from '@lil-local/privacy-filter'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
 import { ColBertPipeline } from '@lil-local/retrieval'
 import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
@@ -44,6 +45,7 @@ export const externalSignedPointSegmentation = selectSamPoints
 export const externalPrepareSamPoints = prepareSamPointPrompts
 export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
 export const externalValidateRegion = validateRegion
+export type ExternalPrivacyResult = PrivacyResult
 export type ExternalSegmentationMask = SegmentationRegion
 export type ExternalSam2Variant = Sam2Variant
 
@@ -121,6 +123,8 @@ export const importedPackages = [
   LiteRtLmTextPipeline,
   LiteRtLmWorkerClient,
   EncoderPipeline,
+  createPrivacyFilterSubstrate,
+  redactPrivacySpans,
   D1OnnxWebGpu,
   ColBertPipeline,
   maxSim,

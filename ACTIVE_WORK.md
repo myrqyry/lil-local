@@ -1,6 +1,13 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-26 — Smallest working OpenAI Privacy Filter browser substrate
+
+- **Intent:** Add an opt-in privacy detection and separate redaction capability usable from other Lil Local consumer apps. Provide device/precision choices to other users, but default to smallest **verified compatible** variant for the current browser; no server or automatic redaction.
+- **Actual device result:** Chromium adapter supports WebGPU but **not** `shader-f16`, so `q4f16` (~809 MB) is incompatible with this browser capability; plain `q4` (~917 MB weights, plus ~28 MB tokenizer) loaded and inferred successfully. After whitespace-preserving alignment change, a second real Chromium run detected the synthetic name `Alice Smith` and address `alice@example.com` and generated `My name is [PRIVATE_PERSON] and my email address is [PRIVATE_EMAIL].` Test script exit 0. No claim of throughput or NVIDIA hardware GPU placement.
+- **Implementation:** Experimental `@lil-local/privacy-filter` package with `createPrivacyFilterSubstrate`, explicit model load, mutable caller choice `dtype`/`device`, `resolvePrivacySpans`, and pure optional `redactPrivacySpans`. Repeated/normalized/missing/overlapping spans fail rather than mask an arbitrary occurrence; no originals modified.
+- **Limits:** Transformers.js `simple` aggregation is **not** the model's reference constrained Viterbi decoder; model is a privacy aid, not anonymization assurance. Download needs Hub access until self-hosted; source pinned. Focused tests, independent packed consumer, browser runtime evidence documented in `docs/verification/2026-10-26-openai-privacy-filter-q4.md`. Work isolated on `aster/privacy-filter-smallest`; original dirty checkout untouched. No merge or push.
+
 
 ## 2026-10-18 — Rename Lil Tart / @litert-playground to Lil Local / @lil-local
 

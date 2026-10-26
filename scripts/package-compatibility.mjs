@@ -15,6 +15,7 @@ const packages = [
   ['embedding-litertlm', 'embedding-litertlm.tgz'],
   ['decision-onnx', 'decision-onnx.tgz'],
   ['encoder', 'encoder.tgz'],
+  ['privacy-filter', 'privacy-filter.tgz'],
   ['retrieval', 'retrieval.tgz'],
   ['kokoro', 'kokoro.tgz'],
   ['qwen3-tts', 'qwen3-tts.tgz'],
