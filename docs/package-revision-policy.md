@@ -60,6 +60,12 @@ entrypoint.
 - `@lil-local/depth-estimation`
 - `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks)
 
+**Pending full compatibility gate:** `@lil-local/sharp-onnx` is a new
+experimental ONNX/WebGPU image-to-3D package. Its independent packed Vite
+consumer check is `pnpm test:sharp-external`; do not promote it to the
+fully supported list until the complete `pnpm test:compatibility` gate is green.
+No SHARP model inference on a physical GPU has been qualified yet.
+
 Subpath entrypoints are part of the supported surface on the same terms as the
 `.` entrypoint: a subpath is supported only when the compatibility harness
 resolves it through the packed tarball. Consumers must not reach past a published

@@ -9,6 +9,7 @@ export type Capability =
   | 'image-segmentation'
   | 'image-super-resolution'
   | 'image-depth'
+  | 'image-to-3d'
   | 'image-matting'
   | 'image-detection'
   | 'image-pose'

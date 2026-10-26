@@ -12,6 +12,7 @@ import {
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
 import { EncoderPipeline } from '@lil-local/encoder'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
+import { SharpOnnxWebGpu, buildSharpPly, decodeSharpGaussians, type SharpRunOutput } from '@lil-local/sharp-onnx'
 import { ColBertPipeline } from '@lil-local/retrieval'
 import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
 import { KokoroPipeline } from '@lil-local/kokoro'
@@ -102,6 +103,15 @@ export const exampleD1Question: D1Question = {
   instructions: 'A source-stamped observation exists.',
 }
 export const d1TextRuntime = D1OnnxWebGpu
+// External consumers receive a real ONNX loader plus shape and PLY transforms.
+// Construction is inert; the consumer explicitly supplies locally hosted model URLs.
+export const externalSharpRunner = new SharpOnnxWebGpu({
+  graphUrl: '/models/sharp_web_predictor.onnx',
+  externalDataUrl: '/models/sharp_web_predictor.onnx.data',
+})
+export const externalSharpDecoder = decodeSharpGaussians
+export const externalSharpPlyWriter = buildSharpPly
+export type ExternalSharpOutput = SharpRunOutput
 
 export const depthPipeline = new DepthEstimationPipeline()
 export const depthManifest = da3SmallPortraitManifest
