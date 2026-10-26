@@ -1,6 +1,13 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-10-26 — Real Phonon ONNX text-to-speech substrate (isolated branch)
+
+- **Objective:** Replace the existing uncommitted Phonon silence scaffold with real single-device browser inference, exported as a reusable Lil Local substrate rather than a server. Original checkout was already dirty; work isolated to branch `aster/phonon-live-onnx` in `~/loam/.worktrees/lil-local-phonon-live`.
+- **Real evidence:** Inspected both published ONNX graph signatures at pinned Hugging Face revision `4f0cda7c60dddb4862d0e68ff9ff60c32ffdc9f4`, wired flow-model state, real Mimi PCM decoding, voice tensors, float32/Q4/Q4F16 selection and `createPhononSubstrate`. A real Chromium run loaded both Q4 models and produced 105,600 **nonzero** PCM samples (4.4s at 24 kHz, RMS 0.05222); ffprobe independently confirmed WAV metadata at `/tmp/lil-local-phonon-browser.wav`. First Q4F16 execution had failed due to missing `shader-f16`, motivating GPU-feature-aware Q4 fallback. Human speech intelligibility and speed remain unqualified.
+- **Verification:** 11 focused tests and package typecheck pass, 18 package-boundary tests pass, isolated packed Phonon consumer install/typecheck/Vite build passes. Full `pnpm verify` **fails** in the broad packed-consumer stage on TS2769 BigInt/typed-array compatibility in unchanged `image-embedding` and `qwen3-tts`, despite earlier workspace typechecks/tests passing. No full gate success claimed. Full evidence: `docs/verification/2026-10-26-phonon-onnx-real-browser.md`.
+- **Remaining:** Qualify intelligibility against reference speech; benchmark speed/VRAM/long-form/cancellation; self-host model graph and tokenizer assets for verified fully offline operation. No merge, push, phone app integration, or backend service created.
+
 
 ## 2026-10-18 — Rename Lil Tart / @litert-playground to Lil Local / @lil-local
 

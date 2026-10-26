@@ -15,6 +15,7 @@ import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
 import { ColBertPipeline } from '@lil-local/retrieval'
 import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
 import { KokoroPipeline } from '@lil-local/kokoro'
+import { PhononPipeline, choosePhononVariant, type PhononConfig } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
@@ -44,6 +45,9 @@ export const externalSignedPointSegmentation = selectSamPoints
 export const externalPrepareSamPoints = prepareSamPointPrompts
 export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
 export const externalValidateRegion = validateRegion
+export const externalPhononPipeline = new PhononPipeline({ variant: 'q4' })
+export const externalPhononVariant = choosePhononVariant
+export type ExternalPhononConfig = PhononConfig
 export type ExternalSegmentationMask = SegmentationRegion
 export type ExternalSam2Variant = Sam2Variant
 
@@ -126,6 +130,7 @@ export const importedPackages = [
   maxSim,
   rankDense,
   KokoroPipeline,
+  PhononPipeline,
   Qwen3TtsPipeline,
   ClipImageEmbeddingPipeline,
   MoViNetPipeline,

@@ -54,6 +54,8 @@ entrypoint.
 - `@lil-local/encoder`
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
+
+**Pending the broad compatibility gate:** `@lil-local/phonon` now provides real ONNX-based browser TTS and an independently validated packed TypeScript/Vite consumer (`pnpm test:phonon-external`). The shared packed test currently fails in unchanged image-embedding and qwen3-tts typed-array code, so Phonon is not yet promoted to the fully supported cross-package surface. See `docs/verification/2026-10-26-phonon-onnx-real-browser.md`.
 - `@lil-local/qwen3-tts`
 - `@lil-local/image-embedding`
 - `@lil-local/video-classification`
