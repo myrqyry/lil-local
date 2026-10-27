@@ -157,7 +157,9 @@ export class ClipImageEmbeddingPipeline implements Pipeline<ClipImageInput, Clip
         const rawOutput = await this.runtime.predict(modelAsset.path, tensor, { label: 'clip-image-embedding' });
         const outputs = Array.isArray(rawOutput) ? rawOutput : Object.values(rawOutput);
         try {
-          const imageEmbedding = new Float32Array(outputs[0].toTypedArray());
+          // CLIP emits a float32 embedding; cast guards against newer TS libs whose
+          // TypedArray union includes non-ArrayLike<number> members (BigInt64Array/Float16Array).
+          const imageEmbedding = new Float32Array(outputs[0].toTypedArray() as Float32Array);
           const embeddings = this.textEmbeddings;
           const result: ClipImageOutput = {
             kind: 'embedding',

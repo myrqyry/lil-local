@@ -17,7 +17,9 @@ async function toInputTensor(data: Float32Array | Int32Array, shape: number[], a
 
 function readFloat32(tensor: Tensor): Float32Array {
   const arr = tensor.toTypedArray()
-  return arr instanceof Float32Array ? arr : Float32Array.from(arr)
+  // Cast guards against newer TS libs whose TypedArray union includes
+  // non-ArrayLike<number> members (BigInt64Array/Float16Array); these tensors are float32.
+  return arr instanceof Float32Array ? arr : Float32Array.from(arr as ArrayLike<number>)
 }
 
 export class CodecDecoder {
