@@ -17,11 +17,13 @@ const packages = [
   ['encoder', 'encoder.tgz'],
   ['retrieval', 'retrieval.tgz'],
   ['kokoro', 'kokoro.tgz'],
+  ['phonon', 'phonon.tgz'],
   ['qwen3-tts', 'qwen3-tts.tgz'],
   ['image-embedding', 'image-embedding.tgz'],
   ['video-classification', 'video-classification.tgz'],
   ['depth-estimation', 'depth-estimation.tgz'],
   ['image-segmentation', 'image-segmentation.tgz'],
+  ['moderation', 'moderation.tgz'],
 ]
 
 const tempRoot = await mkdtemp(join(tmpdir(), 'lil-local-compat-'))

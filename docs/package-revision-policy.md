@@ -48,9 +48,11 @@ entrypoint.
 
 - `@lil-local/inference-core`
 - `@lil-local/runtime-litert`
+- `@lil-local/react-litert` (React bindings for the managed LiteRT runtime)
 - `@lil-local/browser-cache`
 - `@lil-local/text-gen`
 - `@lil-local/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
+- `@lil-local/decision-onnx` (opt-in D1 Omni ONNX WebGPU text-decision slice)
 - `@lil-local/encoder`
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
@@ -59,6 +61,7 @@ entrypoint.
 - `@lil-local/video-classification`
 - `@lil-local/depth-estimation`
 - `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks)
+- `@lil-local/moderation` (opt-in Apache-2.0 content-safety classifier; Transformers.js ONNX on WebGPU/WASM)
 
 Subpath entrypoints are part of the supported surface on the same terms as the
 `.` entrypoint: a subpath is supported only when the compatibility harness

@@ -173,6 +173,11 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/image-embedding` | `@lil-local/image-embedding` | Reusable image-embedding package |
 | `packages/video-classification` | `@lil-local/video-classification` | Browser video-classification support and runtime checks |
 | `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
+| `packages/image-segmentation` | `@lil-local/image-segmentation` | On-demand face parsing and SAM 2.1 point-prompted mask inference |
+| `packages/decision-onnx` | `@lil-local/decision-onnx` | Opt-in D1 Omni ONNX WebGPU text-decision slice |
+| `packages/embedding-litertlm` | `@lil-local/embedding-litertlm` | Opt-in LiteRT-LM EmbeddingGemma 2 WebGPU text embeddings |
+| `packages/react-litert` | `@lil-local/react-litert` | React bindings for the managed LiteRT runtime |
+| `packages/moderation` | `@lil-local/moderation` | Opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX, WebGPU/WASM) |
 | `examples/minimal-kokoro` | `@lil-local/example-kokoro` | Minimal standalone Kokoro browser example |
 | `examples/minimal-qwen3-tts` | `@lil-local/example-qwen3-tts` | Minimal Qwen3-TTS example and compatibility harness |
 
@@ -243,10 +248,12 @@ qualification is a separate evidence-producing step; see [Verification philosoph
 | `pnpm test:compatibility` | Pack and consume the supported external package surface |
 | `pnpm test:conversion-assets` | Validate pinned conversion recipes and candidate-evidence boundaries |
 | `pnpm test:qualification` | Run deterministic runtime-qualification contract tests |
+| `pnpm test:webgpu-kernel-probe` | Test WebGPU matmul workgroup-selection heuristics (fail closed on inaccurate output) |
 | `pnpm qualify` | Run real browser qualification cases and write evidence results |
+| `pnpm probe:webgpu-matmul` | Opt-in real-Chromium WebGPU matmul microkernel probe; measurement only, not an execution provider |
 | `pnpm test:watch` | Watch-mode tests for the playground |
 | `pnpm typecheck` | Type-check all workspace projects |
-| `pnpm verify` | Typecheck + tests + boundaries + compatibility + conversion assets + qualification contracts + builds |
+| `pnpm verify` | Typecheck + tests + WebGPU kernel probe + boundaries + compatibility + conversion assets + qualification contracts + builds |
 
 Conversion inputs and candidate evidence live under `conversion/`. Android
 CompiledModel observations can guide what Lil Local tries next, but they do not
@@ -388,9 +395,10 @@ A useful extraction rule is:
 ## External consumption
 
 Consuming applications should pin every shared inference package to one **Lil
-Tart** Git SHA. The canonical repository is `myrqyry/lil-local`; the package
-namespace was renamed to `@lil-local/*` alongside the project so the repository rename
-does not create a gratuitous package-API migration.
+Local** Git SHA. The canonical repository is `myrqyry/lil-local`; the package
+namespace is `@lil-local/*`. The project and package namespace were renamed from
+Lil Tart / `@litert-playground/*` together, so the repository rename does not
+create a gratuitous package-API migration.
 
 See [Package revision policy](docs/package-revision-policy.md) for the exact
 pinning rules and the supported compatibility surface.

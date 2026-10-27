@@ -11,11 +11,12 @@ pnpm monorepo for browser inference and runtime qualification; LiteRT.js is the 
 | `pnpm build` | Build all projects |
 | `pnpm typecheck` | Type-check every package |
 | `pnpm test` | Run all package tests |
-| `pnpm verify` | **CI gate**: typecheck + test + boundaries + compatibility + conversion assets + qualification + build |
+| `pnpm verify` | **CI gate**: typecheck + test + test:webgpu-kernel-probe + boundaries + compatibility + conversion assets + qualification + build |
 | `pnpm test:boundaries` | Enforce package dependency rules (examples → public entrypoints, inference-core independent, playground → runtime-litert) |
 | `pnpm test:compatibility` | Pack/consume the supported external surface |
 | `pnpm test:conversion-assets` | Validate pinned conversion recipes and candidate-evidence boundaries |
 | `pnpm test:qualification` | Runtime qualification suite (Node env, separate vitest config) |
+| `pnpm test:webgpu-kernel-probe` | Test WebGPU matmul workgroup-selection heuristics (fail closed on inaccurate output) |
 | `pnpm --filter <pkg> test` | Single-package tests |
 | `pnpm --filter <pkg> typecheck` | Single-package typecheck |
 
@@ -26,16 +27,20 @@ pnpm monorepo for browser inference and runtime qualification; LiteRT.js is the 
 ```
 packages/inference-core    contracts, assets, receipts, validation (no model deps)
 packages/runtime-litert    managed LiteRT runtime, backends, caching, preflight, telemetry
+packages/react-litert      React bindings for the managed LiteRT runtime
 packages/kokoro            Kokoro TTS via kokoro-js (verified browser path)
 packages/qwen3-tts         Qwen3-TTS pipeline (3 LiteRT graphs; known browser memory limitation)
 packages/text-gen          LFM2.5 / Gemma 4 / Qwen3 text generation
 packages/retrieval         ColBERT embeddings, late-interaction scoring
 packages/encoder           Text embeddings, token classification
+packages/embedding-litertlm  opt-in LiteRT-LM EmbeddingGemma 2 text embeddings
+packages/decision-onnx     opt-in D1 Omni ONNX WebGPU text-decision slice
 packages/image-embedding   Image embeddings
 packages/browser-cache     Browser-side model/tensor cache
 packages/video-classification  MoViNet video classification
 packages/depth-estimation    canonical DepthFrame + monocular depth pipelines
 packages/image-segmentation  optional face-class and point-prompted SAM 2.1 masks
+packages/moderation       opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX)
 apps/playground            React + Vite + Tailwind model lab (the consumer app)
 ```
 

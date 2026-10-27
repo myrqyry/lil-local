@@ -15,6 +15,7 @@ import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
 import { ColBertPipeline } from '@lil-local/retrieval'
 import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
 import { KokoroPipeline } from '@lil-local/kokoro'
+import { PhononPipeline } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
@@ -35,6 +36,14 @@ import {
   type SegmentationRegion, type Sam2Variant, type SamPointPrompt,
 } from '@lil-local/image-segmentation'
 
+import {
+  createModerationSubstrate,
+  MODERATION_CATEGORIES,
+  MODERATION_MODEL_ID,
+  MODERATION_MODEL_REVISION,
+  type ModerationResult,
+} from '@lil-local/moderation'
+
 // Importing the public symbols cannot load model weights automatically.
 export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id
 export const pointSegmentationVariants = SAM2_MODEL_VARIANTS
@@ -46,6 +55,15 @@ export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
 export const externalValidateRegion = validateRegion
 export type ExternalSegmentationMask = SegmentationRegion
 export type ExternalSam2Variant = Sam2Variant
+
+// The moderation adapter stays lazy even when imported from a packed consumer:
+// nothing downloads until the consumer explicitly loads its runner.
+export const externalModerationSubstrate = createModerationSubstrate()
+export const externalModerationRunner = new BrowserSubstrateRunner(externalModerationSubstrate)
+export const externalModerationModelId: string = MODERATION_MODEL_ID
+export const externalModerationRevision: string = MODERATION_MODEL_REVISION
+export const externalModerationCategories = MODERATION_CATEGORIES
+export type ExternalModerationResult = ModerationResult
 
 // Substrate-neutral public API must work from a *packed* consumer, without
 // pulling in a specific LiteRT/ONNX/GGUF implementation at import time.
@@ -126,11 +144,13 @@ export const importedPackages = [
   maxSim,
   rankDense,
   KokoroPipeline,
+  PhononPipeline,
   Qwen3TtsPipeline,
   ClipImageEmbeddingPipeline,
   MoViNetPipeline,
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
+  createModerationSubstrate,
 ]
 
 // MoGe is exposed through the packed public entrypoint; consumers own runtime,

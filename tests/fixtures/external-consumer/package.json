@@ -16,13 +16,15 @@
     "@lil-local/encoder": "file:./archives/encoder.tgz",
     "@lil-local/retrieval": "file:./archives/retrieval.tgz",
     "@lil-local/kokoro": "file:./archives/kokoro.tgz",
+    "@lil-local/phonon": "file:./archives/phonon.tgz",
     "@lil-local/qwen3-tts": "file:./archives/qwen3-tts.tgz",
     "@lil-local/image-embedding": "file:./archives/image-embedding.tgz",
     "@lil-local/video-classification": "file:./archives/video-classification.tgz",
     "@lil-local/depth-estimation": "file:./archives/depth-estimation.tgz",
     "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8",
-    "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz"
+    "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz",
+    "@lil-local/moderation": "file:./archives/moderation.tgz"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

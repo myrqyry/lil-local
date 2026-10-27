@@ -1,0 +1,19 @@
+{
+  "name": "@lil-local/moderation",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "peerDependencies": {
+    "@lil-local/inference-core": "0.1.x",
+    "@huggingface/transformers": "^4.2.0"
+  },
+  "devDependencies": {
+    "@lil-local/inference-core": "workspace:*",
+    "@huggingface/transformers": "^4.3.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
