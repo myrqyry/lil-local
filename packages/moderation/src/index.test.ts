@@ -40,6 +40,11 @@ describe('content-safety-guard browser substrate', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it('declares only the backend actually requested from Transformers.js', () => {
+    expect(createModerationSubstrate().requestedBackends).toEqual(['webgpu'])
+    expect(createModerationSubstrate({ device: 'wasm' }).requestedBackends).toEqual(['wasm'])
+  })
+
   it('never starts the pipeline until explicitly loaded', () => {
     const runner = new BrowserSubstrateRunner(createModerationSubstrate())
     expect(runner.status).toBe('idle')
