@@ -79,6 +79,10 @@ try {
   )
   await run('pnpm', ['run', 'typecheck'], { cwd: fixtureRoot })
   await run('pnpm', ['run', 'test:contract'], { cwd: fixtureRoot })
+  if (process.argv.includes('--browser-wasm')) {
+    const { probePackedBrowser } = await import('./packed-litert-browser.mjs')
+    await probePackedBrowser(fixtureRoot, root)
+  }
   await run('pnpm', ['run', 'build'], { cwd: fixtureRoot })
 
   for (const row of rows) {

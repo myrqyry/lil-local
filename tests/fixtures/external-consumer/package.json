@@ -10,6 +10,7 @@
   "dependencies": {
     "@lil-local/inference-core": "file:./archives/inference-core.tgz",
     "@lil-local/runtime-litert": "file:./archives/runtime-litert.tgz",
+    "@litertjs/core": "2.5.3",
     "@lil-local/browser-cache": "file:./archives/browser-cache.tgz",
     "@lil-local/text-gen": "file:./archives/text-gen.tgz",
     "@lil-local/embedding-litertlm": "file:./archives/embedding-litertlm.tgz",
