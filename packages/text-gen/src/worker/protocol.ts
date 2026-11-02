@@ -31,6 +31,8 @@ export interface LiteRtLmWorkerLoadOptions {
   engine?: LiteRtLmWorkerEngine;
   /** Self-hosted JS/WASM base for LiteRT-LM; defaults to a version-matched CDN. */
   wasmBase?: string;
+  /** Opt-in LiteRT-LM 0.19 vision encoder; omitted means text-only. */
+  visionBackend?: 'cpu' | 'gpu';
   mediaPipe?: LiteRtLmWorkerMediaPipeLoadOptions;
   /**
    * Optional caller-owned identity for Blob-backed models. Supply this when

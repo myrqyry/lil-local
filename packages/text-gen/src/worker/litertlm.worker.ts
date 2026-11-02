@@ -26,6 +26,7 @@ interface LiteRtLmModule {
   Engine: {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
+      visionBackend?: number;
       mainExecutorSettings?: { maxNumTokens?: number };
     }) => Promise<LiteRtLmEngine>;
   };
@@ -50,6 +51,7 @@ const worker = self as unknown as WorkerScope;
 let liteRtLmEngine: LiteRtLmEngine | undefined;
 let mediaPipeEngine: MediaPipeMultimodalEngine | undefined;
 let activeEngine: LiteRtLmWorkerEngine = 'litert-lm';
+let liteRtLmVisionEnabled = false;
 let dispatchQueue: Promise<void> = Promise.resolve();
 const activeConversations = new Map<string, Conversation>();
 const mediaPipeGenerationIds = new Set<string>();
@@ -139,16 +141,18 @@ async function disposeConversation(id: string, conversation: Conversation): Prom
   }
 }
 
-function toLiteRtLmText(prompt: LiteRtLmWorkerPrompt): string {
+function toLiteRtLmContent(prompt: LiteRtLmWorkerPrompt): Message['content'] {
   if (typeof prompt === 'string') return prompt;
-  if (prompt.some((part) => part.type !== 'text')) {
-    throw new Error(
-      'LiteRT-LM JavaScript currently supports text-only prompts; load the worker with engine="mediapipe" for image/audio input',
-    );
+  if (prompt.some((part) => part.type === 'audio')) {
+    throw new Error('LiteRT-LM PCM audio input is not implemented; use engine="mediapipe" for audio');
   }
-  return prompt
-    .map((part) => (part.type === 'text' ? part.text : ''))
-    .join('');
+  if (prompt.some((part) => part.type === 'image') && !liteRtLmVisionEnabled) {
+    throw new Error('Image input requires visionBackend when loading the LiteRT-LM engine');
+  }
+  return prompt.filter((part): part is Extract<typeof part, { type: 'text' | 'image' }> => part.type !== 'audio')
+    .map((part) => part.type === 'text'
+      ? { type: 'text' as const, text: part.text }
+      : { type: 'image' as const, data: part.data });
 }
 
 async function generateLiteRtLm(
@@ -170,7 +174,7 @@ async function generateLiteRtLm(
   try {
     await replayHistory(conversation, config?.history);
     await streamResponse(
-      conversation.sendMessageStreaming({ role: 'user', content: toLiteRtLmText(prompt) }),
+      conversation.sendMessageStreaming({ role: 'user', content: toLiteRtLmContent(prompt) }),
       (message) => {
         const reasoning = extractReasoning(message);
         if (reasoning) emit({ type: 'reasoning', id, text: reasoning });
@@ -272,6 +276,7 @@ async function disposeLoadedEngine(): Promise<void> {
 
 async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>): Promise<void> {
   await disposeLoadedEngine();
+  liteRtLmVisionEnabled = false;
 
   activeEngine = data.options?.engine ?? 'litert-lm';
   if (activeEngine === 'mediapipe') {
@@ -286,8 +291,10 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
   await module.getOrLoadGlobalLiteRtLm(data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE);
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
+    ...(data.options?.visionBackend ? { visionBackend: data.options.visionBackend === 'gpu' ? 4 : 3 } : {}),
     mainExecutorSettings: { maxNumTokens: 8192 },
   });
+  liteRtLmVisionEnabled = Boolean(data.options?.visionBackend);
 }
 
 function hasGenerationConfig(config?: LiteRtLmWorkerGenerationConfig): boolean {

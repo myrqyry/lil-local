@@ -121,6 +121,28 @@ describe('LiteRT-LM worker dispatch', () => {
     expect(messages).toContainEqual(expect.objectContaining({ type: 'error', message: expect.stringContaining('WASM version mismatch') }))
   })
 
+  it('forwards image bytes only when LiteRT-LM vision was explicitly enabled', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'vision.litertlm', options: { visionBackend: 'gpu' } });
+    await flushWorker();
+    const image = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' });
+    send(scope, { type: 'generate', id: 'image', prompt: [{ type: 'text', text: 'Describe: ' }, { type: 'image', data: image }] });
+    await flushWorker();
+    expect(liteRt.createEngine).toHaveBeenCalledWith(expect.objectContaining({ visionBackend: 4 }));
+    expect(liteRt.sendMessageStreaming).toHaveBeenCalledWith({ role: 'user', content: [{ type: 'text', text: 'Describe: ' }, { type: 'image', data: image }] });
+    expect(messages).toContainEqual({ type: 'complete', id: 'image' });
+  });
+
+  it('rejects image messages when the LiteRT-LM engine was loaded text-only', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'text.litertlm' });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'image-off', prompt: [{ type: 'image', data: new Blob(['x'], { type: 'image/png' }) }] });
+    await flushWorker();
+    expect(liteRt.sendMessageStreaming).not.toHaveBeenCalled();
+    expect(messages).toContainEqual(expect.objectContaining({ type: 'error', id: 'image-off', message: expect.stringContaining('visionBackend') }));
+  });
+
   it('rejects MediaPipe per-generation config instead of silently dropping it', async () => {
     const { scope, messages } = await bootWorker();
     send(scope, { type: 'load', model: 'model.task', options: { engine: 'mediapipe' } });
