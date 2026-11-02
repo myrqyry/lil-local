@@ -29,6 +29,24 @@ with NVIDIA driver **595.99.02** (`vulkaninfo --summary`), and
 The mismatch between native Vulkan availability and browser adapter
 discovery is unresolved; do not mark the WebGPU model as passing.
 
+### Chrome Beta comparison
+
+On the same host, **Google Chrome Beta 158.0.8127.2** also returned
+`WebGPU adapter unavailable` in the strict packed-consumer probe with
+Vulkan/ANGLE flags. The existing matmul probe independently returned
+`No WebGPU adapter` using those flags.
+
+An isolated headless Chrome Beta adapter test against localhost found:
+
+- Default flags: `navigator.gpu` exists, `requestAdapter()` returns null.
+- `--enable-unsafe-webgpu` alone: an adapter exists, but reports
+  `vendor=google`, `architecture=swiftshader` (**software**, not NVIDIA).
+- `--enable-unsafe-webgpu` plus Vulkan/ANGLE flags:
+  `requestAdapter()` returns null.
+
+None of these tests establish hardware GPU inference. The strict probe
+correctly refuses SwiftShader as evidence of NVIDIA execution.
+
 ## Boundaries
 
 WASM numerical parity is independently verified and remains a separate
