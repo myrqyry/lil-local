@@ -48,4 +48,43 @@ describe('installed packed inference-core contract', () => {
     expect(runner.status).toBe('ready')
     await runner.dispose()
   })
+
+  it('waits for active inference before releasing packed-model resources', async () => {
+    let finish!: (value: string) => void
+    const pending = new Promise<string>((resolve) => { finish = resolve })
+    let released = 0
+    const runner = new BrowserSubstrateRunner({
+      ...fixture(),
+      create: async () => ({
+        infer: (_input: string) => pending,
+        dispose: async () => { released++ },
+      }),
+    })
+    await runner.load()
+    const result = runner.run('input')
+    const closing = runner.dispose()
+    expect(released).toBe(0)
+    await expect(runner.run('again')).rejects.toThrow(/Cannot infer/)
+    finish('done')
+    await expect(result).resolves.toBe('done')
+    await closing
+    expect(released).toBe(1)
+    expect(runner.status).toBe('disposed')
+  })
+
+  it('disposes a model returned after its load was aborted', async () => {
+    let finishLoad!: (instance: { infer(input: string): Promise<string>; dispose(): Promise<void> }) => void
+    const pending = new Promise<{ infer(input: string): Promise<string>; dispose(): Promise<void> }>(
+      (resolve) => { finishLoad = resolve },
+    )
+    let released = 0
+    const runner = new BrowserSubstrateRunner({ ...fixture(), create: async () => pending })
+    const controller = new AbortController()
+    const loading = runner.load(undefined, controller.signal)
+    controller.abort()
+    finishLoad({ infer: async (input) => input, dispose: async () => { released++ } })
+    await expect(loading).rejects.toMatchObject({ name: 'AbortError' })
+    expect(released).toBe(1)
+    expect(runner.status).toBe('idle')
+  })
 })
