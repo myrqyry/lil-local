@@ -493,9 +493,57 @@ adapter: nvidia / turing / NVIDIA GeForce RTX 2070 SUPER
 
 The **22.3 fps** value is processing throughput for this short synthetic
 256×256 frame workload, not encoded output-video frame rate and not a durable
-benchmark. The source preview itself was sampled at 8 fps. This slice does not
-yet provide encoded video export, audio preservation, temporal smoothing,
-optical-flow reuse, or full-source-fps frame preservation.
+benchmark. The source preview itself was sampled at 8 fps.
+
+## Full-clip WebM export smoke
+
+The same workspace now also exposes an explicit **8-fps full-clip WebM
+export**. It schedules every source timestamp across the whole clip, processes
+those frames sequentially through the same loaded Pix2Pix WebGPU engine, and
+records the output canvas locally with `MediaRecorder`. Codec selection is
+fail-closed and prefers VP9, then VP8, then generic WebM. The baseline export
+is intentionally **video-only**; source audio is not preserved yet.
+
+A headed Chrome Beta 158 smoke used a synthetic **320×240, 8-fps, 3.00-second
+MP4 containing 24 source frames**. Through the real Lil Local UI it:
+
+1. imported and loaded the canonical folded Pix2Pix model;
+2. processed all **24 source frames** on the NVIDIA/Turing WebGPU adapter;
+3. created a downloadable VP9 WebM with zero console/page errors; and
+4. saved the generated file locally for independent inspection.
+
+Observed browser result:
+
+```text
+Video export ready · 24 frames · 0.2 MiB WebM.
+mime: video/webm;codecs=vp9
+adapter: nvidia / turing / NVIDIA GeForce RTX 2070 SUPER
+browser errors: []
+```
+
+Independent `ffprobe` inspection of the downloaded file established:
+
+```text
+codec: vp9
+dimensions: 256x256
+reported frame rate: 8/1
+decoded frames: 24
+size: 191,353 bytes
+container duration: about 2.89 s
+```
+
+The 24 processed/decoded frames match the 3-second source's complete 8-fps
+frame schedule. The shorter container duration is a known **MediaRecorder
+timestamp limitation in this baseline**: WebM duration reflects the last
+encoded frame timestamp rather than an explicit final-frame duration. Attempts
+to append/hold a terminal frame did not make that duration exact without
+making recorder timing less deterministic, so that experiment was reverted.
+
+Therefore encoded local video export is established, but **exact source
+duration preservation is not yet established**. A future WebCodecs + explicit
+muxer path is the appropriate place to control packet timestamps/durations
+precisely and to add audio preservation. Temporal smoothing, optical-flow
+reuse, and full-source-fps processing also remain future work.
 
 ## Decision
 

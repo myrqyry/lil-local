@@ -4,22 +4,37 @@ export interface FrameSequenceProgress {
   time: number
 }
 
+export function buildFrameTimes(
+  durationSeconds: number,
+  fps: number,
+): number[] {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return []
+  if (!Number.isFinite(fps) || fps <= 0) throw new Error('fps must be positive')
+
+  const interval = 1 / fps
+  const times: number[] = []
+  for (let time = 0; time < durationSeconds; time += interval) {
+    times.push(Number(time.toFixed(6)))
+  }
+  return times
+}
+
 export function buildPreviewFrameTimes(
   durationSeconds: number,
   fps: number,
   maxSeconds: number,
 ): number[] {
-  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return []
-  if (!Number.isFinite(fps) || fps <= 0) throw new Error('fps must be positive')
   if (!Number.isFinite(maxSeconds) || maxSeconds <= 0) throw new Error('maxSeconds must be positive')
+  return buildFrameTimes(Math.min(durationSeconds, maxSeconds), fps)
+}
 
-  const end = Math.min(durationSeconds, maxSeconds)
-  const interval = 1 / fps
-  const times: number[] = []
-  for (let time = 0; time < end; time += interval) {
-    times.push(Number(time.toFixed(6)))
+export function chooseVideoExportMimeType(
+  isTypeSupported: (mimeType: string) => boolean,
+): string {
+  for (const mimeType of ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
+    if (isTypeSupported(mimeType)) return mimeType
   }
-  return times
+  throw new Error('WebM recording is unavailable in this browser')
 }
 
 function throwIfAborted(signal: AbortSignal): void {

@@ -18,12 +18,13 @@ import {
   pix2pixOpfsLocation,
   removePix2PixStoredWeights,
 } from '../substrates/pix2pixLocal'
-import { buildPreviewFrameTimes, runFrameSequence } from './pix2pixVideo'
+import { buildFrameTimes, buildPreviewFrameTimes, chooseVideoExportMimeType, runFrameSequence } from './pix2pixVideo'
 
 type Runner = BrowserSubstrateRunner<ImageInput, Pix2PixImageResult, Pix2PixLoadProgress>
 
 const VIDEO_PREVIEW_FPS = 8
 const VIDEO_PREVIEW_SECONDS = 2
+const VIDEO_EXPORT_FPS = 8
 
 interface VideoPreviewStats {
   frames: number
@@ -31,6 +32,14 @@ interface VideoPreviewStats {
   elapsedMs: number
   effectiveFps: number
   averageInferenceMs: number
+}
+
+interface VideoExportStats {
+  frames: number
+  sourceSeconds: number
+  elapsedMs: number
+  mimeType: string
+  bytes: number
 }
 
 function formatBytes(bytes: number): string {
@@ -153,6 +162,45 @@ async function seekVideoFrame(
   await ready
 }
 
+function waitWithAbort(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (delayMs <= 0) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Video export aborted', 'AbortError'))
+      return
+    }
+    const timeout = window.setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, delayMs)
+    const onAbort = () => {
+      window.clearTimeout(timeout)
+      signal.removeEventListener('abort', onAbort)
+      reject(new DOMException('Video export aborted', 'AbortError'))
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+function waitForRecorderStop(recorder: MediaRecorder): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      recorder.removeEventListener('stop', onStop)
+      recorder.removeEventListener('error', onError)
+    }
+    const onStop = () => {
+      cleanup()
+      resolve()
+    }
+    const onError = (event: Event) => {
+      cleanup()
+      reject((event as ErrorEvent).error ?? new Error('MediaRecorder failed'))
+    }
+    recorder.addEventListener('stop', onStop, { once: true })
+    recorder.addEventListener('error', onError, { once: true })
+  })
+}
+
 function captureVideoFrame(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
@@ -191,7 +239,11 @@ export function Pix2PixPanel() {
   const [running, setRunning] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoRunning, setVideoRunning] = useState(false)
+  const [videoExporting, setVideoExporting] = useState(false)
   const [videoStats, setVideoStats] = useState<VideoPreviewStats | null>(null)
+  const [videoExportStats, setVideoExportStats] = useState<VideoExportStats | null>(null)
+  const [videoExportUrl, setVideoExportUrl] = useState('')
+  const [videoExportName, setVideoExportName] = useState('')
   const [stopping, setStopping] = useState(false)
   const [receipt, setReceipt] = useState<InferenceReceipt | null>(null)
 
@@ -202,6 +254,7 @@ export function Pix2PixPanel() {
   const pendingRunner = useRef<Runner | null>(null)
   const loadAbort = useRef<AbortController | null>(null)
   const videoAbort = useRef<AbortController | null>(null)
+  const videoExportUrlRef = useRef<string | null>(null)
   const generation = useRef(0)
 
   useEffect(() => {
@@ -237,6 +290,10 @@ export function Pix2PixPanel() {
         video.pause()
         video.removeAttribute('src')
         video.load()
+      }
+      if (videoExportUrlRef.current) {
+        URL.revokeObjectURL(videoExportUrlRef.current)
+        videoExportUrlRef.current = null
       }
       if (pending) void pending.dispose().catch(reason => console.error('Pending Pix2Pix cleanup failed:', reason))
       const active = runner.current
@@ -286,7 +343,7 @@ export function Pix2PixPanel() {
   }
 
   async function removeInstalledModel() {
-    if (!installed || loading || running || videoRunning || importing || runner.current) return
+    if (!installed || loading || running || videoRunning || videoExporting || importing || runner.current) return
     setError('')
     setReceipt(null)
     setStatus('Removing installed Pix2Pix weights from Lil Local OPFS…')
@@ -370,7 +427,7 @@ export function Pix2PixPanel() {
   }
 
   async function unload() {
-    if (loading || running || videoRunning) return
+    if (loading || running || videoRunning || videoExporting) return
     ++generation.current
     const active = runner.current
     runner.current = null
@@ -386,7 +443,7 @@ export function Pix2PixPanel() {
 
   async function run() {
     const active = runner.current
-    if (!active || !input || loading || running || videoRunning) return
+    if (!active || !input || loading || running || videoRunning || videoExporting) return
     setRunning(true)
     setError('')
     setReceipt(null)
@@ -403,11 +460,21 @@ export function Pix2PixPanel() {
     }
   }
 
+  function clearVideoExport() {
+    if (videoExportUrlRef.current) {
+      URL.revokeObjectURL(videoExportUrlRef.current)
+      videoExportUrlRef.current = null
+    }
+    setVideoExportUrl('')
+    setVideoExportName('')
+    setVideoExportStats(null)
+  }
+
   async function runVideoPreview() {
     const active = runner.current
     const video = videoElement.current
     const canvas = inputCanvas.current
-    if (!active || !video || !canvas || !videoFile || loading || running || videoRunning) return
+    if (!active || !video || !canvas || !videoFile || loading || running || videoRunning || videoExporting) return
 
     const controller = new AbortController()
     const requestId = generation.current
@@ -485,9 +552,148 @@ export function Pix2PixPanel() {
     }
   }
 
+  async function runVideoExport() {
+    const active = runner.current
+    const video = videoElement.current
+    const inputCanvasNode = inputCanvas.current
+    const outputCanvasNode = outputCanvas.current
+    if (!active || !video || !inputCanvasNode || !outputCanvasNode || !videoFile ||
+        loading || running || videoRunning || videoExporting) return
+
+    if (typeof MediaRecorder === 'undefined') {
+      setError('MediaRecorder is unavailable in this browser.')
+      return
+    }
+
+    const controller = new AbortController()
+    const requestId = generation.current
+    const sourceUrl = URL.createObjectURL(videoFile)
+    let completed = 0
+    let stream: MediaStream | null = null
+    let recorder: MediaRecorder | null = null
+    let recorderStopped: Promise<void> | null = null
+    const chunks: Blob[] = []
+
+    videoAbort.current = controller
+    setVideoExporting(true)
+    clearVideoExport()
+    setError('')
+    setReceipt(null)
+    setStatus('Reading local video metadata for WebM export…')
+
+    try {
+      await loadVideoSource(video, sourceUrl, controller.signal)
+      const times = buildFrameTimes(video.duration, VIDEO_EXPORT_FPS)
+      if (!times.length) throw new Error('Video contains no exportable frames')
+
+      const mimeType = chooseVideoExportMimeType(type => MediaRecorder.isTypeSupported(type))
+      stream = outputCanvasNode.captureStream(0)
+      const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined
+      if (!track || typeof track.requestFrame !== 'function') {
+        throw new Error('Manual canvas frame capture is unavailable in this browser')
+      }
+
+      recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 2_500_000,
+      })
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data.size > 0) chunks.push(event.data)
+      })
+      recorderStopped = waitForRecorderStop(recorder)
+      recorder.start()
+
+      const startedAt = performance.now()
+      await runFrameSequence({
+        times,
+        signal: controller.signal,
+        async processFrame(time, index) {
+          await seekVideoFrame(video, time, controller.signal)
+          const frame = captureVideoFrame(video, inputCanvasNode)
+          await active.run(frame)
+          track.requestFrame()
+
+          const targetElapsedMs = ((index + 1) / VIDEO_EXPORT_FPS) * 1000
+          const remainingMs = targetElapsedMs - (performance.now() - startedAt)
+          await waitWithAbort(remainingMs, controller.signal)
+        },
+        onProgress(progress) {
+          completed = progress.completed
+          if (requestId === generation.current) {
+            setStatus(
+              `Exporting WebM · frame ${progress.completed}/${progress.total} · source ${progress.time.toFixed(2)} s`,
+            )
+          }
+        },
+      })
+
+      // MediaRecorder timestamps frames at capture time. Stamp one terminal hold
+      // request at the source end; exact container duration remains browser-controlled.
+      track.requestFrame()
+
+      if (recorder.state !== 'inactive') recorder.stop()
+      await recorderStopped
+
+      const blob = new Blob(chunks, { type: mimeType })
+      if (!blob.size) throw new Error('WebM recorder produced an empty file')
+
+      const exportUrl = URL.createObjectURL(blob)
+      videoExportUrlRef.current = exportUrl
+      const baseName = videoFile.name.replace(/\.[^.]+$/, '') || 'pix2pix-video'
+      const exportName = `${baseName}-pix2pix-${VIDEO_EXPORT_FPS}fps.webm`
+      const elapsedMs = performance.now() - startedAt
+
+      if (requestId === generation.current) {
+        setVideoExportUrl(exportUrl)
+        setVideoExportName(exportName)
+        setVideoExportStats({
+          frames: completed,
+          sourceSeconds: video.duration,
+          elapsedMs,
+          mimeType,
+          bytes: blob.size,
+        })
+        setStatus(
+          `Video export ready · ${completed} frames · ${(blob.size / (1024 * 1024)).toFixed(1)} MiB WebM.`,
+        )
+      }
+    } catch (reason) {
+      if (requestId === generation.current) {
+        if ((reason as Error)?.name === 'AbortError') {
+          setStatus(`Video export stopped after ${completed} frame${completed === 1 ? '' : 's'}; partial file discarded.`)
+        } else {
+          setStatus('Video export failed.')
+          setError(String(reason))
+        }
+      }
+    } finally {
+      if (recorder && recorder.state !== 'inactive') {
+        try {
+          recorder.stop()
+          await recorderStopped
+        } catch {
+          // Preserve the original export error; cleanup is best-effort here.
+        }
+      }
+      for (const track of stream?.getTracks() ?? []) track.stop()
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+      URL.revokeObjectURL(sourceUrl)
+      if (videoAbort.current === controller) videoAbort.current = null
+      if (requestId === generation.current) setVideoExporting(false)
+    }
+  }
+
   function stopVideoPreview() {
     if (!videoRunning) return
     setStatus('Stopping video preview after the current WebGPU frame…')
+    videoAbort.current?.abort()
+  }
+
+  function stopVideoExport() {
+    if (!videoExporting) return
+    setStatus('Stopping video export after the current WebGPU frame…')
     videoAbort.current?.abort()
   }
 
@@ -543,7 +749,7 @@ export function Pix2PixPanel() {
           <input
             type="file"
             accept="image/*"
-            disabled={videoRunning}
+            disabled={videoRunning || videoExporting}
             onChange={event => { void chooseInput(event.currentTarget.files?.[0] ?? null) }}
             className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"
           />
@@ -554,9 +760,9 @@ export function Pix2PixPanel() {
       <div className="rounded-xl border border-outline bg-surface/40 p-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-sm font-semibold">Experimental video preview</p>
+            <p className="text-sm font-semibold">Experimental video flow</p>
             <p className="text-xs text-on-surface-variant">
-              Samples the first {VIDEO_PREVIEW_SECONDS} seconds at {VIDEO_PREVIEW_FPS} fps and runs every frame sequentially through the already-loaded WebGPU model. This is a throughput/flicker probe, not encoded video export yet.
+              Preview samples the first {VIDEO_PREVIEW_SECONDS} seconds at {VIDEO_PREVIEW_FPS} fps. Export processes the full clip at {VIDEO_EXPORT_FPS} fps into a local WebM. Both run frames sequentially through the already-loaded WebGPU model; audio is not preserved yet.
             </p>
           </div>
           <span className="rounded-lg border border-outline px-2 py-1 text-[10px] text-on-surface-muted">
@@ -570,16 +776,17 @@ export function Pix2PixPanel() {
             <input
               type="file"
               accept="video/*"
-              disabled={videoRunning}
+              disabled={videoRunning || videoExporting}
               onChange={event => {
                 const file = event.currentTarget.files?.[0] ?? null
                 setVideoFile(file)
                 setVideoStats(null)
+                clearVideoExport()
                 setError('')
                 if (file) {
                   setStatus(loaded
-                    ? 'Video selected. Run the bounded Pix2Pix preview when ready.'
-                    : 'Video selected. Load the Pix2Pix model before running the preview.')
+                    ? 'Video selected. Preview or export it with the loaded Pix2Pix model.'
+                    : 'Video selected. Load the Pix2Pix model before previewing or exporting.')
                 }
               }}
               className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"
@@ -590,16 +797,29 @@ export function Pix2PixPanel() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={!loaded || !videoFile || loading || running || videoRunning}
+              disabled={!loaded || !videoFile || loading || running || videoRunning || videoExporting}
               onClick={() => { void runVideoPreview() }}
               className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-on-secondary disabled:opacity-50"
             >{videoRunning ? 'Processing…' : 'Run video preview'}</button>
+            <button
+              type="button"
+              disabled={!loaded || !videoFile || loading || running || videoRunning || videoExporting}
+              onClick={() => { void runVideoExport() }}
+              className="rounded-lg border border-secondary px-4 py-2 text-sm font-semibold text-secondary disabled:opacity-50"
+            >{videoExporting ? 'Exporting…' : `Export full clip · ${VIDEO_EXPORT_FPS} fps WebM`}</button>
             {videoRunning && (
               <button
                 type="button"
                 onClick={stopVideoPreview}
                 className="rounded-lg border border-outline px-3 py-2 text-sm"
               >Stop after frame</button>
+            )}
+            {videoExporting && (
+              <button
+                type="button"
+                onClick={stopVideoExport}
+                className="rounded-lg border border-outline px-3 py-2 text-sm"
+              >Stop export after frame</button>
             )}
           </div>
         </div>
@@ -612,6 +832,25 @@ export function Pix2PixPanel() {
             <span><strong className="text-on-surface">{videoStats.sourceSeconds.toFixed(2)} s</strong> source</span>
             <span><strong className="text-on-surface">{videoStats.effectiveFps.toFixed(1)} fps</strong> effective</span>
             <span><strong className="text-on-surface">{videoStats.averageInferenceMs.toFixed(1)} ms</strong> avg inference</span>
+          </div>
+        )}
+
+        {videoExportStats && videoExportUrl && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-tertiary/50 bg-tertiary-container/10 p-3 text-xs text-on-surface-variant">
+            <div>
+              <p className="font-semibold text-on-surface">WebM export ready</p>
+              <p className="mt-1">
+                {videoExportStats.frames} frames · {videoExportStats.sourceSeconds.toFixed(2)} s · {formatBytes(videoExportStats.bytes)} · {videoExportStats.mimeType}
+              </p>
+              <p className="mt-1 text-on-surface-muted">
+                Video only for now; audio is not preserved in this baseline export.
+              </p>
+            </div>
+            <a
+              href={videoExportUrl}
+              download={videoExportName}
+              className="rounded-lg bg-tertiary px-4 py-2 text-sm font-semibold text-on-tertiary"
+            >Download WebM</a>
           </div>
         )}
       </div>
@@ -650,19 +889,19 @@ export function Pix2PixPanel() {
         )}
         <button
           type="button"
-          disabled={!loaded || loading || running || videoRunning}
+          disabled={!loaded || loading || running || videoRunning || videoExporting}
           onClick={() => { void unload() }}
           className="rounded-lg border border-outline px-3 py-2 text-sm disabled:opacity-50"
         >Unload</button>
         <button
           type="button"
-          disabled={!installed || checkingStorage || importing || loading || running || videoRunning || loaded}
+          disabled={!installed || checkingStorage || importing || loading || running || videoRunning || videoExporting || loaded}
           onClick={() => { void removeInstalledModel() }}
           className="rounded-lg border border-error/60 px-3 py-2 text-sm text-error disabled:opacity-50"
         >Remove installed model</button>
         <button
           type="button"
-          disabled={!loaded || !input || loading || running || videoRunning}
+          disabled={!loaded || !input || loading || running || videoRunning || videoExporting}
           onClick={() => { void run() }}
           className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-on-secondary disabled:opacity-50"
         >{running ? 'Running…' : 'Run Pix2Pix'}</button>

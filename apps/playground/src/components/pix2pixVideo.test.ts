@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPreviewFrameTimes, runFrameSequence } from './pix2pixVideo'
+import { buildFrameTimes, buildPreviewFrameTimes, chooseVideoExportMimeType, runFrameSequence } from './pix2pixVideo'
 
 describe('buildPreviewFrameTimes', () => {
   it('samples a bounded two-second preview at the requested fps', () => {
@@ -12,6 +12,28 @@ describe('buildPreviewFrameTimes', () => {
 
   it('never schedules timestamps beyond a short source clip', () => {
     expect(buildPreviewFrameTimes(0.3, 8, 2)).toEqual([0, 0.125, 0.25])
+  })
+})
+
+describe('buildFrameTimes', () => {
+  it('samples the full source duration at the requested fps', () => {
+    const times = buildFrameTimes(2.1, 8)
+
+    expect(times).toHaveLength(17)
+    expect(times[0]).toBe(0)
+    expect(times[times.length - 1]).toBe(2)
+  })
+})
+
+describe('chooseVideoExportMimeType', () => {
+  it('prefers VP9, then VP8, then generic WebM', () => {
+    expect(chooseVideoExportMimeType(type => type.includes('vp9'))).toBe('video/webm;codecs=vp9')
+    expect(chooseVideoExportMimeType(type => type.includes('vp8'))).toBe('video/webm;codecs=vp8')
+    expect(chooseVideoExportMimeType(type => type === 'video/webm')).toBe('video/webm')
+  })
+
+  it('fails rather than silently choosing an unsupported recorder format', () => {
+    expect(() => chooseVideoExportMimeType(() => false)).toThrow(/WebM recording is unavailable/)
   })
 })
 
