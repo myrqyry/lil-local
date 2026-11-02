@@ -18,7 +18,8 @@ import {
   pix2pixOpfsLocation,
   removePix2PixStoredWeights,
 } from '../substrates/pix2pixLocal'
-import { buildFrameTimes, buildPreviewFrameTimes, chooseVideoExportMimeType, runFrameSequence } from './pix2pixVideo'
+import { buildFrameTimes, buildPreviewFrameTimes, frameDurationSeconds, MAX_VIDEO_EXPORT_SECONDS, runFrameSequence } from './pix2pixVideo'
+import { BufferTarget, CanvasSource, Output, Quality, WebMOutputFormat, canEncodeVideo } from 'mediabunny'
 
 type Runner = BrowserSubstrateRunner<ImageInput, Pix2PixImageResult, Pix2PixLoadProgress>
 
@@ -160,45 +161,6 @@ async function seekVideoFrame(
   const ready = waitForVideoEvent(video, 'seeked', signal)
   video.currentTime = time
   await ready
-}
-
-function waitWithAbort(delayMs: number, signal: AbortSignal): Promise<void> {
-  if (delayMs <= 0) return Promise.resolve()
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException('Video export aborted', 'AbortError'))
-      return
-    }
-    const timeout = window.setTimeout(() => {
-      signal.removeEventListener('abort', onAbort)
-      resolve()
-    }, delayMs)
-    const onAbort = () => {
-      window.clearTimeout(timeout)
-      signal.removeEventListener('abort', onAbort)
-      reject(new DOMException('Video export aborted', 'AbortError'))
-    }
-    signal.addEventListener('abort', onAbort, { once: true })
-  })
-}
-
-function waitForRecorderStop(recorder: MediaRecorder): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const cleanup = () => {
-      recorder.removeEventListener('stop', onStop)
-      recorder.removeEventListener('error', onError)
-    }
-    const onStop = () => {
-      cleanup()
-      resolve()
-    }
-    const onError = (event: Event) => {
-      cleanup()
-      reject((event as ErrorEvent).error ?? new Error('MediaRecorder failed'))
-    }
-    recorder.addEventListener('stop', onStop, { once: true })
-    recorder.addEventListener('error', onError, { once: true })
-  })
 }
 
 function captureVideoFrame(
@@ -560,19 +522,14 @@ export function Pix2PixPanel() {
     if (!active || !video || !inputCanvasNode || !outputCanvasNode || !videoFile ||
         loading || running || videoRunning || videoExporting) return
 
-    if (typeof MediaRecorder === 'undefined') {
-      setError('MediaRecorder is unavailable in this browser.')
-      return
-    }
+
 
     const controller = new AbortController()
     const requestId = generation.current
     const sourceUrl = URL.createObjectURL(videoFile)
     let completed = 0
-    let stream: MediaStream | null = null
-    let recorder: MediaRecorder | null = null
-    let recorderStopped: Promise<void> | null = null
-    const chunks: Blob[] = []
+    let cancelWriter: (() => Promise<void>) | null = null
+
 
     videoAbort.current = controller
     setVideoExporting(true)
@@ -583,25 +540,24 @@ export function Pix2PixPanel() {
 
     try {
       await loadVideoSource(video, sourceUrl, controller.signal)
+      if (video.duration > MAX_VIDEO_EXPORT_SECONDS) throw new Error('Video exceeds maximum 60-second export duration')
       const times = buildFrameTimes(video.duration, VIDEO_EXPORT_FPS)
       if (!times.length) throw new Error('Video contains no exportable frames')
 
-      const mimeType = chooseVideoExportMimeType(type => MediaRecorder.isTypeSupported(type))
-      stream = outputCanvasNode.captureStream(0)
-      const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined
-      if (!track || typeof track.requestFrame !== 'function') {
-        throw new Error('Manual canvas frame capture is unavailable in this browser')
-      }
-
-      recorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 2_500_000,
+      const codec = await canEncodeVideo('vp9', { width: 256, height: 256, frameRate: VIDEO_EXPORT_FPS })
+        ? 'vp9'
+        : await canEncodeVideo('vp8', { width: 256, height: 256, frameRate: VIDEO_EXPORT_FPS }) ? 'vp8' : null
+      if (!codec) throw new Error('WebCodecs VP8/VP9 encoding is unavailable in this browser')
+      const target = new BufferTarget()
+      const output = new Output({ format: new WebMOutputFormat(), target })
+      cancelWriter = () => output.cancel()
+      const source = new CanvasSource(outputCanvasNode, {
+        codec,
+        quality: new Quality({ bitrate: 2_500_000 }),
       })
-      recorder.addEventListener('dataavailable', event => {
-        if (event.data.size > 0) chunks.push(event.data)
-      })
-      recorderStopped = waitForRecorderStop(recorder)
-      recorder.start()
+      output.addVideoTrack(source)
+      await output.start()
+      const mimeType = await output.getMimeType()
 
       const startedAt = performance.now()
       await runFrameSequence({
@@ -611,11 +567,7 @@ export function Pix2PixPanel() {
           await seekVideoFrame(video, time, controller.signal)
           const frame = captureVideoFrame(video, inputCanvasNode)
           await active.run(frame)
-          track.requestFrame()
-
-          const targetElapsedMs = ((index + 1) / VIDEO_EXPORT_FPS) * 1000
-          const remainingMs = targetElapsedMs - (performance.now() - startedAt)
-          await waitWithAbort(remainingMs, controller.signal)
+          await source.add(time, frameDurationSeconds(time, VIDEO_EXPORT_FPS, video.duration))
         },
         onProgress(progress) {
           completed = progress.completed
@@ -627,15 +579,11 @@ export function Pix2PixPanel() {
         },
       })
 
-      // MediaRecorder timestamps frames at capture time. Stamp one terminal hold
-      // request at the source end; exact container duration remains browser-controlled.
-      track.requestFrame()
-
-      if (recorder.state !== 'inactive') recorder.stop()
-      await recorderStopped
-
-      const blob = new Blob(chunks, { type: mimeType })
-      if (!blob.size) throw new Error('WebM recorder produced an empty file')
+      await output.finalize()
+      cancelWriter = null
+      if (!target.buffer) throw new Error('WebM writer produced no output')
+      const blob = new Blob([target.buffer], { type: mimeType })
+      if (!blob.size) throw new Error('WebM writer produced an empty file')
 
       const exportUrl = URL.createObjectURL(blob)
       videoExportUrlRef.current = exportUrl
@@ -667,15 +615,9 @@ export function Pix2PixPanel() {
         }
       }
     } finally {
-      if (recorder && recorder.state !== 'inactive') {
-        try {
-          recorder.stop()
-          await recorderStopped
-        } catch {
-          // Preserve the original export error; cleanup is best-effort here.
-        }
+      if (cancelWriter) {
+        try { await cancelWriter() } catch (reason) { console.error('Pix2Pix video encoder cleanup failed:', reason) }
       }
-      for (const track of stream?.getTracks() ?? []) track.stop()
       video.pause()
       video.removeAttribute('src')
       video.load()
@@ -762,7 +704,7 @@ export function Pix2PixPanel() {
           <div className="space-y-1">
             <p className="text-sm font-semibold">Experimental video flow</p>
             <p className="text-xs text-on-surface-variant">
-              Preview samples the first {VIDEO_PREVIEW_SECONDS} seconds at {VIDEO_PREVIEW_FPS} fps. Export processes the full clip at {VIDEO_EXPORT_FPS} fps into a local WebM. Both run frames sequentially through the already-loaded WebGPU model; audio is not preserved yet.
+              Preview samples the first {VIDEO_PREVIEW_SECONDS} seconds at {VIDEO_PREVIEW_FPS} fps. Export processes clips up to {MAX_VIDEO_EXPORT_SECONDS} seconds at {VIDEO_EXPORT_FPS} fps into a local WebM with source-timed frames. Both run frames sequentially through the already-loaded WebGPU model; audio is not preserved yet.
             </p>
           </div>
           <span className="rounded-lg border border-outline px-2 py-1 text-[10px] text-on-surface-muted">

@@ -79,3 +79,17 @@ describe('runFrameSequence', () => {
     expect(processed).toEqual([0])
   })
 })
+
+describe('video export timestamp contract', () => {
+  it('uses source frame times independent of processing wall time', async () => {
+    const { frameDurationSeconds } = await import('./pix2pixVideo')
+    expect(frameDurationSeconds(0, 8, 1)).toBeCloseTo(0.125)
+    expect(frameDurationSeconds(0.875, 8, 1)).toBeCloseTo(0.125)
+    expect(frameDurationSeconds(0.875, 8, 0.9)).toBeCloseTo(0.025)
+  })
+
+  it('rejects an unbounded export before generating large time arrays', async () => {
+    const { buildFrameTimes } = await import('./pix2pixVideo')
+    expect(() => buildFrameTimes(3600, 8)).toThrow(/maximum/)
+  })
+})

@@ -1,3 +1,9 @@
+export const MAX_VIDEO_EXPORT_SECONDS = 60
+
+export function frameDurationSeconds(time: number, fps: number, duration: number): number {
+  return Math.max(0, Math.min(1 / fps, duration - time))
+}
+
 export interface FrameSequenceProgress {
   completed: number
   total: number
@@ -10,6 +16,7 @@ export function buildFrameTimes(
 ): number[] {
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return []
   if (!Number.isFinite(fps) || fps <= 0) throw new Error('fps must be positive')
+  if (durationSeconds > MAX_VIDEO_EXPORT_SECONDS) throw new Error('Video exceeds maximum 60-second export duration')
 
   const interval = 1 / fps
   const times: number[] = []
