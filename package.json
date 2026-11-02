@@ -12,6 +12,7 @@
     "test:boundaries": "vitest run tests/package-boundaries.test.ts",
     "test:compatibility": "node scripts/package-compatibility.mjs",
     "test:compatibility:wasm": "node scripts/package-compatibility.mjs --browser-wasm",
+    "test:compatibility:webgpu": "node scripts/package-compatibility.mjs --browser-webgpu",
     "test:conversion-assets": "node --test scripts/validate-conversion-assets.test.mjs && node scripts/validate-conversion-assets.mjs",
     "test:qualification": "vitest run --config tests/runtime-qualification/vitest.config.ts",
     "qualify": "tsx tests/runtime-qualification/run-qualification.ts",

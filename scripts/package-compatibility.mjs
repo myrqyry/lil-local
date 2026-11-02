@@ -79,9 +79,10 @@ try {
   )
   await run('pnpm', ['run', 'typecheck'], { cwd: fixtureRoot })
   await run('pnpm', ['run', 'test:contract'], { cwd: fixtureRoot })
-  if (process.argv.includes('--browser-wasm')) {
+  const backend = process.argv.includes('--browser-webgpu') ? 'webgpu' : process.argv.includes('--browser-wasm') ? 'wasm' : null
+  if (backend) {
     const { probePackedBrowser } = await import('./packed-litert-browser.mjs')
-    await probePackedBrowser(fixtureRoot, root)
+    await probePackedBrowser(fixtureRoot, root, backend)
   }
   await run('pnpm', ['run', 'build'], { cwd: fixtureRoot })
 

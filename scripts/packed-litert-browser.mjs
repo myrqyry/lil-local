@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 
-/** Optional real-browser probe of the packed Lil Local managed LiteRT WASM runtime. */
-export async function probePackedBrowser(fixtureRoot, repositoryRoot) {
+/** Opt-in packed-consumer numeric probe for explicit WASM or WebGPU; never falls back. */
+export async function probePackedBrowser(fixtureRoot, repositoryRoot, backend = 'wasm') {
   const metadata = JSON.parse(await readFile(
     resolve(repositoryRoot, 'tests/runtime-qualification/tiny-litert-baseline/fixtures/asset.json'), 'utf8',
   ))
@@ -37,20 +37,35 @@ export async function probePackedBrowser(fixtureRoot, repositoryRoot) {
     const port = server.httpServer.address().port
     browser = await chromium.launch({
       headless: true, executablePath: process.env.CHROMIUM_BINARY || '/usr/bin/chromium',
-      args: ['--no-sandbox'],
+      args: backend === 'webgpu' ? [
+        '--no-sandbox', '--enable-unsafe-webgpu',
+        '--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE',
+        '--use-angle=vulkan', '--disable-vulkan-surface',
+      ] : ['--no-sandbox'],
     })
     console.log('CHROMIUM', browser.version())
     const page = await browser.newPage()
     const failures = []
     page.on('pageerror', error => failures.push(error.message))
     await page.goto('http://127.0.0.1:' + port + '/src/index.ts', { waitUntil: 'domcontentloaded' })
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async backend => {
+      if (backend === 'webgpu') {
+        const adapter = await navigator.gpu?.requestAdapter()
+        if (!adapter) throw new Error('WebGPU adapter unavailable')
+        const info = adapter.info
+        console.log('WEBGPU_ADAPTER', JSON.stringify({ vendor: info?.vendor, architecture: info?.architecture, device: info?.device }))
+        if (!info?.vendor || info.vendor.toLowerCase() === 'google' || info.architecture?.toLowerCase().includes('swiftshader')) {
+          throw new Error('WebGPU hardware adapter not verified (software/unknown adapter)')
+        }
+        const device = await adapter.requestDevice()
+        if (!device) throw new Error('WebGPU device unavailable')
+      }
       const { runPackedTinyLitert } = await import('/src/packed-litert-browser.ts')
-      return runPackedTinyLitert()
-    })
+      return runPackedTinyLitert(backend)
+    }, backend)
     if (failures.length) throw Error('Browser page errors: ' + failures.join('; '))
     if (!result.cached) throw Error('Packed runtime did not reuse compiled model')
-    console.log('PACKED_WASM_NUMERIC_PARITY', JSON.stringify(result))
+    console.log('PACKED_' + backend.toUpperCase() + '_NUMERIC_PARITY', JSON.stringify(result))
   } finally {
     await browser?.close()
     await server.close()

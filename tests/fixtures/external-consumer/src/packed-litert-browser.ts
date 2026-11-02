@@ -3,12 +3,12 @@ import { createHttpAssetResolver } from '@lil-local/inference-core'
 import { createLiteRtRuntime } from '@lil-local/runtime-litert'
 import { assertAddOutput } from './add-parity'
 
-/** Opt-in real Chromium/WASM qualification using installed package tarballs. */
-export async function runPackedTinyLitert(): Promise<{
+/** Opt-in packed Chromium proof with strict backend identity and numerical parity. */
+export async function runPackedTinyLitert(backend: 'wasm' | 'webgpu' = 'wasm'): Promise<{
   resolvedBackend: string; maxError: number; cached: boolean; events: string[]; cases: number
 }> {
   const path = '/_tiny/model.tflite'
-  const context = await createLiteRtRuntime({ backend: 'wasm', assets: createHttpAssetResolver(location.origin) })
+  const context = await createLiteRtRuntime({ backend, assets: createHttpAssetResolver(location.origin) })
   try {
     const compiled = await context.liteRt.loadModel(path)
     const cached = (await context.liteRt.loadModel(path)) === compiled
@@ -39,7 +39,7 @@ export async function runPackedTinyLitert(): Promise<{
       }
     }
     const info = context.liteRt.getModelInfo(path)
-    if (!info || info.resolvedBackend !== 'wasm' || info.fallbackCount !== 0) {
+    if (!info || info.resolvedBackend !== backend || info.fallbackCount !== 0) {
       throw new Error(`Unexpected backend receipt ${JSON.stringify(info)}`)
     }
     const events = context.liteRt.getTelemetry().map(record => record.event)
