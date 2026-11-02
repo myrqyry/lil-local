@@ -17,7 +17,7 @@
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",
     "@huggingface/transformers-structured-output": "4.3.1",
-    "@litert-lm/core": "0.18.1",
+    "@litert-lm/core": "0.19.0",
     "@mediapipe/tasks-genai": "0.10.29"
   },
   "devDependencies": {

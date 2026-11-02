@@ -1,7 +1,7 @@
 # EmbeddingGemma 2 via LiteRT-LM Web (experimental)
 
 A reusable **text-only** browser adapter using Google's actual
-`@litert-lm/core@0.18.1` `EmbeddingEngine`, exposed through Lil Local's
+`@litert-lm/core@0.19.0` `EmbeddingEngine`, exposed through Lil Local's
 `BrowserSubstrateRunner`. Nothing is downloaded on import or construction.
 
 ```ts
@@ -28,13 +28,13 @@ try {
 }
 ```
 
-**WASM version guard:** `@litert-lm/core@0.18.1` still embeds a default
-URL for `@litert-lm/core@0.12.1/wasm`. This adapter explicitly loads
-the matching `0.18.1` JS/WASM bundle before model creation; it fails
+**WASM version guard:** `@litert-lm/core@0.19.0` now embeds a matching default
+URL for `@litert-lm/core@0.19.0/wasm`. This adapter explicitly loads
+the matching `0.19.0` JS/WASM bundle before model creation; it fails
 rather than silently inheriting a runtime initialized from a conflicting path.
 By default, the matching runtime comes from jsDelivr (network required).
 For local-first/offline deployments, copy **all four JS/WASM variants** from
-the installed `@litert-lm/core@0.18.1/wasm/` package into a served directory
+the installed `@litert-lm/core@0.19.0/wasm/` package into a served directory
 and pass `wasmBase: '/litert-lm-wasm/'`. Do not mix SDK and WASM versions;
 nor reinitialize a shared JS realm from a different base.
 

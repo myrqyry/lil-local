@@ -23,7 +23,7 @@ describe('LiteRT-LM EmbeddingGemma 2 browser adapter', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('chooses a matching 0.18.1 WASM runtime before creating the embedding engine', async () => {
+  it('chooses a matching 0.19.0 WASM runtime before creating the embedding engine', async () => {
     const runner = new BrowserSubstrateRunner(createEmbeddingGemma2Substrate({
       model: new Blob(['model']),
       wasmBase: '/offline/litert-lm/',

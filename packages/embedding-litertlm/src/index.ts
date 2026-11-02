@@ -38,12 +38,12 @@ export interface EmbeddingGemma2Input {
   dimensions?: EmbeddingGemma2Dimensions
 }
 
-const LITERT_LM_0181_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm'
+const LITERT_LM_0190_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.19.0/wasm'
 
 export interface EmbeddingGemma2Options {
   /** Caller-owned source. No default model download or mutable Hugging Face reference. */
   model: EmbeddingEngineSettings['model']
-  /** Optional locally hosted 0.18.1 WASM/JS base. Omit to use pinned jsDelivr. */
+  /** Optional locally hosted 0.19.0 WASM/JS base. Omit to use pinned jsDelivr. */
   wasmBase?: string
   /** Optional input length configuration; the native default is 1024. */
   maxInputLength?: number
@@ -90,9 +90,9 @@ export function createEmbeddingGemma2Substrate(
         model = response.body
       }
       if (signal?.aborted) throw aborted()
-      // The upstream 0.18.1 SDK currently defaults to 0.12.1 WASM assets.
+      // The 0.19.0 SDK defaults to matching WASM; retain explicit pinning to prevent version drift.
       // Explicitly require a version-matched path before any engine is created.
-      await getOrLoadGlobalLiteRtLm(options.wasmBase ?? LITERT_LM_0181_WASM_BASE)
+      await getOrLoadGlobalLiteRtLm(options.wasmBase ?? LITERT_LM_0190_WASM_BASE)
       if (signal?.aborted) throw aborted()
       const engine = await EmbeddingEngine.create({
         model,

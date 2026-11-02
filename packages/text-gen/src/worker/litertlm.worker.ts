@@ -19,7 +19,7 @@ interface WorkerScope {
   postMessage(message: unknown): void;
 }
 
-const LITERT_LM_0181_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm';
+const LITERT_LM_0190_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.19.0/wasm';
 
 interface LiteRtLmModule {
   getOrLoadGlobalLiteRtLm(path: string): Promise<unknown>;
@@ -281,9 +281,9 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
   }
 
   const module = (await import('@litert-lm/core')) as unknown as LiteRtLmModule;
-  // LiteRT-LM 0.18.1's internal default still points at its 0.12.1 WASM.
+  // Pin 0.19.0 WASM explicitly rather than relying on SDK defaults.
   // Explicit loading also detects conflicts with a previously loaded runtime.
-  await module.getOrLoadGlobalLiteRtLm(data.options?.wasmBase ?? LITERT_LM_0181_WASM_BASE);
+  await module.getOrLoadGlobalLiteRtLm(data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE);
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
     mainExecutorSettings: { maxNumTokens: 8192 },

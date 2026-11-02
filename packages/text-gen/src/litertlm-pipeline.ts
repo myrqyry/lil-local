@@ -31,7 +31,7 @@ import {
   gemma4E4bManifest,
 } from './manifest';
 
-const LITERT_LM_0181_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm';
+const LITERT_LM_0190_WASM_BASE = 'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.19.0/wasm';
 
 interface LiteRtLmModule {
   getOrLoadGlobalLiteRtLm(path: string): Promise<unknown>;
@@ -306,8 +306,8 @@ export interface LiteRtLmTextPipelineOptions {
   // pass the path through unchanged.
   modelBase?: string;
   /**
-   * Host the matching LiteRT-LM 0.18.1 WASM/JS assets yourself for offline use.
-   * Omitted: version-pinned jsDelivr assets (the upstream SDK still defaults to 0.12.1).
+   * Host the matching LiteRT-LM 0.19.0 WASM/JS assets yourself for offline use.
+   * Omitted: version-pinned jsDelivr assets; explicit pinning protects against upstream default drift.
    * A page must initialize LiteRT-LM from one consistent base per JS realm.
    */
   wasmBase?: string;
@@ -425,13 +425,13 @@ export class LiteRtLmTextPipeline
       if (cancelled()) {
         throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
       }
-      // Do not allow SDK 0.18.1 to silently load its baked-in 0.12.1 WASM URL.
+      // Pin matching 0.19.0 WASM explicitly to guard against SDK default drift.
       // This also rejects a conflicting already-initialized runtime path.
-      await module.getOrLoadGlobalLiteRtLm(this.options.wasmBase ?? LITERT_LM_0181_WASM_BASE);
+      await module.getOrLoadGlobalLiteRtLm(this.options.wasmBase ?? LITERT_LM_0190_WASM_BASE);
       if (cancelled()) {
         throw new InferenceError('CANCELLED', 'Model load was cancelled', { asset: modelPath });
       }
-      // Lil Local exposes portable backend labels, but @litert-lm/core@0.18.1
+      // Lil Local exposes portable backend labels, but @litert-lm/core@0.19.0
       // requires its numeric Backend enum. Passing the string `webgpu` made
       // Engine.create take the non-streaming CPU branch, which calls
       // wasm.ModelAssets.create() and fails on the GPU Artisan-only binding.

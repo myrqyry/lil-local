@@ -7,7 +7,7 @@
   "exports": { ".": "./src/index.ts" },
   "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
   "peerDependencies": { "@lil-local/inference-core": "0.1.x" },
-  "dependencies": { "@litert-lm/core": "0.18.1" },
+  "dependencies": { "@litert-lm/core": "0.19.0" },
   "devDependencies": {
     "@lil-local/inference-core": "workspace:*",
     "typescript": "^7.0.2",

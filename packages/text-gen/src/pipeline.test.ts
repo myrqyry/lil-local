@@ -125,7 +125,7 @@ describe('LiteRT-LM WASM asset provenance', () => {
     const p = new LiteRtLmTextPipeline(litertLmManifest, { model: new Blob(['fake model']) })
     await p.loadForBackend('wasm')
     expect(mockWasmLoad).toHaveBeenCalledExactlyOnceWith(
-      'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.18.1/wasm',
+      'https://cdn.jsdelivr.net/npm/@litert-lm/core@0.19.0/wasm',
     )
     expect(mockWasmLoad.mock.invocationCallOrder[0])
       .toBeLessThan(mockEngineCreate.mock.invocationCallOrder[0])

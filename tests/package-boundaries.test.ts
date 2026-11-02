@@ -101,7 +101,7 @@ describe('workspace package boundaries', () => {
     const pipeline = await text('packages/text-gen/src/litertlm-pipeline.ts')
     const entrypoint = await text('packages/text-gen/src/index.ts')
 
-    expect(manifest.dependencies).toMatchObject({ '@litert-lm/core': '0.18.1' })
+    expect(manifest.dependencies).toMatchObject({ '@litert-lm/core': '0.19.0' })
     expect(manifest.dependencies?.['@lil-local/inference-core']).toBeUndefined()
     expect(manifest.peerDependencies).toMatchObject({ '@lil-local/inference-core': '0.1.x' })
     expect(manifest.devDependencies).toMatchObject({ '@lil-local/inference-core': 'workspace:*' })
