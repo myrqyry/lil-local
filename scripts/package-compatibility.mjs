@@ -77,6 +77,7 @@ try {
     },
   )
   await run('pnpm', ['run', 'typecheck'], { cwd: fixtureRoot })
+  await run('pnpm', ['run', 'test:contract'], { cwd: fixtureRoot })
   await run('pnpm', ['run', 'build'], { cwd: fixtureRoot })
 
   for (const row of rows) {

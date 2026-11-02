@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test:contract": "vitest run src/contract.test.ts",
     "build": "vite build"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
   "devDependencies": {
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
-    "@types/react": "^19.2.17"
+    "@types/react": "^19.2.17",
+    "vitest": "^4.1.10"
   }
 }
