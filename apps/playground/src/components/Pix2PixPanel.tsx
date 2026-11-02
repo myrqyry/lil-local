@@ -518,8 +518,7 @@ export function Pix2PixPanel() {
     const active = runner.current
     const video = videoElement.current
     const inputCanvasNode = inputCanvas.current
-    const outputCanvasNode = outputCanvas.current
-    if (!active || !video || !inputCanvasNode || !outputCanvasNode || !videoFile ||
+    if (!active || !video || !inputCanvasNode || !videoFile ||
         loading || running || videoRunning || videoExporting) return
 
 
@@ -548,16 +547,20 @@ export function Pix2PixPanel() {
         ? 'vp9'
         : await canEncodeVideo('vp8', { width: 256, height: 256, frameRate: VIDEO_EXPORT_FPS }) ? 'vp8' : null
       if (!codec) throw new Error('WebCodecs VP8/VP9 encoding is unavailable in this browser')
+      const encodingCanvas = document.createElement('canvas')
+      encodingCanvas.width = 256
+      encodingCanvas.height = 256
+      const encodingContext = encodingCanvas.getContext('2d')
+      if (!encodingContext) throw new Error('2D encoding canvas unavailable')
       const target = new BufferTarget()
       const output = new Output({ format: new WebMOutputFormat(), target })
       cancelWriter = () => output.cancel()
-      const source = new CanvasSource(outputCanvasNode, {
+      const source = new CanvasSource(encodingCanvas, {
         codec,
         quality: new Quality({ bitrate: 2_500_000 }),
       })
       output.addVideoTrack(source)
       await output.start()
-      const mimeType = await output.getMimeType()
 
       const startedAt = performance.now()
       await runFrameSequence({
@@ -566,7 +569,8 @@ export function Pix2PixPanel() {
         async processFrame(time, index) {
           await seekVideoFrame(video, time, controller.signal)
           const frame = captureVideoFrame(video, inputCanvasNode)
-          await active.run(frame)
+          const transformed = await active.run(frame)
+          encodingContext.putImageData(new ImageData(new Uint8ClampedArray(transformed.pixels), transformed.width, transformed.height), 0, 0)
           await source.add(time, frameDurationSeconds(time, VIDEO_EXPORT_FPS, video.duration))
         },
         onProgress(progress) {
@@ -581,6 +585,7 @@ export function Pix2PixPanel() {
 
       await output.finalize()
       cancelWriter = null
+      const mimeType = await output.getMimeType()
       if (!target.buffer) throw new Error('WebM writer produced no output')
       const blob = new Blob([target.buffer], { type: mimeType })
       if (!blob.size) throw new Error('WebM writer produced an empty file')
