@@ -34,11 +34,15 @@ version-pinned CDN by default. This is **not** offline qualification.
 - Actual public call sequence:
   `createLiteRtRuntime({backend:'wasm'})`, `loadModel`,
   `createTensor`, `predict`, `readTensor`, `dispose`.
-- Input values: arrays filled with `3` and `5`; independently checked
-  all finite output values equal `8` to absolute tolerance `1e-5`.
-- **Observed result:** resolvedBackend `wasm`, maxError `0`,
-  compiled-model cache hit `true`, telemetry `compile,inference`;
+- Two independent input cases: arrays filled with `3` and `5` (expected `8`),
+  then arrays filled with `-2` and `7` (expected `5`). Every output element
+  is checked against that case's expected sum at absolute tolerance `1e-5`.
+  The oracle also has rejection tests for incorrect, nonfinite, and empty output.
+- **Observed repeat result:** resolvedBackend `wasm`, maxError `0` across both
+  cases, compiled-model cache hit `true`, telemetry `compile,inference,inference`;
   browser probe and packed-consumer install/typecheck/build exited **0**.
+  This excludes a constant-`8` implementation that could pass the original
+  single-input probe.
 
 ## Failure discovered during development
 

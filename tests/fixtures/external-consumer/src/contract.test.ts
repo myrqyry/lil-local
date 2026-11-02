@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
+import { assertAddOutput } from './add-parity'
 
 const fixture = (onDispose: () => void = () => {}) => ({
   id: 'external-packed-consumer',
@@ -10,6 +11,16 @@ const fixture = (onDispose: () => void = () => {}) => ({
     return { infer: async (input: string) => input.toUpperCase(), dispose: async () => onDispose() }
   },
 }) satisfies BrowserSubstrate<string, string>
+
+describe('packed LiteRT numerical oracle', () => {
+  it('checks every output against the requested input sum', () => {
+    expect(assertAddOutput(Float32Array.of(8, 8), 3, 5)).toBe(0)
+    expect(assertAddOutput(Float32Array.of(5, 5), -2, 7)).toBe(0)
+    expect(() => assertAddOutput(Float32Array.of(8), -2, 7)).toThrow(/Numerical mismatch/)
+    expect(() => assertAddOutput(Float32Array.of(NaN), 3, 5)).toThrow(/Non-finite/)
+    expect(() => assertAddOutput(new Float32Array(), 3, 5)).toThrow(/Empty/)
+  })
+})
 
 describe('installed packed inference-core contract', () => {
   it('loads, executes, and disposes through the public entrypoint', async () => {
