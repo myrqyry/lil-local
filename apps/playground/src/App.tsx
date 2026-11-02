@@ -3,6 +3,7 @@ import ModelRunner from './components/ModelRunner'
 import { Qwen3TtsPanel } from './components/Qwen3TtsPanel'
 import { LfmPipelinePanel } from './components/LfmPipelinePanel'
 import { D1DecisionPanel } from './components/D1DecisionPanel'
+import { Pix2PixPanel } from './components/Pix2PixPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -33,6 +34,21 @@ const d1Entry: ModelAdapter = {
     description: 'Opt-in Q8 ONNX text-only System One decisions using ONNX Runtime Web. Browser qualification pending.',
     modelPath: '',
     tags: ['language', 'decisions', 'onnx', 'webgpu', 'pipeline'],
+  },
+  inputSpecs: [],
+  outputSpecs: [],
+  isPipeline: true,
+  prepareInputs: () => ({}),
+  parseOutputs: async () => ({}),
+}
+
+const pix2pixEntry: ModelAdapter = {
+  modelId: 'pix2pix-edges2shoes-webgpu',
+  metadata: {
+    name: 'Pix2Pix · edges2shoes (Local WebGPU)',
+    description: 'Choose verified folded weights from disk and run the official edges2shoes U-Net through the custom Rust/Wasm WebGPU runtime.',
+    modelPath: '',
+    tags: ['image', 'image-edit', 'pix2pix', 'webgpu', 'pipeline', 'local-file'],
   },
   inputSpecs: [],
   outputSpecs: [],
@@ -92,6 +108,21 @@ export default function App() {
     )
   }
 
+  if (selectedId === 'pix2pix-edges2shoes-webgpu') {
+    return (
+      <div className="min-h-screen bg-surface-dim">
+        <div className="mx-auto max-w-3xl p-4">
+          <button
+            className="mb-4 text-sm text-secondary transition-colors hover:text-on-secondary-container"
+            onClick={() => setSelectedId(null)}
+          >← Back to model list</button>
+          <h1 className="mb-4 text-2xl font-bold text-on-surface">Pix2Pix · Local WebGPU</h1>
+          <Pix2PixPanel />
+        </div>
+      </div>
+    )
+  }
+
   if (selectedId === 'lfm2.5-pipelines') {
     return (
       <div className="min-h-screen bg-surface-dim">
@@ -111,7 +142,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

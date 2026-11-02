@@ -274,6 +274,9 @@ importers:
       '@lil-local/kokoro':
         specifier: workspace:*
         version: link:../../packages/kokoro
+      '@lil-local/pix2pix-webgpu':
+        specifier: workspace:*
+        version: link:../../packages/pix2pix-webgpu
       '@lil-local/qwen3-tts':
         specifier: workspace:*
         version: link:../../packages/qwen3-tts

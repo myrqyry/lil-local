@@ -18,6 +18,7 @@
     "@lil-local/encoder": "workspace:*",
     "@lil-local/inference-core": "workspace:*",
     "@lil-local/kokoro": "workspace:*",
+    "@lil-local/pix2pix-webgpu": "workspace:*",
     "@lil-local/qwen3-tts": "workspace:*",
     "@lil-local/retrieval": "workspace:*",
     "@lil-local/runtime-litert": "workspace:*",

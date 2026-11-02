@@ -384,6 +384,41 @@ caller's signal, and an engine that finishes creation after cancellation is
 immediately freed. The underlying wgpu/Wasm engine creation itself does not
 currently expose a mid-creation cancellation primitive.
 
+## Production playground local-file smoke
+
+The production playground now exposes Pix2Pix as a separate pipeline workspace
+rather than routing this custom runtime through the managed LiteRT model path.
+The workspace accepts both the folded weight binary and source image through
+browser file inputs; no model server, CDN, or automatic model fetch is required.
+
+A production Vite build emitted the checked-in runtime as its own hashed Wasm
+asset (`pix2pix_wgpu_bg-*.wasm`, 426.31 KiB). Headless Chromium using the same
+Vulkan/WebGPU launch path then completed the real user flow on the NVIDIA
+Turing adapter:
+
+1. opened **Pix2Pix · Local WebGPU** from the model catalog;
+2. selected the local 217,677,836-byte folded weight file;
+3. selected a deterministic local PNG input;
+4. passed the package's size/SHA-256 verification;
+5. loaded the bundled Rust/Wasm runtime and created the WebGPU engine;
+6. ran the full model and rendered the output canvas; and
+7. surfaced the normal Lil Local session receipt.
+
+Observed single-run receipt:
+
+```text
+load                 283.6 ms
+compile              312.9 ms
+inference + readback  51.8 ms
+adapter               nvidia / turing
+console/page errors   0
+```
+
+These timings are session observations, not a latency benchmark. The UI path
+does not change the model's durable `qualification: limited` status. It adds a
+local-first way to exercise the already-qualified pinned path without inventing
+a model-hosting dependency.
+
 ## Decision
 
 `@lil-local/pix2pix-webgpu` is now part of Lil Local's **supported packed
