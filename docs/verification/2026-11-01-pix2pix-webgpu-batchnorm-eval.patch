@@ -1,0 +1,431 @@
+--- a/rust-pix2pix-wgpu/export_weights.py
++++ b/rust-pix2pix-wgpu/export_weights.py
+@@ -502,14 +502,52 @@
+     return prefixes
+ 
+ 
++def normalize_flat_checkpoint(state_dict: Dict[str, Any]) -> Dict[str, Any]:
++    """Map explicit down1..8/up1..7/final flat U-Net weights into recursive keys.
++
++    Reject partial layouts rather than silently manufacturing convolution weights.
++    Normalization affine parameters and convolution biases remain optional in
++    export_junyanz_state_dict and are synthesized by that established path.
++    """
++    prefixes = get_junyanz_block_prefixes()
++    mapping: Dict[str, str] = {}
++    for i in range(8):
++        mapping[f"down{i + 1}.model.0.weight"] = (
++            f"{prefixes[i]}.model.{0 if i == 0 else 1}.weight"
++        )
++    for i in range(7):
++        level = 7 - i
++        mapping[f"up{i + 1}.model.0.weight"] = (
++            f"{prefixes[level]}.model.{3 if level == 7 else 5}.weight"
++        )
++    mapping["final.2.weight"] = "model.model.3.weight"
++    mapping["final.2.bias"] = "model.model.3.bias"
++    missing = sorted(set(mapping) - set(state_dict))
++    if missing:
++        raise ValueError(f"Flat Pix2Pix U-Net checkpoint missing required keys: {missing}")
++    unknown = sorted(set(state_dict) - set(mapping))
++    if unknown:
++        raise ValueError(f"Unrecognized flat Pix2Pix U-Net keys: {unknown}")
++    return {dest: state_dict[src] for src, dest in mapping.items()}
++
++
+ def detect_root_prefix(state_dict: Dict[str, Any]) -> str:
+-    """Detects whether keys start with 'model.0.weight', '0.weight', or 'module.model.0.weight'."""
++    """Detect the prefix before the outer UnetSkipConnectionBlock model container.
++
++    Official junyanz/pytorch-CycleGAN-and-pix2pix checkpoints use
++    model.model.0.weight (or module.model.model.0.weight under DataParallel).
++    Older flattened probes remain supported as compatibility fallbacks.
++    """
+     for candidate in ("model", "module.model", "netG.model", ""):
+-        probe = f"{candidate}.0.weight" if candidate else "0.weight"
+-        if probe in state_dict:
++        canonical = f"{candidate}.model.0.weight" if candidate else "model.0.weight"
++        if canonical in state_dict:
++            return candidate
++        legacy = f"{candidate}.0.weight" if candidate else "0.weight"
++        if legacy in state_dict:
+             return candidate
+     raise KeyError(
+-        "Could not locate outermost encoder key ('model.0.weight' or '0.weight') in checkpoint."
++        "Could not locate outermost encoder weight "
++        "('model.model.0.weight', 'model.0.weight', or compatible prefixed form)."
+     )
+ 
+ 
+@@ -517,6 +555,90 @@
+     return f"{prefix}.{suffix}" if prefix else suffix
+ 
+ 
++def detect_normalization_mode(state_dict: Dict[str, Any]) -> str:
++    """Return the runtime normalization semantics required by this checkpoint."""
++    has_batch_stats = any(
++        key.endswith(".running_mean") or key.endswith(".running_var")
++        for key in state_dict
++    )
++    return "batch_eval_folded" if has_batch_stats else "instance"
++
++
++def fold_batch_norm_eval(
++    gamma: Float32Tensor,
++    beta: Float32Tensor,
++    running_mean: Float32Tensor,
++    running_var: Float32Tensor,
++    *,
++    eps: float = 1e-5,
++) -> Tuple[Float32Tensor, Float32Tensor]:
++    """Fold BatchNorm eval into per-channel affine scale/shift.
++
++    y = ((x - mean) / sqrt(var + eps)) * gamma + beta
++      = x * scale + shift
++    """
++    if not (gamma.shape == beta.shape == running_mean.shape == running_var.shape):
++        raise ValueError(
++            "BatchNorm tensors must share one channel shape: "
++            f"gamma={gamma.shape}, beta={beta.shape}, mean={running_mean.shape}, var={running_var.shape}"
++        )
++    scale = array("f")
++    shift = array("f")
++    for g, b, mean, variance in zip(
++        gamma.buffer, beta.buffer, running_mean.buffer, running_var.buffer
++    ):
++        if variance < 0.0:
++            raise ValueError(f"BatchNorm running variance must be non-negative, got {variance}")
++        s = float(g) / math.sqrt(float(variance) + eps)
++        scale.append(s)
++        shift.append(float(b) - float(mean) * s)
++    return Float32Tensor(gamma.shape, scale), Float32Tensor(beta.shape, shift)
++
++
++def validate_runtime_normalization(state_dict: Dict[str, Any]) -> str:
++    """Validate global normalization metadata and return the required runtime mode."""
++    mode = detect_normalization_mode(state_dict)
++    if mode == "batch_eval_folded":
++        means = {k[:-13] for k in state_dict if k.endswith(".running_mean")}
++        variances = {k[:-12] for k in state_dict if k.endswith(".running_var")}
++        if means != variances:
++            raise ValueError("BatchNorm checkpoint has incomplete running_mean/running_var pairs")
++    return mode
++
++
++def _export_norm_affine(
++    state_dict: Dict[str, Any],
++    gamma_key: str,
++    beta_key: str,
++    c_out: int,
++    *,
++    mode: str,
++    eps: float = 1e-5,
++) -> Tuple[Float32Tensor, Float32Tensor]:
++    if gamma_key in state_dict and beta_key in state_dict:
++        gamma = Float32Tensor.from_any(state_dict[gamma_key])
++        beta = Float32Tensor.from_any(state_dict[beta_key])
++    else:
++        gamma = Float32Tensor.ones((c_out,))
++        beta = Float32Tensor.zeros((c_out,))
++    if gamma.shape != (c_out,) or beta.shape != (c_out,):
++        raise ValueError(
++            f"Normalization affine shape mismatch for {gamma_key}: "
++            f"expected {(c_out,)}, got gamma={gamma.shape}, beta={beta.shape}"
++        )
++    if mode != "batch_eval_folded":
++        return gamma, beta
++
++    prefix = gamma_key.rsplit(".", 1)[0]
++    mean_key = prefix + ".running_mean"
++    var_key = prefix + ".running_var"
++    if mean_key not in state_dict or var_key not in state_dict:
++        raise ValueError(f"BatchNorm layer {prefix!r} is missing running statistics")
++    running_mean = Float32Tensor.from_any(state_dict[mean_key])
++    running_var = Float32Tensor.from_any(state_dict[var_key])
++    return fold_batch_norm_eval(gamma, beta, running_mean, running_var, eps=eps)
++
++
+ def export_junyanz_state_dict(
+     state_dict: Dict[str, Any],
+     output_path: str,
+@@ -530,6 +652,7 @@
+     `perm = {3, 2, 1}` BGR<->RGB swizzle into `e1` and `d8` weights at zero runtime cost.
+     Returns total bytes written.
+     """
++    normalization_mode = validate_runtime_normalization(state_dict)
+     root = detect_root_prefix(state_dict)
+     prefixes = get_junyanz_block_prefixes(root)
+     floats_written = 0
+@@ -569,12 +692,9 @@
+             if has_norm:
+                 g_key = _join(p, "model.2.weight")
+                 beta_key = _join(p, "model.2.bias")
+-                if g_key in state_dict and beta_key in state_dict:
+-                    gamma = Float32Tensor.from_any(state_dict[g_key])
+-                    beta = Float32Tensor.from_any(state_dict[beta_key])
+-                else:
+-                    gamma = Float32Tensor.ones((c_out,))
+-                    beta = Float32Tensor.zeros((c_out,))
++                gamma, beta = _export_norm_affine(
++                    state_dict, g_key, beta_key, c_out, mode=normalization_mode
++                )
+ 
+                 f.write(gamma.to_le_bytes())
+                 f.write(beta.to_le_bytes())
+@@ -629,12 +749,9 @@
+             if has_norm and upnorm_idx is not None:
+                 g_key = _join(p, f"model.{upnorm_idx}.weight")
+                 beta_key = _join(p, f"model.{upnorm_idx}.bias")
+-                if g_key in state_dict and beta_key in state_dict:
+-                    gamma = Float32Tensor.from_any(state_dict[g_key])
+-                    beta = Float32Tensor.from_any(state_dict[beta_key])
+-                else:
+-                    gamma = Float32Tensor.ones((c_out,))
+-                    beta = Float32Tensor.zeros((c_out,))
++                gamma, beta = _export_norm_affine(
++                    state_dict, g_key, beta_key, c_out, mode=normalization_mode
++                )
+ 
+                 f.write(gamma.to_le_bytes())
+                 f.write(beta.to_le_bytes())
+@@ -760,6 +877,8 @@
+         parser.error("Provide a checkpoint path or use --verify BIN_PATH.")
+ 
+     state_dict = load_pytorch_checkpoint_any(args.checkpoint)
++    if any(key.startswith('down1.') for key in state_dict):
++        state_dict = normalize_flat_checkpoint(state_dict)
+     total_bytes = export_junyanz_state_dict(
+         state_dict,
+         args.output,
+--- a/rust-pix2pix-wgpu/src/shaders.wgsl
++++ b/rust-pix2pix-wgpu/src/shaders.wgsl
+@@ -48,7 +48,8 @@
+     @align(16) seed: u32,
+     eps: f32,
+     use_welford: u32,
+-    _pad1: u32,
++    // 0u: spatial InstanceNorm; 1u: folded BatchNorm eval affine (x * gamma + beta)
++    mode: u32,
+ };
+ 
+ struct SkipStackParams {
+@@ -660,6 +661,25 @@
+     // Adaptive reduction stride: for small bottleneck maps (e7/d1: n=4 -> stride=2; e6/d2: n=16 -> stride=8;
+     // e5/d3: n=64 -> stride=32), skips redundant barrier stages over idle threads (tid >= n).
+     let initial_stride = min(128u, max(n >> 1u, 1u));
++    let gamma = norm_gamma[c];
++    let beta = norm_beta[c];
++
++    // BatchNorm eval can be folded at export time into scale/shift. In that
++    // mode there is deliberately no spatial reduction: the stored per-channel
++    // gamma/beta already encode running_mean/running_var and affine params.
++    if (norm_params.mode == 1u) {
++        for (var i: u32 = tid; i < n; i = i + 256u) {
++            let idx = offset + i;
++            var val = norm_data[idx] * gamma + beta;
++            if (norm_params.apply_dropout != 0u) {
++                let rng = pcg_hash(idx ^ norm_params.seed);
++                let keep = select(0.0, 2.0, (rng & 1u) == 1u);
++                val = val * keep;
++            }
++            norm_data[idx] = val;
++        }
++        return;
++    }
+ 
+     var mean: f32 = 0.0;
+     var variance: f32 = 0.0;
+@@ -740,8 +760,6 @@
+     }
+ 
+     let inv_std = inverseSqrt(variance + norm_params.eps);
+-    let gamma = norm_gamma[c];
+-    let beta = norm_beta[c];
+ 
+     // Normalize, scale/shift, and apply optional inverted 50% dropout
+     for (var i: u32 = tid; i < n; i = i + 256u) {
+--- a/rust-pix2pix-wgpu/src/lib.rs
++++ b/rust-pix2pix-wgpu/src/lib.rs
+@@ -28,6 +28,16 @@
+     Disabled = 2,
+ }
+ 
++#[wasm_bindgen]
++#[repr(u32)]
++#[derive(Copy, Clone, Debug, PartialEq, Eq)]
++pub enum NormalizationConvention {
++    /// Compute spatial InstanceNorm statistics from each current activation.
++    InstanceNorm = 0,
++    /// Apply export-folded BatchNorm eval as per-channel `x * scale + shift`.
++    BatchNormEvalFolded = 1,
++}
++
+ #[repr(C, align(16))]
+ #[derive(Copy, Clone, Pod, Zeroable)]
+ pub struct LayerParams {
+@@ -51,7 +61,7 @@
+     pub seed: u32,
+     pub eps: f32,
+     pub use_welford: u32,
+-    pub _pad1: u32,
++    pub mode: u32,
+ }
+ 
+ #[repr(C, align(16))]
+@@ -286,6 +296,7 @@
+     encoders: Vec<(ConvStep, Option<NormStep>)>,
+     decoders: Vec<DecoderStage>,
+     dropout_convention: DropoutConvention,
++    normalization_convention: NormalizationConvention,
+     use_texture2d_array_skip: bool,
+     frame_counter: u32,
+ }
+@@ -592,7 +603,7 @@
+                     seed: 0,
+                     eps: 1e-5,
+                     use_welford: 0,
+-                    _pad1: 0,
++                    mode: NormalizationConvention::InstanceNorm as u32,
+                 };
+                 let np_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                     label: Some(&format!("e{}_norm_params", i + 1)),
+@@ -736,13 +747,6 @@
+                 ],
+             });
+ 
+-            let deconv_step = ConvStep {
+-                bind_group: bg,
+-                param_buf: param_buf.clone(),
+-                base_params,
+-                workgroups: compute_16x16_dispatch(h_out, h_out, c_out),
+-            };
+-
+             let skip_stack_step = if has_skip {
+                 let rgba_layers = total_c_in / 4;
+                 let skip_tex = device.create_texture(&wgpu::TextureDescriptor {
+@@ -849,6 +853,13 @@
+                 None
+             };
+ 
++            let deconv_step = ConvStep {
++                bind_group: bg,
++                param_buf,
++                base_params,
++                workgroups: compute_16x16_dispatch(h_out, h_out, c_out),
++            };
++
+             let norm_step = if has_norm {
+                 let g_buf = reader.create_weight_buffer(
+                     &device,
+@@ -871,7 +882,7 @@
+                     seed: (1337 + i as u32) * 9973,
+                     eps: 1e-5,
+                     use_welford: 0,
+-                    _pad1: 0,
++                    mode: NormalizationConvention::InstanceNorm as u32,
+                 };
+                 let np_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                     label: Some(&format!("d{}_norm_params", i + 1)),
+@@ -1031,6 +1042,7 @@
+             encoders,
+             decoders,
+             dropout_convention,
++            normalization_convention: NormalizationConvention::InstanceNorm,
+             use_texture2d_array_skip: false,
+             frame_counter: 0,
+         })
+@@ -1054,6 +1066,29 @@
+                 self.queue
+                     .write_buffer(&norm.param_buf, 0, bytemuck::bytes_of(&norm.base_params));
+             }
++        }
++    }
++
++    /// Switches normalization semantics across all normalized encoder/decoder stages.
++    ///
++    /// `BatchNormEvalFolded` requires weights exported with running-statistics
++    /// folded into the stored per-channel gamma/beta slots.
++    pub fn set_normalization_convention(&mut self, convention: NormalizationConvention) {
++        self.normalization_convention = convention;
++        let mode = convention as u32;
++        for (_, norm_opt) in &mut self.encoders {
++            if let Some(norm) = norm_opt {
++                norm.base_params.mode = mode;
++                self.queue
++                    .write_buffer(&norm.param_buf, 0, bytemuck::bytes_of(&norm.base_params));
++            }
++        }
++        for stage in &mut self.decoders {
++            if let Some(norm) = &mut stage.norm {
++                norm.base_params.mode = mode;
++                self.queue
++                    .write_buffer(&norm.param_buf, 0, bytemuck::bytes_of(&norm.base_params));
++            }
+         }
+     }
+ 
+--- a/test_export_weights.py
++++ b/test_export_weights.py
+@@ -0,0 +1,62 @@
++import sys
++import unittest
++
++sys.path.insert(0, "rust-pix2pix-wgpu")
++import export_weights as ew
++
++
++class OfficialJunyanzKeyDetectionTests(unittest.TestCase):
++    def test_detects_official_generator_outer_block(self):
++        state = {"model.model.0.weight": object()}
++        self.assertEqual(ew.detect_root_prefix(state), "model")
++
++    def test_detects_dataparallel_official_generator_outer_block(self):
++        state = {"module.model.model.0.weight": object()}
++        self.assertEqual(ew.detect_root_prefix(state), "module.model")
++
++    def test_batchnorm_checkpoint_selects_folded_eval_mode(self):
++        state = {
++            "model.model.0.weight": object(),
++            "model.model.1.model.2.running_mean": object(),
++            "model.model.1.model.2.running_var": object(),
++        }
++        self.assertEqual(
++            ew.validate_runtime_normalization(state),
++            "batch_eval_folded",
++        )
++
++    def test_accepts_instancenorm_style_checkpoint_without_running_stats(self):
++        state = {"model.model.0.weight": object()}
++        ew.validate_runtime_normalization(state)
++
++    def test_detects_batchnorm_and_instancenorm_checkpoint_modes(self):
++        batch = {
++            "model.model.0.weight": object(),
++            "model.model.1.model.2.running_mean": object(),
++        }
++        instance = {"model.model.0.weight": object()}
++        self.assertEqual(ew.detect_normalization_mode(batch), "batch_eval_folded")
++        self.assertEqual(ew.detect_normalization_mode(instance), "instance")
++
++    def test_folds_batchnorm_eval_into_scale_and_shift(self):
++        gamma = ew.Float32Tensor.from_any([2.0, 4.0])
++        beta = ew.Float32Tensor.from_any([1.0, -1.0])
++        mean = ew.Float32Tensor.from_any([3.0, 5.0])
++        variance = ew.Float32Tensor.from_any([4.0, 9.0])
++        scale, shift = ew.fold_batch_norm_eval(gamma, beta, mean, variance, eps=1e-5)
++        expected_scale = [
++            2.0 / ((4.0 + 1e-5) ** 0.5),
++            4.0 / ((9.0 + 1e-5) ** 0.5),
++        ]
++        expected_shift = [
++            1.0 - 3.0 * expected_scale[0],
++            -1.0 - 5.0 * expected_scale[1],
++        ]
++        for actual, expected in zip(scale.buffer, expected_scale):
++            self.assertAlmostEqual(actual, expected, places=6)
++        for actual, expected in zip(shift.buffer, expected_shift):
++            self.assertAlmostEqual(actual, expected, places=6)
++
++
++if __name__ == "__main__":
++    unittest.main()

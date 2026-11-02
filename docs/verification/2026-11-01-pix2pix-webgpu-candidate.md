@@ -96,11 +96,16 @@ eight-layer decoder engine and expects exactly:
 for `pix2pix_unet256.bin`.
 
 That weight file, and any source `.pth`, `.pt`, or Torch7 checkpoint, are
-not bundled in the ZIP. The included Rust browser demo therefore cannot run a
-trained full model from this artifact alone.
+not bundled in the ZIP. The original browser demo therefore cannot run a
+trained full model from the artifact alone.
 
-Rust compilation was not verified on this machine because `cargo` is not
-installed. The installed `rustc` alone is insufficient evidence.
+The first shell inspection incorrectly concluded that Cargo was absent because
+`~/.cargo/bin` was not on that shell's PATH. The user-local Rust toolchain was
+already present: Cargo 1.93.1 with `wasm32-unknown-unknown` installed.
+After exporting that PATH, both `cargo check --target wasm32-unknown-unknown`
+and the release wasm build passed. `wasm-bindgen-cli 0.2.130` was then
+installed user-locally to match the crate's resolved `wasm-bindgen 0.2.130`,
+and successfully generated the web package.
 
 ## Real checkpoint audit
 
@@ -165,19 +170,89 @@ probe, PyTorch BatchNorm-eval versus InstanceNorm differed by:
 - mean absolute error: `1.56535`;
 - `allclose(atol=1e-4, rtol=1e-4) == false`.
 
-The disposable exporter was therefore hardened to reject checkpoints containing
-BatchNorm running statistics instead of silently producing a semantically wrong
-runtime binary. Four focused regression tests pass after the fix, and the full
-zero-dependency `verify_plan.py` still exits 0. The previously exported
-BatchNorm diagnostic binary remains only evidence that the byte-layout path can
-be exercised; it must not be used as a qualified model.
+The disposable exporter was first hardened to reject BatchNorm checkpoints,
+then extended under RED/GREEN coverage to support **BatchNorm eval folding**
+without changing the 217,677,836-byte weight layout:
 
-## Browser runtime attempt
+```text
+scale = gamma / sqrt(running_var + eps)
+shift = beta - running_mean * scale
+```
 
-A direct call into `executeWgslPipelineOnCanvas` was intentionally stopped
-after it remained busy in the generated CPU-reference/testbench path under
-headless Chromium. No completed inference receipt was produced, so no runtime
-speed or output-quality claim is recorded.
+Those folded values reuse the two existing per-channel norm arrays. The WGSL
+`NormParams` block reuses its final 32-bit padding slot as an explicit mode:
+`0 = InstanceNorm`, `1 = folded BatchNorm eval affine`. The Rust API exposes
+the same choice as `NormalizationConvention`; no checkpoint semantics are
+guessed at runtime.
+
+Verification after the change:
+
+- six focused exporter tests pass;
+- the original zero-dependency `verify_plan.py` still exits 0;
+- all 13 normalized U-Net stages (e2-e7, d1-d7) were read back from the
+  exported binary and matched their expected folded scale/shift arrays with
+  exactly zero slot error;
+- the folded official checkpoint still occupies exactly
+  `217,677,836` bytes / `54,419,459` float32 values;
+- folded binary SHA-256:
+  `eaea6a9c6ec2ed281589c9986ca1b16e755b06d8062673dd0b26d5e4ea235a34`.
+
+A real e2 activation from the official model was then passed through the
+modified WGSL normalization kernel on the local NVIDIA Turing adapter. Against
+PyTorch BatchNorm eval across all 524,288 values:
+
+```text
+max absolute error = 9.5367431640625e-7
+mean absolute error = 4.5831033634868845e-8
+```
+
+The equivalent folded CPU affine path differed from PyTorch by at most
+`1.9073486328125e-6`, so the GPU result is inside the expected FP32 numerical
+noise.
+
+## Full official-model browser parity
+
+The current official `junyanz/pytorch-CycleGAN-and-pix2pix` `networks.py`
+was used as the PyTorch oracle, not a hand-reconstructed model. A
+`UnetGenerator(3, 3, 8, ngf=64, BatchNorm, use_dropout=True)` loaded the
+official `edges2shoes.pth` with **zero missing and zero unexpected keys**,
+then ran in `.eval()` mode on a deterministic 256x256 RGB byte input.
+
+The modified Rust engine was compiled to wasm, packaged with matching
+`wasm-bindgen 0.2.130`, loaded the folded binary, explicitly selected
+`BatchNormEvalFolded`, disabled dropout, and ran on Chromium WebGPU over the
+local NVIDIA Turing adapter.
+
+Dual-storage skip path, full 16-layer generator vs PyTorch:
+
+```text
+MSE      = 3.4547995974437695e-12
+RMSE     = 1.8587090835353592e-6
+max abs  = 9.052455425262451e-5
+PSNR     = 120.63636016845703 dB
+```
+
+Optimized `Texture2DArray` skip path, same model/input/reference:
+
+```text
+MSE      = 4.302812880302431e-12
+RMSE     = 2.074322310363641e-6
+max abs  = 8.882582187652588e-5
+PSNR     = 119.68306732177734 dB
+```
+
+The optimized path was then reused for three consecutive full-model runs on the
+same engine instance. All three produced identical error statistics. The first
+queue+verification wait was about 256 ms and two warmed repeats were about
+41.1 ms and 38.1 ms. These are **exploratory wall times only**: `run_frame`
+returns after queue submission and the subsequent MSE/readback wait includes
+queued inference plus verification/readback, so they are not isolated
+inference benchmarks.
+
+This establishes real full-model numerical parity for one official checkpoint
+and one deterministic input on this NVIDIA/Turing/Chromium path. It does not by
+itself establish production lifecycle, cancellation, memory bounds, broad model
+compatibility, or a supported Lil Local package surface.
 
 ## Candidate mechanisms worth keeping
 
@@ -196,27 +271,45 @@ wholesale:
 
 These fit Lil Local's existing qualification-first approach.
 
+## Preserved implementation cutting
+
+The verified source-only changes are preserved separately from model weights and
+generated wasm output in:
+
+`docs/verification/2026-11-01-pix2pix-webgpu-batchnorm-eval.patch`
+
+Patch SHA-256:
+
+`bbb22210828fbc3e029b870521696c4230ad29117b7c8d1d118d48ab5cff08cc`
+
+It contains the exporter root-prefix fix, BatchNorm-eval folding, explicit
+normalization mode in WGSL/Rust, and focused Python regression coverage. The
+217 MB checkpoint, folded binary, generated wasm package, temporary PyTorch
+fixtures, and browser harness outputs remain outside the repository.
+
 ## Decision
 
-Do **not** add this artifact as a Pix2Pix runtime provider yet.
+The custom WebGPU engine is now a **technically viable Pix2Pix runtime
+candidate**, not merely a kernel experiment. We have established:
 
-Lil Local currently treats custom WGSL inference engines as future candidates,
-and this audit does not establish the missing evidence needed to change that:
-a compiled Rust/Wasm runtime, **correct normalization semantics for the chosen
-checkpoint**, full-model execution on a real GPU, output parity against the
-source implementation, lifecycle/cancellation behavior, memory bounds, and
-packed-consumer integration.
+- official checkpoint loading and exact architecture match;
+- correct BatchNorm-eval export semantics without expanding the binary format;
+- Rust `wasm32-unknown-unknown` compilation and bindgen packaging;
+- real NVIDIA/Turing full-model execution;
+- numerical parity with the official PyTorch generator;
+- parity for both dual-storage and `Texture2DArray` skip paths; and
+- stable repeated execution on one engine instance.
 
-For the official Berkeley/Hugging Face mirrored weights, the next technical
-gate is BatchNorm-eval support. A promising implementation would precompute
-per-channel BatchNorm eval scale/shift from running statistics at export time,
-reuse the existing two per-channel norm slots, and add an explicit runtime
-normalization mode that applies affine-only normalization instead of spatial
-InstanceNorm. That must be proven layer-by-layer against PyTorch before a full
-model run. The alternative is an exact recursive UnetGenerator checkpoint
-trained with InstanceNorm, for which the current WGSL normalization semantics
-are a closer match.
+Do **not** expose it as a supported Lil Local provider yet. Remaining production
+gates are narrower now: lifecycle/cancellation behavior, explicit memory and
+resource limits, failure cleanup, multiple-input/model qualification, and the
+normal Lil Local packed-consumer/boundary integration. Performance also needs a
+real benchmark that isolates inference from queueing, MSE verification, and
+readback; the warmed ~38-41 ms observations above are encouraging but not a
+qualified latency claim.
 
-If Pix2Pix becomes a concrete model target, start from the verified mechanisms
-above and qualify a narrow runtime package against a pinned checkpoint rather
-than adopting the generated React workbench or its product copy.
+If Pix2Pix becomes an active product capability, the next implementation should
+be a narrow `@lil-local/*` candidate package built from the preserved patch,
+with the official checkpoint provenance pinned outside the package and with
+Lil Local's existing runtime receipts/qualification rules applied. Do not adopt
+the generated React workbench or its marketing copy wholesale.
