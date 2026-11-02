@@ -14,6 +14,7 @@ const packages = [
   ['text-gen', 'text-gen.tgz'],
   ['embedding-litertlm', 'embedding-litertlm.tgz'],
   ['decision-onnx', 'decision-onnx.tgz'],
+  ['pix2pix-webgpu', 'pix2pix-webgpu.tgz'],
   ['encoder', 'encoder.tgz'],
   ['retrieval', 'retrieval.tgz'],
   ['kokoro', 'kokoro.tgz'],

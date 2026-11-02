@@ -2,6 +2,14 @@
 # Active Work
 
 
+## 2026-11-01 — Verified Pix2Pix custom WebGPU package
+
+- **Objective:** Promote the audited Pix2Pix U-Net 256 engine from a disposable verification workbench into the narrowest reusable Lil Local surface that the evidence supports, without bundling model weights or generalizing one checkpoint into universal Pix2Pix support.
+- **Implementation:** Added `@lil-local/pix2pix-webgpu` with checked-in Rust/wgpu + WGSL source and its ~420 KiB wasm-bindgen runtime, caller-owned `AssetResolver` transport, strict folded-weight byte/hash verification, explicit BatchNorm-eval mode, fail-closed WebGPU-only loading, lifecycle ownership through `BrowserSubstrateRunner`, optional hidden canvas, final GPU NCHW readback, and RGBA8 image results. The model manifest is intentionally `qualification: limited`.
+- **Evidence:** The package's focused suite passes 8/8 tests and typecheck passes. A real package-level Chromium smoke on NVIDIA/Turing strictly verified all 217,677,836 folded weight bytes, loaded the bundled Wasm, ran the full model, read back 262,144 RGBA bytes, and differed from the independent PyTorch reference by at most one 8-bit channel level. `pnpm test:compatibility` passes with the package packed/installed/typechecked/contract-tested/Vite-built from its public entrypoint. Earlier full floating-point parity evidence remains in `docs/verification/2026-11-01-pix2pix-webgpu-candidate.md`.
+- **Boundaries:** Only the pinned folded official `edges2shoes` checkpoint is qualified; weights remain outside Git. The 253,233,196-byte manifest resident-memory figure is derived major static GPU allocation accounting, not process/driver peak VRAM. Mid-wgpu engine creation is not interruptible; late-created engines are freed after cancellation. No arbitrary checkpoint support, cross-GPU/browser qualification, or production latency claim. Final `pnpm verify` exited 0 on the completed tree; this section records the verified local checkpoint and no push/publication is implied.
+
+
 ## 2026-10-18 — Rename Lil Tart / @litert-playground to Lil Local / @lil-local
 
 - **Intent:** Give the browser model lab and reusable package family one coherent identity, `Lil Local`, namespace `@lil-local/*`, canonical repo `myrqyry/lil-local`; protect the established inference APIs and downstream apps.

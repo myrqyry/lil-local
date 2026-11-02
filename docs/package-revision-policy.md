@@ -53,6 +53,7 @@ entrypoint.
 - `@lil-local/text-gen`
 - `@lil-local/embedding-litertlm` (opt-in WebGPU text embeddings; runtime/model qualification pending)
 - `@lil-local/decision-onnx` (opt-in D1 Omni ONNX WebGPU text-decision slice)
+- `@lil-local/pix2pix-webgpu` (opt-in Rust/Wasm custom WebGPU Pix2Pix; pinned edges2shoes qualification is limited)
 - `@lil-local/encoder`
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`

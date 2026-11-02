@@ -14,6 +14,7 @@
     "@lil-local/text-gen": "file:./archives/text-gen.tgz",
     "@lil-local/embedding-litertlm": "file:./archives/embedding-litertlm.tgz",
     "@lil-local/decision-onnx": "file:./archives/decision-onnx.tgz",
+    "@lil-local/pix2pix-webgpu": "file:./archives/pix2pix-webgpu.tgz",
     "@lil-local/encoder": "file:./archives/encoder.tgz",
     "@lil-local/retrieval": "file:./archives/retrieval.tgz",
     "@lil-local/kokoro": "file:./archives/kokoro.tgz",

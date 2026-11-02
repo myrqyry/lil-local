@@ -287,29 +287,129 @@ normalization mode in WGSL/Rust, and focused Python regression coverage. The
 217 MB checkpoint, folded binary, generated wasm package, temporary PyTorch
 fixtures, and browser harness outputs remain outside the repository.
 
+## Package extraction and reusable output — 2026-11-01
+
+The viable engine was then extracted into a narrow
+`@lil-local/pix2pix-webgpu` package instead of adopting the generated React
+workbench. The package keeps the verified surface intentionally small:
+
+- only the folded official `edges2shoes` U-Net 256 path is advertised;
+- model weights are caller-owned and are **not** committed or bundled;
+- import is lazy: no Wasm initialization, WebGPU request or asset fetch occurs
+  until an explicit `BrowserSubstrateRunner.load()`;
+- WebGPU is required and failure is explicit; there is no CPU/WebGL/WASM
+  inference fallback;
+- the folded weight asset is pinned to exactly `217,677,836` bytes and
+  SHA-256
+  `eaea6a9c6ec2ed281589c9986ca1b16e755b06d8062673dd0b26d5e4ea235a34`;
+- the supplied `AssetResolver` is wrapped by Lil Local's existing manifest
+  verifier before the engine is created; and
+- the model manifest records qualification as `limited`, rather than
+  promoting one machine/checkpoint result into generic Pix2Pix support.
+
+The Rust engine also gained an explicit output readback path. The final d8 GPU
+buffer is retained by the engine, and `read_output_nchw()` copies it into a
+dedicated MAP_READ staging buffer only when a consumer requests output. The
+normal rendering path therefore does not pay a mandatory full-output readback.
+The package converts the returned `[3,256,256]` NCHW `[-1,1]` tensor into a
+normal opaque RGBA8 result.
+
+The checked-in runtime consists of the Rust/WGSL source plus the generated
+wasm-bindgen web package, not the model. Current generated runtime hashes are:
+
+```text
+384d86440dab654429f8e01dd9b572327d3ac15d1a09e44921362655efa97025  wasm/pix2pix_wgpu_bg.wasm
+882c034b5506a37b1ad7b145c95b0320752f8762bb31d922d06c2b9a91a50db6  wasm/pix2pix_wgpu.js
+```
+
+The manifest's `residentBytes = 253,233,196` is a derived lower-bound-style
+accounting of major static GPU allocations in this engine: model weights,
+encoder/decoder activation buffers, skip textures, input texture, output
+staging, CPU-reference buffer and MSE buffers. It is **not** total browser
+process memory or a VRAM peak claim; driver/browser overhead and caller-held
+weight copies are outside that number.
+
+### Package-level real browser smoke
+
+The new package itself—not the old audit harness—was exercised from a Vite
+consumer using `createHttpAssetResolver` and a temporary local asset server.
+On Chromium WebGPU the observed adapter was again:
+
+```text
+vendor       nvidia
+architecture turing
+```
+
+The smoke:
+
+1. fetched and strictly verified the complete folded 217 MB asset;
+2. dynamically initialized the bundled Wasm;
+3. created the engine on a detached 256x256 canvas;
+4. ran full-model inference through the default `Texture2DArray` skip path;
+5. read the final NCHW tensor back to JavaScript;
+6. converted it through the package's public RGBA result path; and
+7. compared all output channels against the independent PyTorch reference
+   converted to RGBA8.
+
+The output contained exactly `262,144` RGBA bytes and the maximum channel
+difference was **1 integer level out of 255**. This is consistent with the
+already-established floating-point parity plus final 8-bit quantization.
+
+One smoke receipt observed approximately `512.1 ms` asset load/integrity time,
+`362.1 ms` engine creation time and `274.5 ms` inference-plus-output-readback
+time. These are single-run wall observations, **not a performance benchmark**.
+
+### Lifecycle and packed-consumer evidence
+
+Focused package tests cover lazy loading, fail-closed WebGPU availability,
+verified engine configuration, malformed-input rejection, output conversion and
+late-engine cleanup after load cancellation. The package test suite passed
+8/8 cases and package TypeScript checking passed.
+
+`pnpm test:compatibility` also passed with the new package in the external
+consumer matrix. The packed tarball installed, resolved through its public
+entrypoint, typechecked, passed the fixture contract and Vite-built alongside
+the rest of the supported package surface. No model was fetched by that
+compatibility test.
+
+The completed repository then passed the authoritative `pnpm verify` gate with
+exit 0, including every workspace typecheck/test, WebGPU selection tests,
+package boundaries, packed compatibility, conversion-asset checks, runtime
+qualification and production builds. Existing Vite chunk-size notices remained
+advisory.
+
+The package's current cancellation guarantee is cooperative at the Lil Local
+lifecycle boundary: pre-abort prevents loading, asset fetching receives the
+caller's signal, and an engine that finishes creation after cancellation is
+immediately freed. The underlying wgpu/Wasm engine creation itself does not
+currently expose a mid-creation cancellation primitive.
+
 ## Decision
 
-The custom WebGPU engine is now a **technically viable Pix2Pix runtime
-candidate**, not merely a kernel experiment. We have established:
+`@lil-local/pix2pix-webgpu` is now part of Lil Local's **supported packed
+package surface**, while its runtime/model qualification remains deliberately
+**limited**. Those are separate claims.
 
-- official checkpoint loading and exact architecture match;
-- correct BatchNorm-eval export semantics without expanding the binary format;
-- Rust `wasm32-unknown-unknown` compilation and bindgen packaging;
-- real NVIDIA/Turing full-model execution;
-- numerical parity with the official PyTorch generator;
-- parity for both dual-storage and `Texture2DArray` skip paths; and
-- stable repeated execution on one engine instance.
+Established:
 
-Do **not** expose it as a supported Lil Local provider yet. Remaining production
-gates are narrower now: lifecycle/cancellation behavior, explicit memory and
-resource limits, failure cleanup, multiple-input/model qualification, and the
-normal Lil Local packed-consumer/boundary integration. Performance also needs a
-real benchmark that isolates inference from queueing, MSE verification, and
-readback; the warmed ~38-41 ms observations above are encouraging but not a
-qualified latency claim.
+- the package can be packed and consumed through the normal Lil Local contract;
+- the checked-in Rust/Wasm runtime builds and executes on real NVIDIA WebGPU;
+- the pinned folded official `edges2shoes` model passes full-output parity;
+- the reusable package returns actual image bytes rather than requiring a
+  canvas-only consumer; and
+- caller-owned model transport, integrity verification and lifecycle ownership
+  use existing Lil Local boundaries.
 
-If Pix2Pix becomes an active product capability, the next implementation should
-be a narrow `@lil-local/*` candidate package built from the preserved patch,
-with the official checkpoint provenance pinned outside the package and with
-Lil Local's existing runtime receipts/qualification rules applied. Do not adopt
-the generated React workbench or its marketing copy wholesale.
+Not established:
+
+- arbitrary Pix2Pix checkpoints or architectures;
+- other GPUs/browsers as qualified environments;
+- total process/driver memory bounds or OOM recovery;
+- immediate cancellation once wgpu engine creation is already inside the native
+  call; or
+- isolated production latency/throughput benchmarks.
+
+Do not generalize this package into a universal Pix2Pix provider from the one
+qualified model. The old source patch remains useful historical evidence for
+the normalization fix; the checked-in `packages/pix2pix-webgpu/native` source
+is now the current implementation authority.

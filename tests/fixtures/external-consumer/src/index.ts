@@ -12,6 +12,10 @@ import {
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
 import { EncoderPipeline } from '@lil-local/encoder'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
+import {
+  createPix2PixEdge2ShoesSubstrate,
+  pix2pixEdge2ShoesManifest,
+} from '@lil-local/pix2pix-webgpu'
 import { ColBertPipeline } from '@lil-local/retrieval'
 import { maxSim, rankDense } from '@lil-local/retrieval/scoring'
 import { KokoroPipeline } from '@lil-local/kokoro'
@@ -121,6 +125,14 @@ export const exampleD1Question: D1Question = {
 }
 export const d1TextRuntime = D1OnnxWebGpu
 
+// Importing the packed Pix2Pix package must remain lazy: the Wasm module and
+// caller-owned 217 MB weights are untouched until an explicit runner load.
+export const externalPix2PixManifest = pix2pixEdge2ShoesManifest
+export const externalPix2PixSubstrate = createPix2PixEdge2ShoesSubstrate({
+  assets: { async resolve() { return new ArrayBuffer(0) } },
+})
+export const externalPix2PixRunner = new BrowserSubstrateRunner(externalPix2PixSubstrate)
+
 export const depthPipeline = new DepthEstimationPipeline()
 export const depthManifest = da3SmallPortraitManifest
 
@@ -140,6 +152,7 @@ export const importedPackages = [
   LiteRtLmWorkerClient,
   EncoderPipeline,
   D1OnnxWebGpu,
+  createPix2PixEdge2ShoesSubstrate,
   ColBertPipeline,
   maxSim,
   rankDense,

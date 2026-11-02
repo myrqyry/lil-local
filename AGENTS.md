@@ -35,6 +35,7 @@ packages/retrieval         ColBERT embeddings, late-interaction scoring
 packages/encoder           Text embeddings, token classification
 packages/embedding-litertlm  opt-in LiteRT-LM EmbeddingGemma 2 text embeddings
 packages/decision-onnx     opt-in D1 Omni ONNX WebGPU text-decision slice
+packages/pix2pix-webgpu    opt-in Rust/Wasm custom WebGPU Pix2Pix image translation
 packages/image-embedding   Image embeddings
 packages/browser-cache     Browser-side model/tensor cache
 packages/video-classification  MoViNet video classification

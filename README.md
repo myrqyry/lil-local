@@ -175,6 +175,7 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
 | `packages/image-segmentation` | `@lil-local/image-segmentation` | On-demand face parsing and SAM 2.1 point-prompted mask inference |
 | `packages/decision-onnx` | `@lil-local/decision-onnx` | Opt-in D1 Omni ONNX WebGPU text-decision slice |
+| `packages/pix2pix-webgpu` | `@lil-local/pix2pix-webgpu` | Opt-in Rust/Wasm custom WebGPU Pix2Pix U-Net 256 image translation |
 | `packages/embedding-litertlm` | `@lil-local/embedding-litertlm` | Opt-in LiteRT-LM EmbeddingGemma 2 WebGPU text embeddings |
 | `packages/react-litert` | `@lil-local/react-litert` | React bindings for the managed LiteRT runtime |
 | `packages/moderation` | `@lil-local/moderation` | Opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX, WebGPU/WASM) |
