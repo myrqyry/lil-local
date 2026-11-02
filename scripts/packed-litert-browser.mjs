@@ -35,12 +35,15 @@ export async function probePackedBrowser(fixtureRoot, repositoryRoot, backend = 
   try {
     await server.listen()
     const port = server.httpServer.address().port
+    const headed = process.env.PACKED_BROWSER_HEADED === '1'
     browser = await chromium.launch({
-      headless: true, executablePath: process.env.CHROMIUM_BINARY || '/usr/bin/chromium',
+      headless: !headed,
+      executablePath: process.env.CHROMIUM_BINARY || '/usr/bin/chromium',
       args: backend === 'webgpu' ? [
-        '--no-sandbox', '--enable-unsafe-webgpu',
-        '--enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE',
-        '--use-angle=vulkan', '--disable-vulkan-surface',
+        '--no-sandbox', '--ozone-platform=x11',
+        '--enable-experimental-web-platform-features',
+        '--enable-webgpu-developer-features',
+        '--enable-features=Vulkan',
       ] : ['--no-sandbox'],
     })
     console.log('CHROMIUM', browser.version())
@@ -49,11 +52,17 @@ export async function probePackedBrowser(fixtureRoot, repositoryRoot, backend = 
     page.on('pageerror', error => failures.push(error.message))
     await page.goto('http://127.0.0.1:' + port + '/src/index.ts', { waitUntil: 'domcontentloaded' })
     const result = await page.evaluate(async backend => {
+      let adapterInfo = null
       if (backend === 'webgpu') {
         const adapter = await navigator.gpu?.requestAdapter()
         if (!adapter) throw new Error('WebGPU adapter unavailable')
         const info = adapter.info
-        console.log('WEBGPU_ADAPTER', JSON.stringify({ vendor: info?.vendor, architecture: info?.architecture, device: info?.device }))
+        adapterInfo = {
+          vendor: info?.vendor ?? null,
+          architecture: info?.architecture ?? null,
+          device: info?.device ?? null,
+          description: info?.description ?? null,
+        }
         if (!info?.vendor || info.vendor.toLowerCase() === 'google' || info.architecture?.toLowerCase().includes('swiftshader')) {
           throw new Error('WebGPU hardware adapter not verified (software/unknown adapter)')
         }
@@ -61,7 +70,7 @@ export async function probePackedBrowser(fixtureRoot, repositoryRoot, backend = 
         if (!device) throw new Error('WebGPU device unavailable')
       }
       const { runPackedTinyLitert } = await import('/src/packed-litert-browser.ts')
-      return runPackedTinyLitert(backend)
+      return { ...(await runPackedTinyLitert(backend)), adapterInfo }
     }, backend)
     if (failures.length) throw Error('Browser page errors: ' + failures.join('; '))
     if (!result.cached) throw Error('Packed runtime did not reuse compiled model')

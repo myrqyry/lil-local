@@ -29,7 +29,7 @@ export async function runPackedTinyLitert(backend: 'wasm' | 'webgpu' = 'wasm'): 
         const output = await context.liteRt.predict(path, tensors)
         if (!Array.isArray(output) || output.length !== 1) throw new Error('Expected one output tensor')
         try {
-          const values = context.liteRt.readTensor<Float32Array>(output[0])
+          const values = await context.liteRt.readTensorAsync<Float32Array>(output[0])
           maxError = Math.max(maxError, assertAddOutput(values, left, right))
         } finally {
           for (const tensor of output) tensor.delete()

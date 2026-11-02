@@ -402,6 +402,19 @@ describe('managed LiteRT runtime', () => {
     expect(context.liteRt.getTelemetry().map((entry) => entry.event)).toEqual(['compile', 'inference'])
   })
 
+  it('reads accelerator-backed tensors through async readback', async () => {
+    const context = await createLiteRtRuntime({
+      backend: 'wasm',
+      assets: { resolve: vi.fn() },
+    })
+    const values = Float32Array.of(3, 5, 8)
+    const data = vi.fn().mockResolvedValue(values)
+    const tensor = { data } as unknown as Tensor
+
+    await expect(context.liteRt.readTensorAsync<Float32Array>(tensor)).resolves.toBe(values)
+    expect(data).toHaveBeenCalledTimes(1)
+  })
+
   it('bounds telemetry history for long-running consumers', async () => {
     const model = { run: vi.fn().mockResolvedValue([{}]) }
     vi.mocked(loadAndCompile).mockResolvedValue(model as never)

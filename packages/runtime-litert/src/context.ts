@@ -282,6 +282,12 @@ class LiteRtRuntimeManager implements ManagedLiteRtRuntime {
     return tensor.toTypedArray() as T
   }
 
+  async readTensorAsync<T extends LiteRtTypedArray>(tensor: Tensor): Promise<T> {
+    this.assertUsable()
+    this.tensorCopies += 1
+    return (await tensor.data()) as T
+  }
+
   supportsGpuBufferTensors(): boolean {
     return typeof (Tensor as unknown as { fromGpuBuffer?: unknown }).fromGpuBuffer === 'function'
   }

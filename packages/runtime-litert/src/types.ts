@@ -88,6 +88,7 @@ export interface ManagedLiteRtRuntime {
   clearTelemetry(): void
   createTensor(data: LiteRtTypedArray, shape: number[]): Tensor
   readTensor<T extends LiteRtTypedArray>(tensor: Tensor): T
+  readTensorAsync<T extends LiteRtTypedArray>(tensor: Tensor): Promise<T>
   supportsGpuBufferTensors(): boolean
   disposeModel(path: string): void
   dispose(): void

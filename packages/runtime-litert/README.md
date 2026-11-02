@@ -50,7 +50,7 @@ The authoritative declarations are [`src/types.ts`](src/types.ts), exported thro
 | `getModelInfo(path, options?)` / `getDiagnostics(path, options?)` | Model metadata or diagnostics, possibly `undefined` | Metadata is not independent inference-parity evidence. |
 | `getTelemetry()` / `clearTelemetry()` | Read bounded telemetry / clear it | Telemetry is session history, not durable qualification. |
 | `loadNpy(path, signal?)` / `fetchBuffer(path, signal?)` | `Promise<Float32Array>` / `Promise<ArrayBuffer>` | Asset access follows the configured resolver. |
-| `createTensor(data, shape)` / `readTensor(tensor)` | Tensor construction / typed-array readback | Typed inputs: float32, int32, int8, uint8. |
+| `createTensor(data, shape)` / `readTensor(tensor)` / `readTensorAsync(tensor)` | Tensor construction / typed-array readback | `readTensor` is synchronous host-memory readback; `readTensorAsync` also handles accelerator-backed tensors by copying them to host memory first. Typed inputs: float32, int32, int8, uint8. |
 | `supportsGpuBufferTensors()` | `boolean` | Capability observation, not a guarantee every model operation ran on GPU. |
 | `disposeModel(path)` / `dispose()` | `void` | Release model-specific resources / whole managed runtime. |
 
