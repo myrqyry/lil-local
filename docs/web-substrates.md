@@ -23,6 +23,22 @@ D1's loaded ONNX implementation also deduplicates direct session disposal: multi
 
 The D1 ONNX panel uses this contract to drive the real `D1OnnxWebGpu.load()`, `decide()`, and `dispose()` calls. Its **Stop loading** control now aborts cooperatively and waits for the runner's cleanup; the D1 loader checks cancellation before tokenizer/graph stages and after the ONNX session returns, releasing any late-created session. `onnxruntime-web` is not passed a network cancellation signal by this path: Stop can therefore remain pending during an in-progress ORT download or graph compilation. A simultaneous loader failure is reported separately rather than mislabeled as a clean cancellation. The previous real D1 inference evidence lives in `docs/verification/2026-10-12-d1-webgpu-text.md`; cancellation unit tests and a no-weights browser UI smoke test do **not** constitute a fresh full model inference qualification.
 
+## Public TypeScript lifecycle reference
+
+The source of truth is [`packages/inference-core/src/substrate.ts`](../packages/inference-core/src/substrate.ts), exported from `@lil-local/inference-core`. This is a TypeScript interface, **not an HTTP endpoint**; an endpoint-only API checker cannot score its coverage.
+
+| Member | Public contract | Constraint / error behavior |
+| --- | --- | --- |
+| `BrowserSubstrate<I, O, Progress>` | `id`, `format`, `capabilities`, `requestedBackends`, `create(onProgress?, signal?)` | Nonempty metadata required; requested backends are not observed backend evidence. |
+| `LoadedBrowserSubstrate<I, O>` | `infer(input): Promise<O>`, `dispose(): Promise<void>` | Model-specific I/O and underlying cleanup belong to the adapter. |
+| `new BrowserSubstrateRunner(substrate)` | Own one session | Constructor does not load weights; invalid descriptors throw. |
+| `runner.status` | `idle`, `loading`, `ready`, `running`, `failed`, `disposing`, `disposed` | Lifecycle status is not a GPU or model-parity receipt. |
+| `runner.load(onProgress?, signal?)` | Explicit creation and optional cooperative cancellation | Only allowed in `idle`. Pre-aborted signals reject with `AbortError` before creation; late returned models are disposed before abortion settles. Failed late cleanup prevents reuse. |
+| `runner.run(input)` | Await one inference result | Requires `ready`; concurrent runs are rejected. |
+| `runner.dispose()` | Wait for pending load/run, release model | Repeated callers share pending disposal. Cleanup failures reject; final `disposed` status alone does **not** prove successful underlying release. |
+
+The runner does not guarantee interruption of a loader that ignores `AbortSignal`, nor that computation actually ran on a requested backend. Runtime evidence must be established separately.
+
 ## LiteRT-LM JS / WASM compatibility
 
 LiteRT-LM JavaScript `@litert-lm/core@0.18.1` ships with an upstream
