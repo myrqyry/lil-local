@@ -38,6 +38,25 @@ function innerResolver(resolve: AssetResolver['resolve']): AssetResolver {
 }
 
 describe('browser cache asset resolver', () => {
+  it('checks stored presence without reading the cached body when the store supports has', async () => {
+    const read = vi.fn(async () => buffer(4, 5, 6))
+    const resolver = createBrowserCacheAssetResolver({
+      modelId: 'demo-model',
+      revision: 'rev-a',
+      manifest,
+      inner: innerResolver(async () => buffer(1, 2, 3)),
+      store: {
+        has: async () => true,
+        read,
+        write: async () => undefined,
+        delete: async () => undefined,
+      },
+    })
+
+    await expect(resolver.hasCached(asset())).resolves.toBe(true)
+    expect(read).not.toHaveBeenCalled()
+  })
+
   it('returns a stored asset without calling HTTP', async () => {
     const values = new Map<string, ArrayBuffer>()
     const http = vi.fn(async () => buffer(1, 2, 3))

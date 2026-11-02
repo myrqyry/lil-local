@@ -14,6 +14,7 @@ export interface BrowserCacheIdentity {
 }
 
 export interface BrowserCacheStore {
+  has?(key: string): Promise<boolean>
   read(key: string): Promise<ArrayBuffer | undefined>
   write(key: string, value: ArrayBuffer): Promise<void>
   delete(key: string): Promise<void>
@@ -28,12 +29,14 @@ export interface BrowserCacheResolverOptions {
 }
 
 export interface BrowserCacheAssetResolver extends AssetResolver {
+  hasCached(asset: ModelAsset): Promise<boolean>
   invalidate(identity: BrowserCacheIdentity): Promise<void>
   cacheKey(asset: ModelAsset): string
 }
 
 function unavailableStore(): BrowserCacheStore {
   return {
+    has: async () => { throw new Error('OPFS unavailable') },
     read: async () => { throw new Error('OPFS unavailable') },
     write: async () => { throw new Error('OPFS unavailable') },
     delete: async () => { throw new Error('OPFS unavailable') },
@@ -51,6 +54,14 @@ export async function createOpfsAssetStore(directoryName = 'litert-playground'):
     const directory = await root.getDirectoryHandle(directoryName, { create: true })
     const fileName = (key: string) => encodeURIComponent(key)
     return {
+      async has(key) {
+        try {
+          await directory.getFileHandle(fileName(key))
+          return true
+        } catch {
+          return false
+        }
+      },
       async read(key) {
         try {
           const file = await directory.getFileHandle(fileName(key))
@@ -109,6 +120,18 @@ export function createBrowserCacheAssetResolver(
     return generations.get(key) ?? 0
   }
 
+  async function hasCached(asset: ModelAsset): Promise<boolean> {
+    const manifestAsset = assetFromManifest(options.manifest, asset)
+    const key = cacheKey(manifestAsset)
+    try {
+      const store = await storePromise
+      if (store.has) return await store.has(key)
+      return (await store.read(key)) !== undefined
+    } catch {
+      return false
+    }
+  }
+
   async function resolve(asset: ModelAsset, requestOptions?: AssetRequestOptions): Promise<ArrayBuffer> {
     const manifestAsset = assetFromManifest(options.manifest, asset)
     const key = cacheKey(manifestAsset)
@@ -140,6 +163,7 @@ export function createBrowserCacheAssetResolver(
   }
 
   return {
+    hasCached,
     resolve,
     stream: async (asset, requestOptions) => {
       const value = await resolve(asset, requestOptions)

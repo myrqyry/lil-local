@@ -419,6 +419,53 @@ does not change the model's durable `qualification: limited` status. It adds a
 local-first way to exercise the already-qualified pinned path without inventing
 a model-hosting dependency.
 
+## Persistent model location
+
+The verified host-side source binary was copied out of the disposable audit
+tree into the normal XDG data location:
+
+```text
+$HOME/.local/share/lil-local/models/pix2pix/edges2shoes-batchnorm-eval-v1.bin
+```
+
+The copy is exactly 217,677,836 bytes and retains SHA-256
+`eaea6a9c6ec2ed281589c9986ca1b16e755b06d8062673dd0b26d5e4ea235a34`.
+It remains outside Git.
+
+For browser use, the playground now imports/replaces that folded binary into
+Lil Local's existing OPFS store rather than retaining an OS file handle. The
+logical installed location shown in the UI is:
+
+```text
+OPFS /litert-playground/pix2pix-edges2shoes-unet256%2Fpix2pix-edges2shoes-folded-weights%2Fpix2pix%2Fedges2shoes-batchnorm-eval-v1.bin%2Fbatchnorm-eval-fold-v1
+```
+
+The shared browser-cache resolver gained a presence probe so the UI can detect
+that entry without reading the 217 MB body. Replacement verifies the new file
+before invalidating an existing good copy, and removal is explicit.
+
+A production Chromium persistence smoke proved the intended lifecycle on
+NVIDIA/Turing:
+
+1. imported the canonical local folded binary into OPFS;
+2. observed one OPFS file at the exact logical location above, size
+   217,677,836 bytes;
+3. reloaded the production app;
+4. observed that the browser model file picker held zero selected files;
+5. rediscovered the installed model through the OPFS presence probe;
+6. selected only an input PNG;
+7. loaded the model from OPFS and ran full inference successfully; and
+8. recorded zero console/page errors.
+
+The post-reload session receipt observed `517.7 ms` load, `391.5 ms`
+compile, and `79.5 ms` inference + output readback on that run. These remain
+session observations rather than benchmark claims.
+
+OPFS is origin-scoped. A different browser origin (including a different local
+port) has a separate installed copy. The XDG host file above is the stable
+machine-level source; OPFS is the stable browser-installed copy for a given
+origin.
+
 ## Decision
 
 `@lil-local/pix2pix-webgpu` is now part of Lil Local's **supported packed

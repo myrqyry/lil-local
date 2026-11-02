@@ -11,7 +11,13 @@ import {
   type Pix2PixImageResult,
   type Pix2PixLoadProgress,
 } from '@lil-local/pix2pix-webgpu'
-import { createPix2PixFileAssetResolver } from '../substrates/pix2pixLocal'
+import {
+  createPix2PixPersistentAssetResolver,
+  hasPix2PixStoredWeights,
+  importPix2PixWeights,
+  pix2pixOpfsLocation,
+  removePix2PixStoredWeights,
+} from '../substrates/pix2pixLocal'
 
 type Runner = BrowserSubstrateRunner<ImageInput, Pix2PixImageResult, Pix2PixLoadProgress>
 
@@ -77,8 +83,11 @@ async function decodeImageToInput(
 export function Pix2PixPanel() {
   const [weightsFile, setWeightsFile] = useState<File | null>(null)
   const [input, setInput] = useState<ImageInput | null>(null)
-  const [status, setStatus] = useState('Choose the folded weights and an input image.')
+  const [status, setStatus] = useState('Checking Lil Local model storage…')
   const [error, setError] = useState('')
+  const [installed, setInstalled] = useState(false)
+  const [checkingStorage, setCheckingStorage] = useState(true)
+  const [importing, setImporting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [running, setRunning] = useState(false)
   const [stopping, setStopping] = useState(false)
@@ -91,16 +100,37 @@ export function Pix2PixPanel() {
   const loadAbort = useRef<AbortController | null>(null)
   const generation = useRef(0)
 
-  useEffect(() => () => {
-    generation.current += 1
-    loadAbort.current?.abort()
-    const pending = pendingRunner.current
-    pendingRunner.current = null
-    loadAbort.current = null
-    if (pending) void pending.dispose().catch(reason => console.error('Pending Pix2Pix cleanup failed:', reason))
-    const active = runner.current
-    runner.current = null
-    if (active) void active.dispose().catch(reason => console.error('Pix2Pix cleanup failed:', reason))
+  useEffect(() => {
+    let mounted = true
+    void hasPix2PixStoredWeights()
+      .then(value => {
+        if (!mounted) return
+        setInstalled(value)
+        setStatus(value
+          ? 'Model installed in Lil Local OPFS storage. Load it when you are ready.'
+          : 'No installed Pix2Pix model yet. Choose the folded .bin once to import it.')
+      })
+      .catch(reason => {
+        if (!mounted) return
+        setError('Could not inspect Lil Local model storage: ' + String(reason))
+        setStatus('Model storage check failed.')
+      })
+      .finally(() => {
+        if (mounted) setCheckingStorage(false)
+      })
+
+    return () => {
+      mounted = false
+      generation.current += 1
+      loadAbort.current?.abort()
+      const pending = pendingRunner.current
+      pendingRunner.current = null
+      loadAbort.current = null
+      if (pending) void pending.dispose().catch(reason => console.error('Pending Pix2Pix cleanup failed:', reason))
+      const active = runner.current
+      runner.current = null
+      if (active) void active.dispose().catch(reason => console.error('Pix2Pix cleanup failed:', reason))
+    }
   }, [])
 
   async function chooseInput(file: File | null) {
@@ -116,9 +146,52 @@ export function Pix2PixPanel() {
     }
   }
 
+  async function importModel() {
+    if (!weightsFile || importing || loading || runner.current) return
+    setImporting(true)
+    setError('')
+    setReceipt(null)
+    setStatus(installed
+      ? 'Replacing installed Pix2Pix weights in Lil Local OPFS…'
+      : 'Importing Pix2Pix weights into Lil Local OPFS…')
+    try {
+      await importPix2PixWeights(weightsFile, {
+        onProgress(progress) {
+          setStatus(
+            `Reading local weights · ${formatBytes(progress.loadedBytes)} / ${formatBytes(progress.totalBytes ?? weightsFile.size)}`,
+          )
+        },
+      })
+      setInstalled(true)
+      setStatus('Model installed in Lil Local OPFS storage. You can load it without choosing the file again.')
+    } catch (reason) {
+      setInstalled(await hasPix2PixStoredWeights())
+      setStatus('Model import failed.')
+      setError(String(reason))
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function removeInstalledModel() {
+    if (!installed || loading || running || importing || runner.current) return
+    setError('')
+    setReceipt(null)
+    setStatus('Removing installed Pix2Pix weights from Lil Local OPFS…')
+    try {
+      await removePix2PixStoredWeights()
+      setInstalled(false)
+      setWeightsFile(null)
+      setStatus('Installed Pix2Pix model removed. Choose the folded .bin to import it again.')
+    } catch (reason) {
+      setError('Could not remove installed Pix2Pix model: ' + String(reason))
+      setStatus('Model removal failed.')
+    }
+  }
+
   async function loadModel() {
-    if (!weightsFile || !outputCanvas.current || loading || runner.current) {
-      if (!weightsFile) setError('Choose the folded edges2shoes .bin file first.')
+    if (!installed || !outputCanvas.current || loading || importing || runner.current) {
+      if (!installed) setError('Import the folded edges2shoes model into Lil Local storage first.')
       return
     }
 
@@ -126,7 +199,7 @@ export function Pix2PixPanel() {
     const controller = new AbortController()
     const localRunner = new BrowserSubstrateRunner(
       createPix2PixEdge2ShoesSubstrate({
-        assets: createPix2PixFileAssetResolver(weightsFile),
+        assets: createPix2PixPersistentAssetResolver(),
         canvas: outputCanvas.current,
       }),
     )
@@ -193,7 +266,7 @@ export function Pix2PixPanel() {
       if (active) await active.dispose()
       setReceipt(null)
       setError('')
-      setStatus('Unloaded. Local files remain untouched.')
+      setStatus('Unloaded. Installed OPFS model remains available.')
     } catch (reason) {
       setError('Runtime disposal failed: ' + String(reason))
     }
@@ -225,33 +298,44 @@ export function Pix2PixPanel() {
       <div className="space-y-1">
         <p className="text-sm font-semibold">Official edges2shoes · U-Net 256 · custom Rust/Wasm WebGPU</p>
         <p className="text-sm text-on-surface-variant">
-          Local-file workflow only. Nothing downloads automatically and there is no CPU, WASM, WebGL, or cloud fallback.
+          Import the verified model once into Lil Local's persistent OPFS store, then future sessions load that installed copy. Nothing downloads automatically and there is no CPU, WebGL, or cloud fallback.
         </p>
         <p className="text-xs text-on-surface-variant">
           Expected folded weights: {formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES)} · SHA-256 {PIX2PIX_EDGE2SHOES_FOLDED_SHA256.slice(0, 16)}…
         </p>
+        <div className="rounded-xl border border-outline bg-surface/50 p-3 text-xs text-on-surface-variant">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-on-surface">
+              {checkingStorage ? 'Checking model storage…' : installed ? 'Installed in browser storage' : 'Not installed'}
+            </span>
+            <span>{installed ? formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES) : '0 B stored'}</span>
+          </div>
+          <code className="mt-2 block break-all text-[10px] text-on-surface-muted">{pix2pixOpfsLocation()}</code>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm">
-          <span className="font-medium">1 · Folded model weights</span>
+          <span className="font-medium">1 · Import / replace folded model weights</span>
           <input
             type="file"
             accept=".bin,application/octet-stream"
-            disabled={loading || loaded}
+            disabled={checkingStorage || importing || loading || loaded}
             onChange={event => {
               const file = event.currentTarget.files?.[0] ?? null
               setWeightsFile(file)
               setError('')
               if (file) {
                 setStatus(file.size === PIX2PIX_EDGE2SHOES_WEIGHT_BYTES
-                  ? 'Weight file selected. Integrity will be verified on Load.'
+                  ? 'Weight file selected. Choose Import to verify and persist it.'
                   : `Selected file is ${formatBytes(file.size)}; expected ${formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES)}.`)
               }
             }}
             className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"
           />
-          <p className="text-xs text-on-surface-muted">{weightsFile?.name ?? 'No model file selected.'}</p>
+          <p className="text-xs text-on-surface-muted">
+            {weightsFile?.name ?? (installed ? 'Installed copy will be used for Load.' : 'Choose the folded .bin once to install it.')}
+          </p>
         </label>
 
         <label className="space-y-2 text-sm">
@@ -280,10 +364,16 @@ export function Pix2PixPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={!weightsFile || loading || loaded}
+          disabled={!weightsFile || checkingStorage || importing || loading || loaded}
+          onClick={() => { void importModel() }}
+          className="rounded-lg border border-outline px-3 py-2 text-sm font-semibold text-on-surface disabled:opacity-50"
+        >{importing ? 'Importing…' : installed ? 'Replace installed model' : 'Import model'}</button>
+        <button
+          type="button"
+          disabled={!installed || checkingStorage || importing || loading || loaded}
           onClick={() => { void loadModel() }}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
-        >{loading ? 'Loading…' : 'Load local model'}</button>
+        >{loading ? 'Loading…' : 'Load installed model'}</button>
         {loading && (
           <button
             type="button"
@@ -298,6 +388,12 @@ export function Pix2PixPanel() {
           onClick={() => { void unload() }}
           className="rounded-lg border border-outline px-3 py-2 text-sm disabled:opacity-50"
         >Unload</button>
+        <button
+          type="button"
+          disabled={!installed || checkingStorage || importing || loading || running || loaded}
+          onClick={() => { void removeInstalledModel() }}
+          className="rounded-lg border border-error/60 px-3 py-2 text-sm text-error disabled:opacity-50"
+        >Remove installed model</button>
         <button
           type="button"
           disabled={!loaded || !input || loading || running}

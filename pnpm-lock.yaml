@@ -262,6 +262,9 @@ importers:
       '@fontsource-variable/bricolage-grotesque':
         specifier: ^5.3.0
         version: 5.3.0
+      '@lil-local/browser-cache':
+        specifier: workspace:*
+        version: link:../../packages/browser-cache
       '@lil-local/decision-onnx':
         specifier: workspace:*
         version: link:../../packages/decision-onnx
