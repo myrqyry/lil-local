@@ -466,6 +466,37 @@ port) has a separate installed copy. The XDG host file above is the stable
 machine-level source; OPFS is the stable browser-installed copy for a given
 origin.
 
+## Experimental video-preview smoke
+
+The production Pix2Pix workspace now also has a deliberately bounded video
+preview mode. It samples at **8 fps** for at most the first **2 seconds**
+(up to 16 frames), reuses the already-loaded WebGPU engine, and runs frames
+strictly one at a time. Stop requests take effect between frames; the native
+wgpu call itself is not claimed to be interruptible mid-frame.
+
+A headed Chrome Beta 158 smoke on the same NVIDIA/Turing machine drove the
+real Lil Local UI end-to-end:
+
+1. opened the Pix2Pix pipeline from the model catalog;
+2. imported the canonical 217,677,836-byte folded model into that origin's OPFS;
+3. loaded the WebGPU engine;
+4. selected a locally generated 320×240, 8-fps, 2-second MP4;
+5. processed all **16** scheduled frames through the full Pix2Pix model; and
+6. completed with **zero console/page errors**.
+
+Observed session status:
+
+```text
+Video preview complete · 16 frames · 22.3 effective fps.
+adapter: nvidia / turing / NVIDIA GeForce RTX 2070 SUPER
+```
+
+The **22.3 fps** value is processing throughput for this short synthetic
+256×256 frame workload, not encoded output-video frame rate and not a durable
+benchmark. The source preview itself was sampled at 8 fps. This slice does not
+yet provide encoded video export, audio preservation, temporal smoothing,
+optical-flow reuse, or full-source-fps frame preservation.
+
 ## Decision
 
 `@lil-local/pix2pix-webgpu` is now part of Lil Local's **supported packed

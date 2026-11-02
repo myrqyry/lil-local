@@ -18,8 +18,20 @@ import {
   pix2pixOpfsLocation,
   removePix2PixStoredWeights,
 } from '../substrates/pix2pixLocal'
+import { buildPreviewFrameTimes, runFrameSequence } from './pix2pixVideo'
 
 type Runner = BrowserSubstrateRunner<ImageInput, Pix2PixImageResult, Pix2PixLoadProgress>
+
+const VIDEO_PREVIEW_FPS = 8
+const VIDEO_PREVIEW_SECONDS = 2
+
+interface VideoPreviewStats {
+  frames: number
+  sourceSeconds: number
+  elapsedMs: number
+  effectiveFps: number
+  averageInferenceMs: number
+}
 
 function formatBytes(bytes: number): string {
   return bytes >= 1024 * 1024
@@ -80,6 +92,93 @@ async function decodeImageToInput(
   }
 }
 
+function waitForVideoEvent(
+  video: HTMLVideoElement,
+  eventName: 'loadedmetadata' | 'seeked',
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Video preview aborted', 'AbortError'))
+      return
+    }
+
+    const cleanup = () => {
+      video.removeEventListener(eventName, onReady)
+      video.removeEventListener('error', onError)
+      signal.removeEventListener('abort', onAbort)
+    }
+    const onReady = () => {
+      cleanup()
+      resolve()
+    }
+    const onError = () => {
+      cleanup()
+      reject(new Error(video.error ? `Video decode failed (code ${video.error.code})` : 'Video decode failed'))
+    }
+    const onAbort = () => {
+      cleanup()
+      reject(new DOMException('Video preview aborted', 'AbortError'))
+    }
+
+    video.addEventListener(eventName, onReady, { once: true })
+    video.addEventListener('error', onError, { once: true })
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+async function loadVideoSource(
+  video: HTMLVideoElement,
+  sourceUrl: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const ready = waitForVideoEvent(video, 'loadedmetadata', signal)
+  video.src = sourceUrl
+  video.load()
+  await ready
+
+  if (!Number.isFinite(video.duration) || video.duration <= 0 || !video.videoWidth || !video.videoHeight) {
+    throw new Error('Video metadata is incomplete or unsupported')
+  }
+}
+
+async function seekVideoFrame(
+  video: HTMLVideoElement,
+  time: number,
+  signal: AbortSignal,
+): Promise<void> {
+  if (Math.abs(video.currentTime - time) < 0.0005 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return
+  const ready = waitForVideoEvent(video, 'seeked', signal)
+  video.currentTime = time
+  await ready
+}
+
+function captureVideoFrame(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+): ImageInput {
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) throw new Error('2D canvas is unavailable for video frame preparation')
+
+  canvas.width = 256
+  canvas.height = 256
+  const sourceScale = Math.max(256 / video.videoWidth, 256 / video.videoHeight)
+  const sourceWidth = 256 / sourceScale
+  const sourceHeight = 256 / sourceScale
+  const sourceX = (video.videoWidth - sourceWidth) / 2
+  const sourceY = (video.videoHeight - sourceHeight) / 2
+
+  context.clearRect(0, 0, 256, 256)
+  context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 256, 256)
+  const image = context.getImageData(0, 0, 256, 256)
+  return {
+    width: 256,
+    height: 256,
+    data: new Uint8Array(image.data),
+    mimeType: 'image/rgba8',
+  }
+}
+
 export function Pix2PixPanel() {
   const [weightsFile, setWeightsFile] = useState<File | null>(null)
   const [input, setInput] = useState<ImageInput | null>(null)
@@ -90,14 +189,19 @@ export function Pix2PixPanel() {
   const [importing, setImporting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [running, setRunning] = useState(false)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoRunning, setVideoRunning] = useState(false)
+  const [videoStats, setVideoStats] = useState<VideoPreviewStats | null>(null)
   const [stopping, setStopping] = useState(false)
   const [receipt, setReceipt] = useState<InferenceReceipt | null>(null)
 
   const inputCanvas = useRef<HTMLCanvasElement | null>(null)
   const outputCanvas = useRef<HTMLCanvasElement | null>(null)
+  const videoElement = useRef<HTMLVideoElement | null>(null)
   const runner = useRef<Runner | null>(null)
   const pendingRunner = useRef<Runner | null>(null)
   const loadAbort = useRef<AbortController | null>(null)
+  const videoAbort = useRef<AbortController | null>(null)
   const generation = useRef(0)
 
   useEffect(() => {
@@ -123,9 +227,17 @@ export function Pix2PixPanel() {
       mounted = false
       generation.current += 1
       loadAbort.current?.abort()
+      videoAbort.current?.abort()
       const pending = pendingRunner.current
       pendingRunner.current = null
       loadAbort.current = null
+      videoAbort.current = null
+      const video = videoElement.current
+      if (video) {
+        video.pause()
+        video.removeAttribute('src')
+        video.load()
+      }
       if (pending) void pending.dispose().catch(reason => console.error('Pending Pix2Pix cleanup failed:', reason))
       const active = runner.current
       runner.current = null
@@ -174,7 +286,7 @@ export function Pix2PixPanel() {
   }
 
   async function removeInstalledModel() {
-    if (!installed || loading || running || importing || runner.current) return
+    if (!installed || loading || running || videoRunning || importing || runner.current) return
     setError('')
     setReceipt(null)
     setStatus('Removing installed Pix2Pix weights from Lil Local OPFS…')
@@ -258,7 +370,7 @@ export function Pix2PixPanel() {
   }
 
   async function unload() {
-    if (loading || running) return
+    if (loading || running || videoRunning) return
     ++generation.current
     const active = runner.current
     runner.current = null
@@ -274,7 +386,7 @@ export function Pix2PixPanel() {
 
   async function run() {
     const active = runner.current
-    if (!active || !input || loading || running) return
+    if (!active || !input || loading || running || videoRunning) return
     setRunning(true)
     setError('')
     setReceipt(null)
@@ -289,6 +401,94 @@ export function Pix2PixPanel() {
     } finally {
       setRunning(false)
     }
+  }
+
+  async function runVideoPreview() {
+    const active = runner.current
+    const video = videoElement.current
+    const canvas = inputCanvas.current
+    if (!active || !video || !canvas || !videoFile || loading || running || videoRunning) return
+
+    const controller = new AbortController()
+    const requestId = generation.current
+    const sourceUrl = URL.createObjectURL(videoFile)
+    let completed = 0
+    let inferenceTotalMs = 0
+    let lastReceipt: InferenceReceipt | null = null
+
+    videoAbort.current = controller
+    setVideoRunning(true)
+    setVideoStats(null)
+    setError('')
+    setReceipt(null)
+    setStatus('Reading local video metadata…')
+
+    try {
+      await loadVideoSource(video, sourceUrl, controller.signal)
+      const times = buildPreviewFrameTimes(video.duration, VIDEO_PREVIEW_FPS, VIDEO_PREVIEW_SECONDS)
+      if (!times.length) throw new Error('Video contains no previewable frames')
+
+      const sourceSeconds = Math.min(video.duration, VIDEO_PREVIEW_SECONDS)
+      const startedAt = performance.now()
+
+      await runFrameSequence({
+        times,
+        signal: controller.signal,
+        async processFrame(time) {
+          await seekVideoFrame(video, time, controller.signal)
+          const frame = captureVideoFrame(video, canvas)
+          const result = await active.run(frame)
+          lastReceipt = result.receipt
+          inferenceTotalMs += result.receipt.inferenceMs
+        },
+        onProgress(progress) {
+          completed = progress.completed
+          if (requestId === generation.current) {
+            setStatus(
+              `Video preview · frame ${progress.completed}/${progress.total} · source ${progress.time.toFixed(2)} s`,
+            )
+          }
+        },
+      })
+
+      const elapsedMs = performance.now() - startedAt
+      const effectiveFps = completed / (elapsedMs / 1000)
+      if (requestId === generation.current) {
+        if (lastReceipt) setReceipt(lastReceipt)
+        setVideoStats({
+          frames: completed,
+          sourceSeconds,
+          elapsedMs,
+          effectiveFps,
+          averageInferenceMs: inferenceTotalMs / completed,
+        })
+        setStatus(
+          `Video preview complete · ${completed} frames · ${effectiveFps.toFixed(1)} effective fps.`,
+        )
+      }
+    } catch (reason) {
+      if (requestId === generation.current) {
+        if ((reason as Error)?.name === 'AbortError') {
+          setStatus(`Video preview stopped after ${completed} frame${completed === 1 ? '' : 's'}.`)
+        } else {
+          setStatus('Video preview failed.')
+          setError(String(reason))
+        }
+      }
+    } finally {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+      URL.revokeObjectURL(sourceUrl)
+      if (videoAbort.current === controller) videoAbort.current = null
+      if (requestId === generation.current) setVideoRunning(false)
+    }
+  }
+
+  function stopVideoPreview() {
+    if (!videoRunning) return
+    setStatus('Stopping video preview after the current WebGPU frame…')
+    videoAbort.current?.abort()
   }
 
   const loaded = !!runner.current
@@ -343,11 +543,77 @@ export function Pix2PixPanel() {
           <input
             type="file"
             accept="image/*"
+            disabled={videoRunning}
             onChange={event => { void chooseInput(event.currentTarget.files?.[0] ?? null) }}
             className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"
           />
           <p className="text-xs text-on-surface-muted">Center-cropped and resized locally to 256×256 RGBA8.</p>
         </label>
+      </div>
+
+      <div className="rounded-xl border border-outline bg-surface/40 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Experimental video preview</p>
+            <p className="text-xs text-on-surface-variant">
+              Samples the first {VIDEO_PREVIEW_SECONDS} seconds at {VIDEO_PREVIEW_FPS} fps and runs every frame sequentially through the already-loaded WebGPU model. This is a throughput/flicker probe, not encoded video export yet.
+            </p>
+          </div>
+          <span className="rounded-lg border border-outline px-2 py-1 text-[10px] text-on-surface-muted">
+            up to {VIDEO_PREVIEW_FPS * VIDEO_PREVIEW_SECONDS} frames
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="min-w-0 flex-1 space-y-2 text-sm">
+            <span className="font-medium">Local video</span>
+            <input
+              type="file"
+              accept="video/*"
+              disabled={videoRunning}
+              onChange={event => {
+                const file = event.currentTarget.files?.[0] ?? null
+                setVideoFile(file)
+                setVideoStats(null)
+                setError('')
+                if (file) {
+                  setStatus(loaded
+                    ? 'Video selected. Run the bounded Pix2Pix preview when ready.'
+                    : 'Video selected. Load the Pix2Pix model before running the preview.')
+                }
+              }}
+              className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"
+            />
+            <p className="truncate text-xs text-on-surface-muted">{videoFile?.name ?? 'Choose a browser-decodable local video.'}</p>
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!loaded || !videoFile || loading || running || videoRunning}
+              onClick={() => { void runVideoPreview() }}
+              className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-on-secondary disabled:opacity-50"
+            >{videoRunning ? 'Processing…' : 'Run video preview'}</button>
+            {videoRunning && (
+              <button
+                type="button"
+                onClick={stopVideoPreview}
+                className="rounded-lg border border-outline px-3 py-2 text-sm"
+              >Stop after frame</button>
+            )}
+          </div>
+        </div>
+
+        <video ref={videoElement} className="hidden" muted playsInline preload="metadata" />
+
+        {videoStats && (
+          <div className="mt-3 grid gap-2 text-xs text-on-surface-variant sm:grid-cols-4">
+            <span><strong className="text-on-surface">{videoStats.frames}</strong> frames</span>
+            <span><strong className="text-on-surface">{videoStats.sourceSeconds.toFixed(2)} s</strong> source</span>
+            <span><strong className="text-on-surface">{videoStats.effectiveFps.toFixed(1)} fps</strong> effective</span>
+            <span><strong className="text-on-surface">{videoStats.averageInferenceMs.toFixed(1)} ms</strong> avg inference</span>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -384,19 +650,19 @@ export function Pix2PixPanel() {
         )}
         <button
           type="button"
-          disabled={!loaded || loading || running}
+          disabled={!loaded || loading || running || videoRunning}
           onClick={() => { void unload() }}
           className="rounded-lg border border-outline px-3 py-2 text-sm disabled:opacity-50"
         >Unload</button>
         <button
           type="button"
-          disabled={!installed || checkingStorage || importing || loading || running || loaded}
+          disabled={!installed || checkingStorage || importing || loading || running || videoRunning || loaded}
           onClick={() => { void removeInstalledModel() }}
           className="rounded-lg border border-error/60 px-3 py-2 text-sm text-error disabled:opacity-50"
         >Remove installed model</button>
         <button
           type="button"
-          disabled={!loaded || !input || loading || running}
+          disabled={!loaded || !input || loading || running || videoRunning}
           onClick={() => { void run() }}
           className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-on-secondary disabled:opacity-50"
         >{running ? 'Running…' : 'Run Pix2Pix'}</button>
