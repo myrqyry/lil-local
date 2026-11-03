@@ -12,6 +12,21 @@ export {
   selectTextGenerationManifest,
 } from './manifest'
 export { LiteRtLmWorkerClient } from './worker/client'
+export {
+  AdaptiveSpeculationController,
+  BoundedSessionTokenMemory,
+  chooseSubmissionWindow,
+  collectSuffixDraftCandidates,
+} from './speculation'
+export type {
+  AdaptiveSpeculationControllerOptions,
+  SpeculationPlan,
+  SpeculationPlanOptions,
+  SpeculationSample,
+  SubmissionWindowSample,
+  SuffixDraftCandidate,
+  SuffixDraftOptions,
+} from './speculation'
 export type {
   LiteRtLmWorkerRequest,
   LiteRtLmWorkerResponse,

@@ -3,8 +3,12 @@ import { createLiteRtRuntime } from '@lil-local/runtime-litert'
 import { ManagedLiteRtModelController, useManagedLiteRtModel } from '@lil-local/react-litert'
 import { createBrowserCacheAssetResolver } from '@lil-local/browser-cache'
 import {
+  AdaptiveSpeculationController,
+  BoundedSessionTokenMemory,
   LiteRtLmTextPipeline,
   LiteRtLmWorkerClient,
+  chooseSubmissionWindow,
+  collectSuffixDraftCandidates,
   type LiteRtLmTextPipelineOptions,
   type LiteRtLmWorkerLoadOptions,
   type LiteRtLmWorkerPrompt,
@@ -95,6 +99,19 @@ export const textPipelineOptions: LiteRtLmTextPipelineOptions = {
   modelBase: 'https://huggingface.co/',
 }
 
+// Paper-inspired speculation policy is a public, runtime-neutral text-generation
+// primitive. Importing it must not initialize a model, GPU runtime, or browser store.
+export const externalDraftCandidates = collectSuffixDraftCandidates(
+  [1, 2, 3],
+  [[9, 1, 2, 3, 4, 5]],
+)
+export const externalSessionMemory = new BoundedSessionTokenMemory(64)
+export const externalSpeculationController = new AdaptiveSpeculationController([1, 2, 4])
+export const externalSubmissionWindow = chooseSubmissionWindow([
+  { steps: 1, elapsedMs: 10 },
+  { steps: 2, elapsedMs: 18 },
+])
+
 // The lightweight downstream loader is part of the supported public surface:
 // consumers with their own model cache only need to provide the execution backend.
 export async function loadCachedTextModel(model: Blob): Promise<void> {
@@ -150,6 +167,10 @@ export const importedPackages = [
   createBrowserCacheAssetResolver,
   LiteRtLmTextPipeline,
   LiteRtLmWorkerClient,
+  AdaptiveSpeculationController,
+  BoundedSessionTokenMemory,
+  chooseSubmissionWindow,
+  collectSuffixDraftCandidates,
   EncoderPipeline,
   D1OnnxWebGpu,
   createPix2PixEdge2ShoesSubstrate,

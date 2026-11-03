@@ -76,3 +76,18 @@ claimed by these tests.
 `apps/playground/src/substrates/d1Onnx.ts`,
 `apps/playground/src/components/D1DecisionPanel.tsx`,
 `docs/verification/2026-10-12-d1-webgpu-text.md`.
+
+
+## 2026-11-02 — Keep speculative-decoding policy separate from host-owned decode loops
+
+**Decision:** Land reusable speculation policy in `@lil-local/text-gen` — suffix-continuation drafts, bounded model-scoped session memory, measured submission-window calibration, and adaptive width selection with online EMA — but do not wire it around the current LiteRT-LM or Transformers.js generation loops or describe those paths as GPU-resident speculative decoding. A full GPU-resident implementation requires a separately qualified custom WebGPU text runtime, or future upstream APIs that expose multi-token verification and KV-cache ownership.
+
+**Why:** The current text engines own per-token decode, sampling and KV state. Wrapping their public APIs would leave the browser/host decision boundary in place and would not establish the paper's key properties: batched integer verification, GPU-side acceptance/KV compaction, dual in-flight command windows, exact greedy equivalence, or the reported performance behavior.
+
+**Alternatives considered:** Inject policy directly into LiteRT-LM/Transformers generation; rejected because the required low-level hooks are absent. Put persisted session tokens into `browser-cache`; rejected because that package owns model assets with model/revision/integrity semantics, not personal conversation content.
+
+**Constraints / consequences:** The policy helpers are public and packed-consumer supported, but remain inert until a capable runtime supplies verification measurements. Session-memory persistence is caller-owned and should remain same-origin, bounded and explicitly deletable. Any future custom WebGPU decoder must independently verify backend identity, output equivalence, hardware performance, page-frame interference, and calibration amortization before promotion.
+
+**Evidence / references:** arXiv:2610.39761v1; `packages/text-gen/src/speculation.ts`; `packages/text-gen/src/speculation.test.ts`; `docs/verification/2026-11-02-gpu-resident-speculation-cutting.md`.
+
+**Supersedes:** none

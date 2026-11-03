@@ -2,6 +2,14 @@
 # Active Work
 
 
+## 2026-11-02 — Browser speculative-decoding cutting
+
+- **Objective:** Adapt the reusable parts of arXiv:2610.39761 (“GPU-Resident Speculative Decoding for In-Browser LLM Inference with WebGPU”) without claiming that the current LiteRT-LM or Transformers.js pipelines expose GPU-resident verification/KV control.
+- **Implementation:** `@lil-local/text-gen` now exports exact suffix-continuation draft collection (default order/draft bounds 8), bounded model-scoped session token memory with caller-owned restore, a measured “smallest within 10% of fastest” submission-window selector, and an empirical speculation controller that chooses calibrated width from accepted tokens per millisecond, updates online measurements with a configurable exponential moving average, and fails closed to width 1 before calibration. The packed external consumer imports and executes these helpers. Personal session-token persistence is intentionally **not** routed through `browser-cache`; callers may persist snapshots in same-origin storage only when appropriate.
+- **Evidence:** TDD captured RED states for the missing speculation module, missing session-memory restore, missing submission-window selector, and stale lifetime-average calibration that failed to respond to a recent width-2 slowdown. Final focused text-gen suite passes **105 tests** and package typecheck passes after the EMA/controller changes. Packed external-consumer compatibility passed for all supported packages, including `text-gen`. Final `pnpm verify` exited **0**, covering workspace typechecks/tests, WebGPU kernel-selection tests, package boundaries, compatibility, conversion assets, 73 runtime-qualification tests and production builds; existing Vite chunk-size/dynamic-import notices remained advisories.
+- **Boundary:** No `dot4I8Packed` small-batch kernels, GPU-side acceptance/tree walk, KV compaction, dual in-flight command windows, generated-token ring buffer, weighted GPU context-mixing trie, draft heads, exact greedy equivalence, or browser speedup is claimed. Those require a separately qualified custom WebGPU text runtime or new low-level upstream runtime hooks. Detailed receipt: `docs/verification/2026-11-02-gpu-resident-speculation-cutting.md`.
+
+
 ## 2026-11-01 — Verified Pix2Pix custom WebGPU package
 
 - **Objective:** Promote the audited Pix2Pix U-Net 256 engine from a disposable verification workbench into the narrowest reusable Lil Local surface that the evidence supports, without bundling model weights or generalizing one checkpoint into universal Pix2Pix support.

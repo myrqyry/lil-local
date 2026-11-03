@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
+import {
+  AdaptiveSpeculationController,
+  BoundedSessionTokenMemory,
+  chooseSubmissionWindow,
+  collectSuffixDraftCandidates,
+} from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
 
 const fixture = (onDispose: () => void = () => {}) => ({
@@ -19,6 +25,37 @@ describe('packed LiteRT numerical oracle', () => {
     expect(() => assertAddOutput(Float32Array.of(8), -2, 7)).toThrow(/Numerical mismatch/)
     expect(() => assertAddOutput(Float32Array.of(NaN), 3, 5)).toThrow(/Non-finite/)
     expect(() => assertAddOutput(new Float32Array(), 3, 5)).toThrow(/Empty/)
+  })
+})
+
+describe('installed packed text-gen speculation contract', () => {
+  it('imports and executes the runtime-neutral speculation helpers', () => {
+    expect(collectSuffixDraftCandidates(
+      [1, 2, 3],
+      [[9, 1, 2, 3, 4, 5]],
+    )[0]).toEqual({
+      tokens: [4, 5],
+      matchOrder: 3,
+      occurrences: 1,
+    })
+
+    const memory = new BoundedSessionTokenMemory(3)
+    memory.append('model-a', [1, 2, 3, 4])
+    expect(memory.snapshot('model-a')).toEqual([2, 3, 4])
+
+    expect(chooseSubmissionWindow([
+      { steps: 1, elapsedMs: 10 },
+      { steps: 2, elapsedMs: 18 },
+      { steps: 4, elapsedMs: 34 },
+    ])).toBe(2)
+
+    const controller = new AdaptiveSpeculationController([1, 2])
+    controller.record({ width: 1, acceptedTokens: 1, elapsedMs: 4 })
+    controller.record({ width: 2, acceptedTokens: 2, elapsedMs: 5 })
+    expect(controller.selectPlan({ targetWindowMs: 10 })).toEqual({
+      width: 2,
+      windowSteps: 2,
+    })
   })
 })
 
