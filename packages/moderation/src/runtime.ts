@@ -85,7 +85,7 @@ export function createModerationSubstrate(
     id: 'transformers:onnx-content-safety-guard-small',
     format: 'onnx',
     capabilities: ['text-classification'],
-    requestedBackends: ['webgpu', 'wasm'],
+    requestedBackends: [device],
     async create(_onProgress, signal) {
       if (signal?.aborted) throw aborted()
       const transformers = (await import('@huggingface/transformers')) as unknown as TransformersModule
