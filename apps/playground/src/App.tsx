@@ -4,6 +4,7 @@ import { Qwen3TtsPanel } from './components/Qwen3TtsPanel'
 import { LfmPipelinePanel } from './components/LfmPipelinePanel'
 import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { Pix2PixPanel } from './components/Pix2PixPanel'
+import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -57,6 +58,13 @@ const pix2pixEntry: ModelAdapter = {
   parseOutputs: async () => ({}),
 }
 
+const nemotronAsrEntry: ModelAdapter = {
+  modelId: 'nemotron-3.5-asr-onnx-int4',
+  metadata: { name: 'Nemotron 3.5 · Browser ASR (ONNX INT4)', description: 'Experimental local browser transcription · WebGPU or WASM · explicit download; microphone & audio files', modelPath: '', tags: ['audio', 'asr', 'onnx', 'webgpu', 'pipeline'] },
+  inputSpecs: [], outputSpecs: [], isPipeline: true,
+  prepareInputs: () => ({}), parseOutputs: async () => ({}),
+}
+
 const bonsaiCandidate: ModelAdapter = {
   modelId: 'bonsai2-2b-onnx-webgpu-candidate',
   metadata: {
@@ -75,6 +83,14 @@ const bonsaiCandidate: ModelAdapter = {
 
 export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  if (selectedId === 'nemotron-3.5-asr-onnx-int4') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">Nemotron 3.5 · Local Speech Recognition</h1>
+      <NemotronAsrPanel />
+    </div></div>
+  }
 
   if (selectedId === 'qwen3-tts') {
     return (
@@ -142,7 +158,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />
