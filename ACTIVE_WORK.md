@@ -1,5 +1,11 @@
 <!-- meristem-template:v1 -->
 # Active Work
+## 2026-11-03 — Consolidate surviving image-segmentation/moderation branches
+- `aster/polish-moderation-backend-20261027` carried one still-missing correctness fix: the moderation substrate now reports only the backend actually requested from Transformers.js. Cherry-picked onto `master`; package tests 15/15 and typecheck pass.
+- `aster/forma-image-segmentation` was not safe to merge wholesale because `master` now has a newer `@lil-local/image-segmentation` package for face parsing and SAM 2.1. Recovered only the still-missing portable U²-Net foreground-matte path (`mask.ts`, `pipeline.ts`, focused tests/manifest), wired it into the current public entrypoint, combined peer dependencies with the existing Transformers.js path, and added packed-consumer coverage. The matte path remains explicitly unqualified for real model execution/output quality.
+- Evidence: image-segmentation tests 15/15, package typecheck, packed compatibility across all 20 supported packages, and full `pnpm verify` all pass. Existing Vite chunk-size/dynamic-import notices remain advisory.
+- These recovered mechanisms now live on `master`; the old branches are historical evidence rather than required feature islands.
+
 ## 2026-11-02 — Promote verified Phonon experiment over later silent scaffold
 - The preserved aster/phonon-live-onnx branch contains the real browser ONNX runtime verified on 2026-10-26. Current master later reintroduced the same package name as a structural scaffold whose own source says the graph ABI is unverified and whose run path emits one silent frame.
 - Experiment unification therefore promotes only the verified package implementation and its focused browser/external-consumer receipts onto current master, while retaining today's workspace/package registry and regenerating the lockfile. This is not a wholesale merge of the older branch.

@@ -4,12 +4,23 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
-  "peerDependencies": { "@huggingface/transformers": "^4.2.0" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "@lil-local/inference-core": "0.1.x",
+    "@lil-local/runtime-litert": "0.1.x"
+  },
   "devDependencies": {
     "@huggingface/transformers": "^4.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@lil-local/inference-core": "workspace:*",
+    "@lil-local/runtime-litert": "workspace:*"
   }
 }

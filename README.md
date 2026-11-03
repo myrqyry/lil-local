@@ -173,7 +173,7 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/image-embedding` | `@lil-local/image-embedding` | Reusable image-embedding package |
 | `packages/video-classification` | `@lil-local/video-classification` | Browser video-classification support and runtime checks |
 | `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
-| `packages/image-segmentation` | `@lil-local/image-segmentation` | On-demand face parsing and SAM 2.1 point-prompted mask inference |
+| `packages/image-segmentation` | `@lil-local/image-segmentation` | On-demand face parsing, SAM 2.1 point-prompted masks, and an opt-in U²-Net foreground-matte candidate |
 | `packages/decision-onnx` | `@lil-local/decision-onnx` | Opt-in D1 Omni ONNX WebGPU text-decision slice |
 | `packages/pix2pix-webgpu` | `@lil-local/pix2pix-webgpu` | Opt-in Rust/Wasm custom WebGPU Pix2Pix U-Net 256 image translation |
 | `packages/embedding-litertlm` | `@lil-local/embedding-litertlm` | Opt-in LiteRT-LM EmbeddingGemma 2 WebGPU text embeddings |

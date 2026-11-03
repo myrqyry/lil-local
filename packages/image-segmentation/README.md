@@ -15,13 +15,18 @@ crop/paint operations, and any rigging.
   original image, but masks are lower resolution; consuming apps must
   resample appropriately while preserving original pixel alpha.
 - `validateRegion`, `decodeSamMaskCandidates`, and manifest/label helpers
+- `SaliencySegmentationPipeline` — opt-in U²-Net 320px LiteRT foreground matte candidate, kept separate from semantic face/SAM masks
+- `prepareSaliencyInput`, `decodeSaliencyMask`, `extractMaskLayer` — portable preprocessing, soft-alpha decoding, and source-coordinate RGBA crop helpers
+
+The foreground-matte path is deliberately conservative: its exact model revision and SHA-256 are pinned, WASM is the first qualification backend, and package tests verify preprocessing/signature/tensor-lifetime behavior. Real model execution and output-mask quality are still **unqualified**; artifact availability is not promoted to an inference claim.
 
 A calling application should invoke these inside a disposable Web Worker,
 cancel through worker termination, and transfer mask ArrayBuffers. The package
-**does not load models on import**. When explicitly invoked it uses
-Transformers.js with **CPU/WASM** and `q8` ONNX weights fetched on demand from
-pinned Hugging Face revisions, potentially cached by the browser. No weights
-are bundled.
+**does not load models on import**. Face parsing and SAM 2.1 use Transformers.js
+with **CPU/WASM** and `q8` ONNX weights from pinned Hugging Face revisions. The
+foreground-matte candidate uses the shared LiteRT runtime with its own pinned
+TFLite artifact and an explicit WASM-first qualification policy. No weights are
+bundled.
 
 This does not expose a GGUF runner, SAM3 language-driven inference, or a
 completed Live2D rig. SAM 2.1 still needs user-supplied points; output

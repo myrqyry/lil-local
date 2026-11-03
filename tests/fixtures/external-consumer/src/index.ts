@@ -43,7 +43,8 @@ import {
 import {
   FACE_PARSING_MODEL, SAM2_MODEL_VARIANTS, suggestFaceRegions,
   selectSamPoint, selectSamPoints, prepareSamPointPrompts, validateRegion,
-  type SegmentationRegion, type Sam2Variant, type SamPointPrompt,
+  SaliencySegmentationPipeline, u2NetSaliencyManifest, extractMaskLayer,
+  type SegmentationRegion, type Sam2Variant, type SamPointPrompt, type ForegroundMask,
 } from '@lil-local/image-segmentation'
 
 import {
@@ -62,6 +63,10 @@ export const externalPointSegmentation = selectSamPoint
 export const externalSignedPointSegmentation = selectSamPoints
 export const externalPrepareSamPoints = prepareSamPointPrompts
 export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
+export const foregroundPipeline = new SaliencySegmentationPipeline()
+export const foregroundManifest = u2NetSaliencyManifest
+export const foregroundLayerFactory = extractMaskLayer
+export type ExternalForegroundMask = ForegroundMask
 export const externalValidateRegion = validateRegion
 export type ExternalPrivacyResult = PrivacyResult
 export type ExternalSegmentationMask = SegmentationRegion

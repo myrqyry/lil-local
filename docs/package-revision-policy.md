@@ -63,7 +63,7 @@ Experimental `@lil-local/privacy-filter` provides opt-in browser ONNX PII detect
 - `@lil-local/image-embedding`
 - `@lil-local/video-classification`
 - `@lil-local/depth-estimation`
-- `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks)
+- `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks, plus opt-in LiteRT foreground matte helpers)
 - `@lil-local/moderation` (opt-in Apache-2.0 content-safety classifier; Transformers.js ONNX on WebGPU/WASM)
 
 **Pending full compatibility gate:** `@lil-local/sharp-onnx` is a new

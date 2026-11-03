@@ -11,3 +11,8 @@ export { decodeSamMaskCandidates } from './masks'
 export { suggestFaceRegions, selectSamPoint, selectSamPoints } from './runtime'
 export { prepareSamPointPrompts, MAX_SAM_PROMPTS } from './prompts'
 export type { SamPointPrompt } from './prompts'
+export {
+  prepareSaliencyInput, decodeSaliencyMask, extractMaskLayer,
+} from './mask'
+export type { RgbaSource, ForegroundMask, MaskedLayer } from './mask'
+export { SaliencySegmentationPipeline, u2NetSaliencyManifest } from './pipeline'
