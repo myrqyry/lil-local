@@ -51,6 +51,7 @@ TDD was used for the new logic.
 - Package typecheck passed after the EMA/controller changes.
 - Packed external-consumer compatibility passed for `@lil-local/text-gen` and every other supported package.
 - Final `pnpm verify` exited **0**, covering all workspace typechecks/tests, WebGPU kernel-selection tests, package boundaries, packed compatibility, conversion-asset validation, 73 runtime-qualification tests, and production builds. Existing Vite chunk-size and ineffective-dynamic-import notices remained advisories.
+- Because unrelated Nemotron playground work appeared concurrently in the live worktree, exact implementation commit `d94340d` was checked out into a fresh detached worktree, installed from the existing pnpm store with the frozen lockfile, and `pnpm verify` again exited **0**. This establishes the committed speculation checkpoint independently of those concurrent files.
 
 ## Next meaningful experiment
 
