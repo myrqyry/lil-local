@@ -1,5 +1,9 @@
 <!-- meristem-template:v1 -->
 # Active Work
+## 2026-11-02 — Promote verified Phonon experiment over later silent scaffold
+- The preserved aster/phonon-live-onnx branch contains the real browser ONNX runtime verified on 2026-10-26. Current master later reintroduced the same package name as a structural scaffold whose own source says the graph ABI is unverified and whose run path emits one silent frame.
+- Experiment unification therefore promotes only the verified package implementation and its focused browser/external-consumer receipts onto current master, while retaining today's workspace/package registry and regenerating the lockfile. This is not a wholesale merge of the older branch.
+- Privacy Filter and Sharp ONNX remain separate follow-on experiment promotions after Phonon verification.
 
 
 ## 2026-11-01 — Verified Pix2Pix custom WebGPU package
