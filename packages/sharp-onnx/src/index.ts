@@ -1,0 +1,6 @@
+export { decodeSharpGaussians } from './geometry'
+export type { SharpTensor, SharpOutputTensors, SharpGaussians, SharpCamera } from './geometry'
+export { buildSharpPly } from './ply'
+export { createSharpSubstrate } from './substrate'
+export { SharpOnnxWebGpu, sharpImageToRgb, SHARP_RESOLUTION } from './runtime'
+export type { SharpOnnxOptions, SharpRunInput, SharpRunOutput } from './runtime'

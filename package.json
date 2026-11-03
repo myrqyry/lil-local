@@ -20,7 +20,10 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "verify": "pnpm typecheck && pnpm test && pnpm test:webgpu-kernel-probe && pnpm test:boundaries && pnpm test:compatibility && pnpm test:conversion-assets && pnpm test:qualification && pnpm build",
     "test:webgpu-kernel-probe": "node --test scripts/webgpu-matmul-selection.test.mjs",
-    "probe:webgpu-matmul": "node scripts/probe-webgpu-matmul.mjs"
+    "probe:webgpu-matmul": "node scripts/probe-webgpu-matmul.mjs",
+    "test:phonon-external": "node scripts/test-phonon-external.mjs",
+    "test:privacy-filter-external": "node scripts/test-privacy-filter-external.mjs",
+    "test:sharp-external": "node scripts/test-sharp-external.mjs"
   },
   "keywords": [],
   "author": "",

@@ -55,6 +55,8 @@ entrypoint.
 - `@lil-local/decision-onnx` (opt-in D1 Omni ONNX WebGPU text-decision slice)
 - `@lil-local/pix2pix-webgpu` (opt-in Rust/Wasm custom WebGPU Pix2Pix; pinned edges2shoes qualification is limited)
 - `@lil-local/encoder`
+
+Experimental `@lil-local/privacy-filter` provides opt-in browser ONNX PII detection and a separate mask-copy helper. Its dedicated `pnpm test:privacy-filter-external` validates the packed public entrypoint; consider it *provisional* until the broad packed compatibility gate passes. This is not an automatic sanitization safeguard. See `docs/verification/2026-10-26-openai-privacy-filter-q4.md`.
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
 - `@lil-local/qwen3-tts`
@@ -63,6 +65,12 @@ entrypoint.
 - `@lil-local/depth-estimation`
 - `@lil-local/image-segmentation` (on-demand CPU/WASM face parsing and SAM2 point masks)
 - `@lil-local/moderation` (opt-in Apache-2.0 content-safety classifier; Transformers.js ONNX on WebGPU/WASM)
+
+**Pending full compatibility gate:** `@lil-local/sharp-onnx` is a new
+experimental ONNX/WebGPU image-to-3D package. Its independent packed Vite
+consumer check is `pnpm test:sharp-external`; do not promote it to the
+fully supported list until the complete `pnpm test:compatibility` gate is green.
+No SHARP model inference on a physical GPU has been qualified yet.
 
 Subpath entrypoints are part of the supported surface on the same terms as the
 `.` entrypoint: a subpath is supported only when the compatibility harness

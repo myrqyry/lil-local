@@ -17,6 +17,7 @@
     "@lil-local/decision-onnx": "file:./archives/decision-onnx.tgz",
     "@lil-local/pix2pix-webgpu": "file:./archives/pix2pix-webgpu.tgz",
     "@lil-local/encoder": "file:./archives/encoder.tgz",
+    "@lil-local/privacy-filter": "file:./archives/privacy-filter.tgz",
     "@lil-local/retrieval": "file:./archives/retrieval.tgz",
     "@lil-local/kokoro": "file:./archives/kokoro.tgz",
     "@lil-local/phonon": "file:./archives/phonon.tgz",
@@ -27,7 +28,8 @@
     "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8",
     "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz",
-    "@lil-local/moderation": "file:./archives/moderation.tgz"
+    "@lil-local/moderation": "file:./archives/moderation.tgz",
+    "@lil-local/sharp-onnx": "file:./archives/sharp-onnx.tgz"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

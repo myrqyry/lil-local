@@ -15,7 +15,9 @@ import {
 } from '@lil-local/text-gen'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
 import { EncoderPipeline } from '@lil-local/encoder'
+import { createPrivacyFilterSubstrate, redactPrivacySpans, type PrivacyResult } from '@lil-local/privacy-filter'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
+import { SharpOnnxWebGpu, buildSharpPly, decodeSharpGaussians, type SharpRunOutput } from '@lil-local/sharp-onnx'
 import {
   createPix2PixEdge2ShoesSubstrate,
   pix2pixEdge2ShoesManifest,
@@ -61,6 +63,7 @@ export const externalSignedPointSegmentation = selectSamPoints
 export const externalPrepareSamPoints = prepareSamPointPrompts
 export const externalSignedPoint: SamPointPrompt = { x: 5, y: 7, label: 0 }
 export const externalValidateRegion = validateRegion
+export type ExternalPrivacyResult = PrivacyResult
 export type ExternalSegmentationMask = SegmentationRegion
 export type ExternalSam2Variant = Sam2Variant
 
@@ -172,6 +175,8 @@ export const importedPackages = [
   chooseSubmissionWindow,
   collectSuffixDraftCandidates,
   EncoderPipeline,
+  createPrivacyFilterSubstrate,
+  redactPrivacySpans,
   D1OnnxWebGpu,
   createPix2PixEdge2ShoesSubstrate,
   ColBertPipeline,
