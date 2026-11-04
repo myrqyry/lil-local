@@ -42,6 +42,12 @@ export class Pix2PixEngine {
      */
     static create(canvas: HTMLCanvasElement, weights_bin: Uint8Array | number[]): Promise<Pix2PixEngine>;
     /**
+     * Reads packed FP16 convolution coefficients and FP32 bias/normalization
+     * spans from a verified asset, expanding only a bounded chunk at a time.
+     * The original FP32 WebGPU compute kernels and buffer layouts are unchanged.
+     */
+    static create_from_packed_fp16_uint8_array(canvas: HTMLCanvasElement, weights_array: Uint8Array, dropout_convention: DropoutConvention): Promise<Pix2PixEngine>;
+    /**
      * Creates the WebGPU Pix2Pix U-Net 256 engine by streaming 4 MiB chunks directly from
      * a `js_sys::Uint8Array`, eliminating the 217.68 MB Wasm linear memory allocation spike.
      */
@@ -89,6 +95,7 @@ export interface InitOutput {
     readonly __wbg_pix2pixengine_free: (a: number, b: number) => void;
     readonly pix2pixengine_compute_on_device_mse: (a: number, b: number, c: number) => any;
     readonly pix2pixengine_create: (a: any, b: number, c: number) => any;
+    readonly pix2pixengine_create_from_packed_fp16_uint8_array: (a: any, b: any, c: number) => any;
     readonly pix2pixengine_create_from_uint8_array: (a: any, b: any, c: number) => any;
     readonly pix2pixengine_read_output_nchw: (a: number) => any;
     readonly pix2pixengine_run_frame: (a: number, b: number, c: number) => [number, number];
@@ -100,7 +107,7 @@ export interface InitOutput {
     readonly wasm_bindgen__convert__closures_____invoke__h1ef2b1b30d297ab2: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h5cb34573169467c3: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_13: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_14: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;

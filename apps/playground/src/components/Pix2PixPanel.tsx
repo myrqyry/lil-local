@@ -5,9 +5,10 @@ import {
   type InferenceReceipt,
 } from '@lil-local/inference-core'
 import {
-  PIX2PIX_EDGE2SHOES_FOLDED_SHA256,
   PIX2PIX_EDGE2SHOES_WEIGHT_BYTES,
   createPix2PixEdge2ShoesSubstrate,
+  pix2pixVariant,
+  type Pix2PixWeightFormat,
   type Pix2PixImageResult,
   type Pix2PixLoadProgress,
 } from '@lil-local/pix2pix-webgpu'
@@ -49,10 +50,10 @@ function formatBytes(bytes: number): string {
     : `${(bytes / 1024).toFixed(1)} KiB`
 }
 
-function progressLabel(progress: Pix2PixLoadProgress): string {
+function progressLabel(progress: Pix2PixLoadProgress, expectedBytes = PIX2PIX_EDGE2SHOES_WEIGHT_BYTES): string {
   if (progress.phase === 'weights') {
     if (progress.loadedBytes !== undefined) {
-      const total = progress.totalBytes ?? PIX2PIX_EDGE2SHOES_WEIGHT_BYTES
+      const total = progress.totalBytes ?? expectedBytes
       return `Reading + verifying weights · ${formatBytes(progress.loadedBytes)} / ${formatBytes(total)}`
     }
     return 'Reading + verifying folded weights…'
@@ -190,6 +191,8 @@ function captureVideoFrame(
 }
 
 export function Pix2PixPanel() {
+  const [weightFormat, setWeightFormat] = useState<Pix2PixWeightFormat>('fp32')
+  const selectedVariant = pix2pixVariant(weightFormat)
   const [weightsFile, setWeightsFile] = useState<File | null>(null)
   const [input, setInput] = useState<ImageInput | null>(null)
   const [status, setStatus] = useState('Checking Lil Local model storage…')
@@ -221,13 +224,16 @@ export function Pix2PixPanel() {
 
   useEffect(() => {
     let mounted = true
-    void hasPix2PixStoredWeights()
+    setCheckingStorage(true)
+    setInstalled(false)
+    setError('')
+    void hasPix2PixStoredWeights(undefined, weightFormat)
       .then(value => {
         if (!mounted) return
         setInstalled(value)
         setStatus(value
-          ? 'Model installed in Lil Local OPFS storage. Load it when you are ready.'
-          : 'No installed Pix2Pix model yet. Choose the folded .bin once to import it.')
+          ? 'Selected model installed in Lil Local OPFS storage. Load it when you are ready.'
+          : 'Selected model is not installed. Choose its exact .bin file to import it.')
       })
       .catch(reason => {
         if (!mounted) return
@@ -237,9 +243,11 @@ export function Pix2PixPanel() {
       .finally(() => {
         if (mounted) setCheckingStorage(false)
       })
+    return () => { mounted = false }
+  }, [weightFormat])
 
+  useEffect(() => {
     return () => {
-      mounted = false
       generation.current += 1
       loadAbort.current?.abort()
       videoAbort.current?.abort()
@@ -292,11 +300,11 @@ export function Pix2PixPanel() {
             `Reading local weights · ${formatBytes(progress.loadedBytes)} / ${formatBytes(progress.totalBytes ?? weightsFile.size)}`,
           )
         },
-      })
+      }, undefined, weightFormat)
       setInstalled(true)
       setStatus('Model installed in Lil Local OPFS storage. You can load it without choosing the file again.')
     } catch (reason) {
-      setInstalled(await hasPix2PixStoredWeights())
+      setInstalled(await hasPix2PixStoredWeights(undefined, weightFormat))
       setStatus('Model import failed.')
       setError(String(reason))
     } finally {
@@ -310,7 +318,7 @@ export function Pix2PixPanel() {
     setReceipt(null)
     setStatus('Removing installed Pix2Pix weights from Lil Local OPFS…')
     try {
-      await removePix2PixStoredWeights()
+      await removePix2PixStoredWeights(undefined, weightFormat)
       setInstalled(false)
       setWeightsFile(null)
       setStatus('Installed Pix2Pix model removed. Choose the folded .bin to import it again.')
@@ -330,7 +338,8 @@ export function Pix2PixPanel() {
     const controller = new AbortController()
     const localRunner = new BrowserSubstrateRunner(
       createPix2PixEdge2ShoesSubstrate({
-        assets: createPix2PixPersistentAssetResolver(),
+        assets: createPix2PixPersistentAssetResolver(undefined, undefined, weightFormat),
+        weightFormat,
         canvas: outputCanvas.current,
       }),
     )
@@ -343,7 +352,7 @@ export function Pix2PixPanel() {
 
     try {
       await localRunner.load(progress => {
-        if (requestId === generation.current) setStatus(progressLabel(progress))
+        if (requestId === generation.current) setStatus(progressLabel(progress, selectedVariant.asset.bytes))
       }, controller.signal)
       if (requestId !== generation.current || controller.signal.aborted) {
         await localRunner.dispose()
@@ -654,16 +663,37 @@ export function Pix2PixPanel() {
           Import the verified model once into Lil Local's persistent OPFS store, then future sessions load that installed copy. Nothing downloads automatically and there is no CPU, WebGL, or cloud fallback.
         </p>
         <p className="text-xs text-on-surface-variant">
-          Expected folded weights: {formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES)} · SHA-256 {PIX2PIX_EDGE2SHOES_FOLDED_SHA256.slice(0, 16)}…
+          Expected {weightFormat === 'fp16-packed' ? 'FP16-packed' : 'FP32'} folded weights: {formatBytes(selectedVariant.asset.bytes)} · SHA-256 {selectedVariant.asset.sha256.slice(0, 16)}…
         </p>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium">Model weight format</span>
+          <select
+            aria-label="Model weight format"
+            value={weightFormat}
+            disabled={checkingStorage || importing || loading || loaded || running || videoRunning || videoExporting}
+            onChange={event => {
+              setWeightFormat(event.currentTarget.value as Pix2PixWeightFormat)
+              setWeightsFile(null)
+              setReceipt(null)
+              setError('')
+            }}
+            className="block w-full rounded-lg border border-outline bg-surface px-3 py-2 text-on-surface disabled:opacity-50"
+          >
+            <option value="fp32">Original FP32 · 207.6 MiB</option>
+            <option value="fp16-packed">Packed FP16 convolutions · 103.8 MiB</option>
+          </select>
+          <p className="text-xs text-on-surface-muted">
+            Stored separately. The FP16 option halves model download/storage, but expands to FP32 GPU buffers; it does not promise faster inference.
+          </p>
+        </label>
         <div className="rounded-xl border border-outline bg-surface/50 p-3 text-xs text-on-surface-variant">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold text-on-surface">
               {checkingStorage ? 'Checking model storage…' : installed ? 'Installed in browser storage' : 'Not installed'}
             </span>
-            <span>{installed ? formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES) : '0 B stored'}</span>
+            <span>{installed ? formatBytes(selectedVariant.asset.bytes) : '0 B stored'}</span>
           </div>
-          <code className="mt-2 block break-all text-[10px] text-on-surface-muted">{pix2pixOpfsLocation()}</code>
+          <code className="mt-2 block break-all text-[10px] text-on-surface-muted">{pix2pixOpfsLocation(weightFormat)}</code>
         </div>
       </div>
 
@@ -679,9 +709,9 @@ export function Pix2PixPanel() {
               setWeightsFile(file)
               setError('')
               if (file) {
-                setStatus(file.size === PIX2PIX_EDGE2SHOES_WEIGHT_BYTES
+                setStatus(file.size === selectedVariant.asset.bytes
                   ? 'Weight file selected. Choose Import to verify and persist it.'
-                  : `Selected file is ${formatBytes(file.size)}; expected ${formatBytes(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES)}.`)
+                  : `Selected file is ${formatBytes(file.size)}; expected ${formatBytes(selectedVariant.asset.bytes)}.`)
               }
             }}
             className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border file:border-outline file:bg-surface file:px-3 file:py-2 file:text-on-surface"

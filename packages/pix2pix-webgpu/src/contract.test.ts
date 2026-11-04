@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET,
+  PIX2PIX_EDGE2SHOES_FP16_WEIGHT_BYTES,
+  pix2pixEdge2ShoesFp16Manifest,
   PIX2PIX_EDGE2SHOES_FOLDED_SHA256,
   PIX2PIX_EDGE2SHOES_WEIGHT_BYTES,
   PIX2PIX_MAJOR_STATIC_GPU_BYTES,
@@ -9,6 +12,16 @@ import {
 } from './contract'
 
 describe('pix2pix WebGPU contract', () => {
+  it('pins an independently verified FP16 asset without changing the original model', () => {
+    expect(PIX2PIX_EDGE2SHOES_FP16_WEIGHT_BYTES).toBe(108_869_644)
+    expect(PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET.sha256).toBe('c74e2dbe83c0acb4cb83a8130186485505fb92b3d00b5d1a60463c686b78a978')
+    expect(pix2pixEdge2ShoesFp16Manifest.assets).toEqual([PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET])
+    expect(pix2pixEdge2ShoesFp16Manifest.version).not.toBe(pix2pixEdge2ShoesManifest.version)
+    expect(pix2pixEdge2ShoesFp16Manifest.verification?.inference).toBe('pass')
+    expect(pix2pixEdge2ShoesFp16Manifest.verification?.qualification).toBe('limited')
+    expect(pix2pixEdge2ShoesManifest.assets).toEqual([expect.objectContaining({bytes:217_677_836})])
+  })
+
   it('pins the verified folded edges2shoes artifact and WebGPU-only capability', () => {
     expect(PIX2PIX_EDGE2SHOES_WEIGHT_BYTES).toBe(217_677_836)
     expect(PIX2PIX_MAJOR_STATIC_GPU_BYTES).toBe(253_233_196)

@@ -52,6 +52,50 @@ export const pix2pixEdge2ShoesManifest: ModelManifest = {
   },
 }
 
+export type Pix2PixWeightFormat = 'fp32' | 'fp16-packed'
+
+export const PIX2PIX_EDGE2SHOES_FP16_WEIGHT_BYTES = 108_869_644
+export const PIX2PIX_EDGE2SHOES_FP16_SHA256 =
+  'c74e2dbe83c0acb4cb83a8130186485505fb92b3d00b5d1a60463c686b78a978'
+
+export const PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET = {
+  id: 'pix2pix-edges2shoes-fp16-weights',
+  path: 'pix2pix/edges2shoes-batchnorm-eval-fp16-v1.bin',
+  bytes: PIX2PIX_EDGE2SHOES_FP16_WEIGHT_BYTES,
+  sha256: PIX2PIX_EDGE2SHOES_FP16_SHA256,
+  mimeType: 'application/octet-stream',
+  role: 'weights',
+} as const
+
+// The compressed file stores FP16 convolutions and FP32 bias/norm scalars.
+// GPU allocations are still FP32; residency is not reduced by this version.
+export const pix2pixEdge2ShoesFp16Manifest: ModelManifest = {
+  ...pix2pixEdge2ShoesManifest,
+  name: 'Pix2Pix U-Net 256 — edges2shoes (packed FP16 storage)',
+  version: 'batchnorm-eval-fp16-packed-v1',
+  memory: {
+    downloadBytes: PIX2PIX_EDGE2SHOES_FP16_WEIGHT_BYTES,
+    residentBytes: PIX2PIX_MAJOR_STATIC_GPU_BYTES,
+  },
+  assets: [PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET],
+  verification: {
+    ...pix2pixEdge2ShoesManifest.verification!,
+    assets: 'pass',
+    // Qualified separately using the packed asset and the real browser path.
+    compile: 'pass',
+    inference: 'pass',
+    output: 'pass',
+    qualification: 'limited',
+    lastVerifiedAt: '2026-11-04',
+  },
+}
+
+export function pix2pixVariant(format: Pix2PixWeightFormat = 'fp32') {
+  return format === 'fp16-packed'
+    ? { manifest: pix2pixEdge2ShoesFp16Manifest, asset: PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET }
+    : { manifest: pix2pixEdge2ShoesManifest, asset: PIX2PIX_EDGE2SHOES_WEIGHT_ASSET }
+}
+
 export function validatePix2PixInput(input: ImageInput): ImageInput {
   if (input.width !== 256 || input.height !== 256) {
     throw new Error('Pix2Pix input must be exactly 256x256 pixels')

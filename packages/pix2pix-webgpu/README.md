@@ -1,9 +1,11 @@
 # @lil-local/pix2pix-webgpu
 
 Experimental, WebGPU-only Pix2Pix U-Net 256 runtime extracted from a verified
-Rust/wgpu candidate. The package currently supports one qualified model path:
+Rust/wgpu candidate. The package currently supports one qualified checkpoint:
 the official Berkeley/Jun-Yan `edges2shoes` generator after BatchNorm-eval
 statistics are folded into the runtime's existing per-channel affine slots.
+It has two explicitly selected on-disk weight representations: the original
+FP32 and an optional FP16-packed convolution variant described below.
 
 ## Boundaries
 
@@ -117,3 +119,60 @@ Current generated artifact hashes:
 
 See `docs/verification/2026-11-01-pix2pix-webgpu-candidate.md` for the full
 checkpoint/export/parity audit and the evidence boundary.
+
+## Optional packed FP16 model (2026-11-04)
+
+The playground's **Model weight format** selector also supports an explicitly
+selected **packed FP16 convolutions** variant. This is not a separate generator:
+it uses the same verified `edges2shoes` weights, original Rust/Wasm/WGSL
+engine, FP32 compute kernels and GPU tensor buffers. Only the convolution
+weights' **file representation** changes. Biases and BatchNorm-eval affine
+parameters remain FP32.
+
+| Attribute | Original FP32 | Packed FP16 convolutions |
+|---|---:|---:|
+| File bytes | 217,677,836 | **108,869,644** |
+| Checkpoint | `edges2shoes-batchnorm-eval-v1.bin` | `edges2shoes-batchnorm-eval-fp16-v1.bin` |
+| GPU compute/storage | FP32 | FP32 (unpacked in bounded Wasm chunks) |
+| Runtime | Rust/Wasm + WebGPU | Same, using the opt-in packed reader |
+
+The packed file has SHA-256:
+`c74e2dbe83c0acb4cb83a8130186485505fb92b3d00b5d1a60463c686b78a978`.
+It is **not** bundled or downloaded automatically. Reproduce it offline from
+the original verified folded checkpoint (NumPy required only for conversion):
+
+```bash
+python3 packages/pix2pix-webgpu/native/pack_fp16.py \
+  "$HOME/.local/share/lil-local/models/pix2pix/edges2shoes-batchnorm-eval-v1.bin" \
+  "$HOME/.local/share/lil-local/models/pix2pix/edges2shoes-batchnorm-eval-fp16-v1.bin"
+```
+
+The converter refuses unexpected input fingerprints and existing destination
+files. Import the new file after explicitly choosing **Packed FP16
+convolutions** in Lil Local's Pix2Pix panel. Its OPFS cache identity is
+different from the original, so importing/removing one format does not alter
+the other. Switching formats requires unloading the currently loaded engine.
+
+Tests for the pure Rust decoder (native, without WebGPU canvas host support)
+and for the offline exporter:
+
+```bash
+cd packages/pix2pix-webgpu/native
+rustc --edition=2021 --test src/packed.rs -o /tmp/pix2pix-packed-tests
+/tmp/pix2pix-packed-tests
+python3 -m unittest -v test_pack_fp16.py
+cargo check --target wasm32-unknown-unknown
+```
+
+On Chrome Beta 158 / NVIDIA RTX 2070 Super, **real-browser import → OPFS
+persistence → packed Wasm constructor → WebGPU generation** passed on a paired
+shoe edge image, with no page or console errors. A separate real-browser
+FP32-vs-packed comparison measured mean absolute RGB8 difference **0.06548/255**;
+every output channel was within one RGB8 level of FP32. This is one paired
+example plus earlier synthetic samples, **not** broad quality qualification.
+
+The smaller file genuinely saves download and persistent storage bytes.
+Peak GPU residency, mobile performance, memory pressure, sustained FPS and
+faster inference have **not** been demonstrated. See
+`docs/verification/2026-11-04-pix2pix-fp16-browser.md` for the exact evidence
+and scope.

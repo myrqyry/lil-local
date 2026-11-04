@@ -14,6 +14,11 @@ export interface Pix2PixWasmRuntimeModule {
       weights: Uint8Array,
       dropoutConvention: number,
     ): Promise<Pix2PixWasmEngine>
+    create_from_packed_fp16_uint8_array(
+      canvas: HTMLCanvasElement,
+      weights: Uint8Array,
+      dropoutConvention: number,
+    ): Promise<Pix2PixWasmEngine>
   }
   DropoutConvention: { Disabled: number }
   NormalizationConvention: { BatchNormEvalFolded: number }

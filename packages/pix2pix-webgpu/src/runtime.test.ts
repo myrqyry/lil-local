@@ -24,9 +24,10 @@ function engineFixture(output = new Float32Array(3 * 256 * 256)) {
 
 function setup(engine = engineFixture()) {
   const createEngine = vi.fn(async () => engine)
+  const createPackedEngine = vi.fn(async () => engine)
   const resolveWeights = vi.fn(async () => new ArrayBuffer(16))
   const loadWasm = vi.fn(async () => ({
-    Pix2PixEngine: { create_from_uint8_array: createEngine },
+    Pix2PixEngine: { create_from_uint8_array: createEngine, create_from_packed_fp16_uint8_array: createPackedEngine },
     DropoutConvention: { Disabled: 2 },
     NormalizationConvention: { BatchNormEvalFolded: 1 },
   }))
@@ -40,7 +41,7 @@ function setup(engine = engineFixture()) {
   }
   const assets = {} as AssetResolver
   const canvas = { width: 0, height: 0 } as HTMLCanvasElement
-  return { engine, createEngine, resolveWeights, loadWasm, deps, assets, canvas }
+  return { engine, createEngine, createPackedEngine, resolveWeights, loadWasm, deps, assets, canvas }
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -103,6 +104,22 @@ describe('pix2pix edges2shoes WebGPU substrate', () => {
 
     await runner.dispose()
     expect(f.engine.free).toHaveBeenCalledOnce()
+  })
+
+  it('uses the packed FP16 constructor only when explicitly requested', async () => {
+    vi.stubGlobal('navigator', { gpu: {} })
+    const f = setup()
+    const runner = new BrowserSubstrateRunner(
+      createPix2PixEdge2ShoesSubstrateWithDeps(
+        { assets: f.assets, canvas: f.canvas, weightFormat: 'fp16-packed' },
+        f.deps,
+      ),
+    )
+    await runner.load()
+    expect(f.createPackedEngine).toHaveBeenCalledWith(f.canvas, expect.any(Uint8Array), 2)
+    expect(f.createEngine).not.toHaveBeenCalled()
+    expect(runner.status).toBe('ready')
+    await runner.dispose()
   })
 
   it('rejects malformed input before dispatching GPU work', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PIX2PIX_EDGE2SHOES_WEIGHT_ASSET } from '@lil-local/pix2pix-webgpu'
+import { PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET, PIX2PIX_EDGE2SHOES_WEIGHT_ASSET } from '@lil-local/pix2pix-webgpu'
 import type { BrowserCacheStore } from '@lil-local/browser-cache'
 import {
   PIX2PIX_OPFS_DIRECTORY,
@@ -56,6 +56,30 @@ describe('Pix2Pix local-file asset resolver', () => {
 
     await removePix2PixStoredWeights(store)
     await expect(hasPix2PixStoredWeights(store)).resolves.toBe(false)
+  })
+
+  it('keeps packed and original models in separate OPFS cache identities', async () => {
+    const keys = new Set<string>()
+    const store: BrowserCacheStore = {
+      has: async (key) => keys.has(key),
+      read: async () => undefined,
+      write: async (key) => { keys.add(key) },
+      delete: async (key) => { keys.delete(key) },
+    }
+    const originalKey = createPix2PixPersistentAssetResolver(undefined, store)
+      .cacheKey(PIX2PIX_EDGE2SHOES_WEIGHT_ASSET)
+    const packedKey = createPix2PixPersistentAssetResolver(undefined, store, 'fp16-packed')
+      .cacheKey(PIX2PIX_EDGE2SHOES_FP16_WEIGHT_ASSET)
+    expect(packedKey).not.toBe(originalKey)
+    keys.add(originalKey)
+    keys.add(packedKey)
+
+    expect(await hasPix2PixStoredWeights(store, 'fp16-packed')).toBe(true)
+    expect(pix2pixOpfsLocation('fp16-packed')).toContain(encodeURIComponent(packedKey))
+    await removePix2PixStoredWeights(store, 'fp16-packed')
+    expect(keys.has(packedKey)).toBe(false)
+    expect(keys.has(originalKey)).toBe(true)
+    expect(await hasPix2PixStoredWeights(store)).toBe(true)
   })
 
   it('preserves an installed copy when replacement weights fail integrity', async () => {

@@ -10,11 +10,13 @@ import {
 } from '@lil-local/inference-core'
 import {
   PIX2PIX_EDGE2SHOES_MODEL_ID,
-  PIX2PIX_EDGE2SHOES_WEIGHT_ASSET,
   pix2pixEdge2ShoesManifest,
+  pix2pixVariant,
+  type Pix2PixWeightFormat,
 } from '@lil-local/pix2pix-webgpu'
 
 export const PIX2PIX_OPFS_DIRECTORY = 'litert-playground'
+// Keep the existing FP32 key stable for users who already installed the original.
 export const PIX2PIX_CACHE_REVISION = pix2pixEdge2ShoesManifest.version
 
 function abortError(): Error {
@@ -33,25 +35,30 @@ function missingStoredWeightsResolver(): AssetResolver {
   }
 }
 
-export function pix2pixCacheKey(): string {
+export function pix2pixCacheKey(format: Pix2PixWeightFormat = 'fp32'): string {
+  const { asset, manifest } = pix2pixVariant(format)
   return [
     PIX2PIX_EDGE2SHOES_MODEL_ID,
-    PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.id,
-    PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.path,
-    PIX2PIX_CACHE_REVISION,
+    asset.id,
+    asset.path,
+    manifest.version,
   ].join('/')
 }
 
-export function pix2pixOpfsLocation(): string {
-  return `OPFS /${PIX2PIX_OPFS_DIRECTORY}/${encodeURIComponent(pix2pixCacheKey())}`
+export function pix2pixOpfsLocation(format: Pix2PixWeightFormat = 'fp32'): string {
+  return `OPFS /${PIX2PIX_OPFS_DIRECTORY}/${encodeURIComponent(pix2pixCacheKey(format))}`
 }
 
-export function createPix2PixFileAssetResolver(file: Blob): AssetResolver {
+export function createPix2PixFileAssetResolver(
+  file: Blob,
+  format: Pix2PixWeightFormat = 'fp32',
+): AssetResolver {
+  const { asset: expected } = pix2pixVariant(format)
   return {
     async resolve(asset, options) {
       if (
-        asset.id !== PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.id ||
-        asset.path !== PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.path
+        asset.id !== expected.id ||
+        asset.path !== expected.path
       ) {
         throw new Error(
           `unexpected Pix2Pix asset: ${asset.id} (${asset.path})`,
@@ -73,30 +80,35 @@ export function createPix2PixFileAssetResolver(file: Blob): AssetResolver {
 export function createPix2PixPersistentAssetResolver(
   inner: AssetResolver = missingStoredWeightsResolver(),
   store?: BrowserCacheStore,
+  format: Pix2PixWeightFormat = 'fp32',
 ): BrowserCacheAssetResolver {
+  const { manifest } = pix2pixVariant(format)
   return createBrowserCacheAssetResolver({
     modelId: PIX2PIX_EDGE2SHOES_MODEL_ID,
-    revision: PIX2PIX_CACHE_REVISION,
-    manifest: pix2pixEdge2ShoesManifest,
+    revision: manifest.version,
+    manifest,
     inner,
     store,
   })
 }
 
-function pix2pixCacheIdentity() {
+function pix2pixCacheIdentity(format: Pix2PixWeightFormat = 'fp32') {
+  const { asset, manifest } = pix2pixVariant(format)
   return {
     modelId: PIX2PIX_EDGE2SHOES_MODEL_ID,
-    assetId: PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.id,
-    assetPath: PIX2PIX_EDGE2SHOES_WEIGHT_ASSET.path,
-    revision: PIX2PIX_CACHE_REVISION,
+    assetId: asset.id,
+    assetPath: asset.path,
+    revision: manifest.version,
   }
 }
 
 export async function hasPix2PixStoredWeights(
   store?: BrowserCacheStore,
+  format: Pix2PixWeightFormat = 'fp32',
 ): Promise<boolean> {
-  return createPix2PixPersistentAssetResolver(undefined, store).hasCached(
-    PIX2PIX_EDGE2SHOES_WEIGHT_ASSET,
+  const { asset } = pix2pixVariant(format)
+  return createPix2PixPersistentAssetResolver(undefined, store, format).hasCached(
+    asset,
   )
 }
 
@@ -104,26 +116,26 @@ export async function importPix2PixWeights(
   file: Blob,
   options?: AssetRequestOptions,
   store?: BrowserCacheStore,
+  format: Pix2PixWeightFormat = 'fp32',
 ): Promise<void> {
+  const { asset } = pix2pixVariant(format)
   // Verify the replacement before invalidating a known-good installed copy.
-  // This keeps a bad picker selection from destroying the working model.
-  const selected = await createPix2PixFileAssetResolver(file).resolve(
-    PIX2PIX_EDGE2SHOES_WEIGHT_ASSET,
+  // A failed import never destroys the existing installed version.
+  const selected = await createPix2PixFileAssetResolver(file, format).resolve(
+    asset,
     options,
   )
-  const verified = await verifyAssetIntegrity(
-    PIX2PIX_EDGE2SHOES_WEIGHT_ASSET,
-    selected,
-  )
+  const verified = await verifyAssetIntegrity(asset, selected)
 
   const resolver = createPix2PixPersistentAssetResolver(
     { resolve: async () => verified },
     store,
+    format,
   )
-  await resolver.invalidate(pix2pixCacheIdentity())
-  await resolver.resolve(PIX2PIX_EDGE2SHOES_WEIGHT_ASSET)
+  await resolver.invalidate(pix2pixCacheIdentity(format))
+  await resolver.resolve(asset)
 
-  if (!(await resolver.hasCached(PIX2PIX_EDGE2SHOES_WEIGHT_ASSET))) {
+  if (!(await resolver.hasCached(asset))) {
     throw new Error(
       'Pix2Pix weights verified but could not be persisted in Lil Local OPFS storage',
     )
@@ -132,8 +144,9 @@ export async function importPix2PixWeights(
 
 export async function removePix2PixStoredWeights(
   store?: BrowserCacheStore,
+  format: Pix2PixWeightFormat = 'fp32',
 ): Promise<void> {
-  await createPix2PixPersistentAssetResolver(undefined, store).invalidate(
-    pix2pixCacheIdentity(),
+  await createPix2PixPersistentAssetResolver(undefined, store, format).invalidate(
+    pix2pixCacheIdentity(format),
   )
 }

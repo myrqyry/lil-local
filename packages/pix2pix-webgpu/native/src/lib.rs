@@ -1,4 +1,9 @@
+mod packed;
 use bytemuck::{Pod, Zeroable};
+use packed::{
+    decode_fp16_chunk, is_packed_convolution, stored_bytes_for, WeightEncoding,
+    EXPECTED_PACKED_FP16_BYTES,
+};
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
 
@@ -180,11 +185,13 @@ impl<'a> WeightSource for SliceWeightReader<'a> {
 
         let aligned_size = align_to_16_bytes(bytes);
         if aligned_size == bytes as u64 {
-            Ok(device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: slice,
-                usage: wgpu::BufferUsages::STORAGE,
-            }))
+            Ok(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some(label),
+                    contents: slice,
+                    usage: wgpu::BufferUsages::STORAGE,
+                }),
+            )
         } else {
             let buf = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(label),
@@ -206,15 +213,28 @@ struct JsUint8WeightReader<'a> {
     total_len: usize,
     offset: usize,
     scratch: Vec<u8>,
+    expanded: Vec<u8>,
+    encoding: WeightEncoding,
 }
 
 impl<'a> JsUint8WeightReader<'a> {
     fn new(array: &'a js_sys::Uint8Array) -> Result<Self, JsValue> {
+        Self::new_with_encoding(array, WeightEncoding::Fp32)
+    }
+
+    fn new_with_encoding(
+        array: &'a js_sys::Uint8Array,
+        encoding: WeightEncoding,
+    ) -> Result<Self, JsValue> {
         let total_len = array.byte_length() as usize;
-        if total_len != EXPECTED_WEIGHTS_BYTES {
+        let expected_len = match encoding {
+            WeightEncoding::Fp32 => EXPECTED_WEIGHTS_BYTES,
+            WeightEncoding::PackedFp16 => EXPECTED_PACKED_FP16_BYTES,
+        };
+        if total_len != expected_len {
             return Err(JsValue::from_str(&format!(
-                "Invalid pix2pix_unet256.bin Uint8Array size: expected {} bytes, got {} bytes",
-                EXPECTED_WEIGHTS_BYTES, total_len
+                "Invalid Pix2Pix {:?} weight file size: expected {} bytes, got {} bytes",
+                encoding, expected_len, total_len
             )));
         }
         Ok(Self {
@@ -222,6 +242,12 @@ impl<'a> JsUint8WeightReader<'a> {
             total_len,
             offset: 0,
             scratch: vec![0u8; STREAM_CHUNK_BYTES],
+            expanded: if encoding == WeightEncoding::PackedFp16 {
+                vec![0u8; STREAM_CHUNK_BYTES]
+            } else {
+                Vec::new()
+            },
+            encoding,
         })
     }
 }
@@ -237,15 +263,17 @@ impl<'a> WeightSource for JsUint8WeightReader<'a> {
         let bytes = count_floats
             .checked_mul(4)
             .ok_or_else(|| JsValue::from_str("Weight byte count overflow"))?;
+        let stored_bytes = stored_bytes_for(label, count_floats, self.encoding)
+            .ok_or_else(|| JsValue::from_str("Stored weight byte count overflow"))?;
         let end = self
             .offset
-            .checked_add(bytes)
+            .checked_add(stored_bytes)
             .ok_or_else(|| JsValue::from_str("Weight offset overflow"))?;
         if end > self.total_len {
             return Err(JsValue::from_str(&format!(
                 "Uint8Array weight underrun at byte offset {}: requested {} bytes, remaining {} bytes",
                 self.offset,
-                bytes,
+                stored_bytes,
                 self.total_len.saturating_sub(self.offset)
             )));
         }
@@ -257,14 +285,33 @@ impl<'a> WeightSource for JsUint8WeightReader<'a> {
             mapped_at_creation: false,
         });
 
+        let half_precision = is_packed_convolution(label, self.encoding);
         let mut written = 0usize;
         while written < bytes {
             let chunk_len = (bytes - written).min(STREAM_CHUNK_BYTES);
-            let sub_start = (self.offset + written) as u32;
-            let sub_end = sub_start + (chunk_len as u32);
-            let view = self.array.subarray(sub_start, sub_end);
-            view.copy_to(&mut self.scratch[..chunk_len]);
-            queue.write_buffer(&buf, written as u64, &self.scratch[..chunk_len]);
+            if half_precision {
+                // Each packed source chunk is half as large as the existing FP32 GPU
+                // buffer. Only this bounded chunk is expanded into Wasm memory.
+                let compressed_len = chunk_len / 2;
+                let source_start = self.offset + written / 2;
+                let view = self
+                    .array
+                    .subarray(source_start as u32, (source_start + compressed_len) as u32);
+                view.copy_to(&mut self.scratch[..compressed_len]);
+                decode_fp16_chunk(
+                    &self.scratch[..compressed_len],
+                    &mut self.expanded[..chunk_len],
+                )
+                .map_err(JsValue::from_str)?;
+                queue.write_buffer(&buf, written as u64, &self.expanded[..chunk_len]);
+            } else {
+                let source_start = self.offset + written;
+                let view = self
+                    .array
+                    .subarray(source_start as u32, (source_start + chunk_len) as u32);
+                view.copy_to(&mut self.scratch[..chunk_len]);
+                queue.write_buffer(&buf, written as u64, &self.scratch[..chunk_len]);
+            }
             written += chunk_len;
         }
 
@@ -324,6 +371,20 @@ impl Pix2PixEngine {
     ) -> Result<Pix2PixEngine, JsValue> {
         console_error_panic_hook::set_once();
         let mut reader = JsUint8WeightReader::new(&weights_array)?;
+        Self::build_with_source(canvas, &mut reader, dropout_convention).await
+    }
+
+    /// Reads packed FP16 convolution coefficients and FP32 bias/normalization
+    /// spans from a verified asset, expanding only a bounded chunk at a time.
+    /// The original FP32 WebGPU compute kernels and buffer layouts are unchanged.
+    pub async fn create_from_packed_fp16_uint8_array(
+        canvas: web_sys::HtmlCanvasElement,
+        weights_array: js_sys::Uint8Array,
+        dropout_convention: DropoutConvention,
+    ) -> Result<Pix2PixEngine, JsValue> {
+        console_error_panic_hook::set_once();
+        let mut reader =
+            JsUint8WeightReader::new_with_encoding(&weights_array, WeightEncoding::PackedFp16)?;
         Self::build_with_source(canvas, &mut reader, dropout_convention).await
     }
 
@@ -500,24 +561,22 @@ impl Pix2PixEngine {
 
         // 2. Encoder Topology (e1..e8)
         let enc_specs: [(u32, u32, u32, u32, u32, bool); 8] = [
-            (256, 3, 128, 64, 0, false),    // e1: no pre-act, no norm
-            (128, 64, 64, 128, 1, true),    // e2: pre-LeakyReLU, norm
-            (64, 128, 32, 256, 1, true),    // e3: pre-LeakyReLU, norm
-            (32, 256, 16, 512, 1, true),    // e4: pre-LeakyReLU, norm
-            (16, 512, 8, 512, 1, true),     // e5: pre-LeakyReLU, norm
-            (8, 512, 4, 512, 1, true),      // e6: pre-LeakyReLU, norm
-            (4, 512, 2, 512, 1, true),      // e7: pre-LeakyReLU, norm
-            (2, 512, 1, 512, 1, false),     // e8: pre-LeakyReLU, bottleneck (no norm)
+            (256, 3, 128, 64, 0, false), // e1: no pre-act, no norm
+            (128, 64, 64, 128, 1, true), // e2: pre-LeakyReLU, norm
+            (64, 128, 32, 256, 1, true), // e3: pre-LeakyReLU, norm
+            (32, 256, 16, 512, 1, true), // e4: pre-LeakyReLU, norm
+            (16, 512, 8, 512, 1, true),  // e5: pre-LeakyReLU, norm
+            (8, 512, 4, 512, 1, true),   // e6: pre-LeakyReLU, norm
+            (4, 512, 2, 512, 1, true),   // e7: pre-LeakyReLU, norm
+            (2, 512, 1, 512, 1, false),  // e8: pre-LeakyReLU, bottleneck (no norm)
         ];
 
         let mut e_bufs = Vec::with_capacity(8);
         let mut encoders = Vec::with_capacity(8);
 
         for (i, &(h_in, c_in, h_out, c_out, flags, has_norm)) in enc_specs.iter().enumerate() {
-            let out_buf = alloc_tensor(
-                &format!("e{}_buf", i + 1),
-                (c_out * h_out * h_out) as usize,
-            );
+            let out_buf =
+                alloc_tensor(&format!("e{}_buf", i + 1), (c_out * h_out * h_out) as usize);
             let prev_buf = if i == 0 { &in_buf } else { &e_bufs[i - 1] };
 
             let w_buf = reader.create_weight_buffer(
@@ -653,14 +712,14 @@ impl Pix2PixEngine {
         // 3. Decoder Topology (d1..d8)
         let dec_specs: [(u32, u32, u32, u32, u32, bool, bool); 8] = [
             // (h_in, c_in_single, h_out, c_out, flags, has_skip, has_norm)
-            (1, 512, 2, 512, 2, false, true),    // d1: input e8
-            (2, 512, 4, 512, 2, true, true),     // d2: input d1 + e7
-            (4, 512, 8, 512, 2, true, true),     // d3: input d2 + e6
-            (8, 512, 16, 512, 2, true, true),    // d4: input d3 + e5
-            (16, 512, 32, 256, 2, true, true),   // d5: input d4 + e4
-            (32, 256, 64, 128, 2, true, true),   // d6: input d5 + e3
-            (64, 128, 128, 64, 2, true, true),   // d7: input d6 + e2
-            (128, 64, 256, 3, 10, true, false),  // d8: input d7 + e1, pre-ReLU(2) + Tanh(8) = 10
+            (1, 512, 2, 512, 2, false, true),   // d1: input e8
+            (2, 512, 4, 512, 2, true, true),    // d2: input d1 + e7
+            (4, 512, 8, 512, 2, true, true),    // d3: input d2 + e6
+            (8, 512, 16, 512, 2, true, true),   // d4: input d3 + e5
+            (16, 512, 32, 256, 2, true, true),  // d5: input d4 + e4
+            (32, 256, 64, 128, 2, true, true),  // d6: input d5 + e3
+            (64, 128, 128, 64, 2, true, true),  // d7: input d6 + e2
+            (128, 64, 256, 3, 10, true, false), // d8: input d7 + e1, pre-ReLU(2) + Tanh(8) = 10
         ];
 
         // 16-byte aligned zero-initialized buffer for d1's unused second input binding (`deconv_in_b`)
@@ -677,10 +736,8 @@ impl Pix2PixEngine {
             dec_specs.iter().enumerate()
         {
             let dropout = Self::should_apply_dropout(dropout_convention, i);
-            let out_buf = alloc_tensor(
-                &format!("d{}_buf", i + 1),
-                (c_out * h_out * h_out) as usize,
-            );
+            let out_buf =
+                alloc_tensor(&format!("d{}_buf", i + 1), (c_out * h_out * h_out) as usize);
             let in_a: &wgpu::Buffer = if i == 0 { &e_bufs[7] } else { &d_bufs[i - 1] };
             let in_b: &wgpu::Buffer = if has_skip {
                 &e_bufs[7 - i]
@@ -1162,7 +1219,10 @@ impl Pix2PixEngine {
     /// Executes the on-device WGSL `compute_mse` verification kernel comparing the GPU's
     /// most recent `d8` output tensor (`[3, 256, 256]`) against a CPU reference tensor,
     /// returning `[mse, rmse, max_abs_err, psnr_db]`.
-    pub async fn compute_on_device_mse(&mut self, cpu_ref_nchw: &[f32]) -> Result<Vec<f32>, JsValue> {
+    pub async fn compute_on_device_mse(
+        &mut self,
+        cpu_ref_nchw: &[f32],
+    ) -> Result<Vec<f32>, JsValue> {
         if cpu_ref_nchw.len() != 3 * 256 * 256 {
             return Err(JsValue::from_str(&format!(
                 "Expected 196,608 float32 elements (3x256x256) for cpu_ref_nchw, got {}",
@@ -1189,7 +1249,13 @@ impl Pix2PixEngine {
             cpass.dispatch_workgroups(1, 1, 1);
         }
 
-        encoder.copy_buffer_to_buffer(&self.mse_stats_gpu_buf, 0, &self.mse_staging_read_buf, 0, 16);
+        encoder.copy_buffer_to_buffer(
+            &self.mse_stats_gpu_buf,
+            0,
+            &self.mse_staging_read_buf,
+            0,
+            16,
+        );
         self.queue.submit(std::iter::once(encoder.finish()));
 
         let buffer_slice = self.mse_staging_read_buf.slice(..);
@@ -1227,13 +1293,7 @@ impl Pix2PixEngine {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("pix2pix_output_readback_encoder"),
             });
-        encoder.copy_buffer_to_buffer(
-            &self.output_buf,
-            0,
-            &self.output_staging_read_buf,
-            0,
-            bytes,
-        );
+        encoder.copy_buffer_to_buffer(&self.output_buf, 0, &self.output_staging_read_buf, 0, bytes);
         self.queue.submit(std::iter::once(encoder.finish()));
 
         let buffer_slice = self.output_staging_read_buf.slice(..bytes);

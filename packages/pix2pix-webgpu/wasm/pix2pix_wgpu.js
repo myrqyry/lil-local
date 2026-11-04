@@ -75,6 +75,19 @@ export class Pix2PixEngine {
         return ret;
     }
     /**
+     * Reads packed FP16 convolution coefficients and FP32 bias/normalization
+     * spans from a verified asset, expanding only a bounded chunk at a time.
+     * The original FP32 WebGPU compute kernels and buffer layouts are unchanged.
+     * @param {HTMLCanvasElement} canvas
+     * @param {Uint8Array} weights_array
+     * @param {DropoutConvention} dropout_convention
+     * @returns {Promise<Pix2PixEngine>}
+     */
+    static create_from_packed_fp16_uint8_array(canvas, weights_array, dropout_convention) {
+        const ret = wasm.pix2pixengine_create_from_packed_fp16_uint8_array(canvas, weights_array, dropout_convention);
+        return ret;
+    }
+    /**
      * Creates the WebGPU Pix2Pix U-Net 256 engine by streaming 4 MiB chunks directly from
      * a `js_sys::Uint8Array`, eliminating the 217.68 MB Wasm linear memory allocation spike.
      * @param {HTMLCanvasElement} canvas
@@ -970,18 +983,18 @@ function __wbg_get_imports() {
             arg0.writeTexture(arg1, arg2, arg3, arg4);
         },
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 278, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 282, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h1ef2b1b30d297ab2);
             return ret;
         },
         __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 60, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 64, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15);
             return ret;
         },
         __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 60, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_13);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 64, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_14);
             return ret;
         },
         __wbindgen_generic_0000000000000004: function(arg0) {
@@ -1025,8 +1038,8 @@ function wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15(arg0, arg
     wasm.wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_13(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_13(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_14(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h06f2931b8d7cfd15_14(arg0, arg1, arg2);
 }
 
 function wasm_bindgen__convert__closures_____invoke__h1ef2b1b30d297ab2(arg0, arg1, arg2) {

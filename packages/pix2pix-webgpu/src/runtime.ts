@@ -8,9 +8,9 @@ import {
 } from '@lil-local/inference-core'
 import {
   PIX2PIX_EDGE2SHOES_MODEL_ID,
-  PIX2PIX_EDGE2SHOES_WEIGHT_ASSET,
+  pix2pixVariant,
+  type Pix2PixWeightFormat,
   nchwToRgba,
-  pix2pixEdge2ShoesManifest,
   validatePix2PixInput,
 } from './contract'
 import {
@@ -37,6 +37,7 @@ export interface Pix2PixEdge2ShoesOptions {
   canvas?: HTMLCanvasElement
   assetVerification?: AssetIntegrityVerificationOptions
   useTexture2DArraySkip?: boolean
+  weightFormat?: Pix2PixWeightFormat
 }
 
 type ProgressFn = (progress: Pix2PixLoadProgress) => void
@@ -84,12 +85,13 @@ function resolveCanvas(canvas?: HTMLCanvasElement): HTMLCanvasElement {
 
 const defaultDependencies: Pix2PixRuntimeDependencies = {
   async resolveWeights(options, signal, onProgress) {
+    const { manifest, asset } = pix2pixVariant(options.weightFormat)
     const resolver = createManifestVerifyingAssetResolver(
-      pix2pixEdge2ShoesManifest,
+      manifest,
       options.assets,
       options.assetVerification,
     )
-    return resolver.resolve(PIX2PIX_EDGE2SHOES_WEIGHT_ASSET, {
+    return resolver.resolve(asset, {
       signal,
       onProgress(progress) {
         onProgress?.({
@@ -117,7 +119,7 @@ export function createPix2PixEdge2ShoesSubstrateWithDeps(
 ): BrowserSubstrate<ImageInput, Pix2PixImageResult, Pix2PixLoadProgress> {
   return {
     id: 'rust-wgpu:pix2pix-edges2shoes-unet256',
-    format: 'pix2pix-unet256-f32',
+    format: options.weightFormat === 'fp16-packed' ? 'pix2pix-unet256-fp16-packed' : 'pix2pix-unet256-f32',
     capabilities: ['image-edit'],
     requestedBackends: ['webgpu'],
     async create(onProgress, signal) {
@@ -138,7 +140,13 @@ export function createPix2PixEdge2ShoesSubstrateWithDeps(
       let engine
       const compileStart = deps.now()
       try {
-        engine = await wasm.Pix2PixEngine.create_from_uint8_array(
+        const createEngine = options.weightFormat === 'fp16-packed'
+          ? wasm.Pix2PixEngine.create_from_packed_fp16_uint8_array
+          : wasm.Pix2PixEngine.create_from_uint8_array
+        if (typeof createEngine !== 'function') {
+          throw new Error('Packed FP16 Pix2Pix runtime is unavailable; no FP32 fallback')
+        }
+        engine = await createEngine(
           canvas,
           new Uint8Array(buffer),
           wasm.DropoutConvention.Disabled,
@@ -184,6 +192,9 @@ export function createPix2PixEdge2ShoesSubstrateWithDeps(
               outputSummary: '256x256 RGBA8',
               warnings: [
                 'Custom WebGPU runtime; qualification is limited to the pinned folded edges2shoes weights.',
+                ...(options.weightFormat === 'fp16-packed'
+                  ? ['FP16-packed convolution weights expand to FP32 GPU buffers during load.']
+                  : []),
               ],
             },
           }
