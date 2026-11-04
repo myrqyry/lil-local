@@ -53,7 +53,8 @@ Dependency flow: `inference-core → runtime-litert → model packages → playg
   preflight, telemetry.
 - Model packages — `text-gen`, `retrieval`, `encoder`, `image-embedding`,
   `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`, `image-segmentation`,
-  and the opt-in custom-WebGPU `pix2pix-webgpu` image-translation candidate.
+  the opt-in `vision-mediapipe` face/gesture substrate,
+  and the custom-WebGPU `pix2pix-webgpu` image-translation candidate.
 - `packages/browser-cache` — browser-side model/tensor cache.
 - `apps/playground` — the consumer app (React + Vite + Tailwind).
 - `examples/` — minimal consumer examples, deliberately small.

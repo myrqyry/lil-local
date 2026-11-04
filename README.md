@@ -22,6 +22,16 @@ Lil Local is built around a deliberately boring workflow:
 The workspace covers text, retrieval, speech, audio, vision, OCR, image
 embeddings, video classification, and related local inference workloads.
 
+### MediaPipe Vision as a reusable substrate
+
+The opt-in `@lil-local/vision-mediapipe` package provides verified, locally
+executed face landmarks/blendshapes and hand gesture recognition. The playground
+has a **MediaPipe Vision · Face & Gestures** test entry; external applications
+consume the same typed package rather than rebuilding MediaPipe lifecycle
+code. No model downloads or webcam access happen until explicit activation.
+See [package usage](packages/vision-mediapipe/README.md) and
+[the browser verification receipt](docs/verification/2026-11-04-mediapipe-vision-substrate.md).
+
 ## What it provides
 
 ### Lil Local model library

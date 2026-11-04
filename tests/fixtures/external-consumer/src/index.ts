@@ -29,6 +29,7 @@ import { PhononPipeline } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -54,6 +55,15 @@ import {
   MODERATION_MODEL_REVISION,
   type ModerationResult,
 } from '@lil-local/moderation'
+
+// Packed downstream consumers can instantiate the same reusable vision substrate
+// without installing SDK internals or accessing a Lil Local workspace source path.
+export const packedFaceRunner = new BrowserSubstrateRunner(createFaceLandmarkerSubstrate())
+export const packedGestureRunner = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
+export type PackedVisionFrame = VisionFrame
+export type PackedFaceVision = FaceVisionResult
+export type PackedGestureVision = GestureVisionResult
+export const packedFaceModelSha256: string = MEDIAPIPE_VISION_MODELS.face.sha256
 
 // Importing the public symbols cannot load model weights automatically.
 export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id

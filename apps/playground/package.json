@@ -24,6 +24,7 @@
     "@lil-local/retrieval": "workspace:*",
     "@lil-local/runtime-litert": "workspace:*",
     "@lil-local/text-gen": "workspace:*",
+    "@lil-local/vision-mediapipe": "workspace:*",
     "@litertjs/core": "^2.5.3",
     "@mediapipe/tasks-audio": "1.2.2",
     "@mingcute/react": "^3.0.2",

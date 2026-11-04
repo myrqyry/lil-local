@@ -24,6 +24,7 @@ const packages = [
   ['qwen3-tts', 'qwen3-tts.tgz'],
   ['image-embedding', 'image-embedding.tgz'],
   ['video-classification', 'video-classification.tgz'],
+  ['vision-mediapipe', 'vision-mediapipe.tgz'],
   ['depth-estimation', 'depth-estimation.tgz'],
   ['image-segmentation', 'image-segmentation.tgz'],
   ['moderation', 'moderation.tgz'],

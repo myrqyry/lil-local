@@ -1,6 +1,13 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-04 — Reusable MediaPipe Vision package, not another app-local runtime
+- Added `@lil-local/vision-mediapipe` as a genuine `BrowserSubstrateRunner`-compatible, portable package for CPU/WASM face landmarks + per-face blendshapes and hand landmarks + gesture scores. Both official model artifacts are size/SHA-256 verified; JS/WASM pinned to 1.2.2, with optional caller-owned verified model weights and matching self-hosted WASM. No auto-download or camera access on import/construction, no OBS actions or character expression policy in the substrate.
+- The Lil Local playground now **consumes that package**, offering opt-in camera tracking for face or hands; explicit Start/Stop, bounded single-in-flight frame inference, real cleanup. The external consumer fixture independently packs/installs and exercises its public contract, rather than importing workspace source.
+- RED-first package tests now 7/7; playground 206/206, typecheck/build, external pack/typecheck/build/contract and initial authoritative `pnpm verify` all passed. Chromium production preview with synthetic webcam loaded and verified both Google models, initialized real MediaPipe WASM CPU inference for both tasks, ran actual frames, then stopped all camera tracks; no real face/gesture correctness or physical-device claims. An informational XNNPACK delegate log is not an exception.
+- Receipt and boundaries: `docs/verification/2026-11-04-mediapipe-vision-substrate.md`; repeatable fake-webcam script: `pnpm test:vision:browser`. ViiRM and Stagehand remain separate consumer migrations: pin a reachable Lil Local SHA when ready, without committing absolute local paths. All work stays local on `aster/mediapipe-vision-substrate`.
+
+
 ## 2026-11-04 — Opt-in browser MediaPipe Parakeet speech transcription
 - Added a separate Parakeet TDT 0.6B v3 browser ASR model entry/panel alongside Nemotron; implemented 16-kHz mono file and AudioWorklet microphone input with streaming `AudioTranscriber`, interim/final segment reconciliation, explicit model loading, optional local `.litertlm` file, and resource cleanup.
 - Pinned `@mediapipe/tasks-audio@1.2.2` and publisher model revision; no automatic model download, no cloud transcription fallback. Browser weights/WASM are fetched on Load unless explicitly local; browser weight SHA and real speech inference remain unverified.

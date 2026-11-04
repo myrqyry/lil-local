@@ -6,6 +6,7 @@ import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { Pix2PixPanel } from './components/Pix2PixPanel'
 import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
+import { MediaPipeVisionPanel } from './components/MediaPipeVisionPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -78,6 +79,18 @@ const parakeetAsrEntry: ModelAdapter = {
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
 }
 
+const mediaPipeVisionEntry: ModelAdapter = {
+  modelId: 'mediapipe-vision-local',
+  metadata: {
+    name: 'MediaPipe Vision · Face & Gestures',
+    description: 'Reusable local browser face landmarks, blendshapes and hand gestures · opt-in, verified model assets',
+    modelPath: '',
+    tags: ['vision', 'face', 'gesture', 'mediapipe', 'wasm', 'pipeline'],
+  },
+  inputSpecs: [], outputSpecs: [], isPipeline: true,
+  prepareInputs: () => ({}), parseOutputs: async () => ({}),
+}
+
 const bonsaiCandidate: ModelAdapter = {
   modelId: 'bonsai2-2b-onnx-webgpu-candidate',
   metadata: {
@@ -96,6 +109,14 @@ const bonsaiCandidate: ModelAdapter = {
 
 export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  if (selectedId === 'mediapipe-vision-local') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Local Tracking</h1>
+      <MediaPipeVisionPanel />
+    </div></div>
+  }
 
   if (selectedId === 'parakeet-tdt-0.6b-mediapipe') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
@@ -179,7 +200,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, mediaPipeVisionEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

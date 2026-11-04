@@ -7,6 +7,7 @@ import {
   collectSuffixDraftCandidates,
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, mapFaceLandmarkerResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
   id: 'external-packed-consumer',
@@ -134,5 +135,19 @@ describe('installed packed inference-core contract', () => {
     await expect(loading).rejects.toMatchObject({ name: 'AbortError' })
     expect(released).toBe(1)
     expect(runner.status).toBe('idle')
+  })
+})
+
+
+describe('installed packed vision-mediapipe public contract', () => {
+  it('instantiates cold runners and maps distinct face results without starting a model download', () => {
+    const face = new BrowserSubstrateRunner(createFaceLandmarkerSubstrate())
+    const gesture = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
+    expect([face.status, gesture.status]).toEqual(['idle','idle'])
+    const mapped = mapFaceLandmarkerResult({
+      faceLandmarks: [[{x:.2,y:.3,z:.4}]],
+      faceBlendshapes: [{categories:[{categoryName:'jawOpen',score:.8}]}],
+    })
+    expect(mapped.faces[0].blendshapes[0].score).toBe(.8)
   })
 })
