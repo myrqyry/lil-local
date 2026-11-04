@@ -72,3 +72,76 @@ Do not represent compression statistics as a verified browser improvement.
 
 No source code, model data, app package, or existing test was modified during
 this scouting pass.
+
+## Supplemental full-browser output test — 2026-11-04
+
+This supersedes the *weight-only* limit above with a **narrow actual-inference
+comparison**, but does not establish deployed compression or speedup.
+
+### Reproducibility and controls
+
+- Original input bytes: the installed, hash-verified 217,677,836-byte model
+  recorded above. It was reopened and its SHA-256 verified **unchanged** after
+  generating the variants.
+- Temporary harness: `/tmp/lil-pix2pix-weight-compare-20261104/` on yuzu-mint.
+  All experimental weights are temporary files; they are **not** model assets,
+  repo changes, or deployable binaries.
+- The harness's topology check was observed **RED** when it accidentally
+  omitted decoder d4, then **GREEN** with the correct 16-layer topology;
+  two Python unittest tests passed.
+- Variant types: FP16 round-trip to FP32 or symmetric per-output-channel INT8
+  quantization followed by dequantization back into FP32.
+  Only the named convolution weights were changed; all biases and normalization
+  values remained FP32. Four variants were tested: `d2/d3/d4` only (both
+  precisions), and all 16 encoder/decoder convolutions (both precisions).
+- The original, unchanged Rust/Wasm `Pix2PixEngine`, WGSL kernels, folded
+  BatchNorm-eval setting, and `Texture2DArray` skip path were used for **all**
+  variants. All images were executed and compared in a real headed Chrome Beta
+  158 browser on the NVIDIA RTX 2070 Super, using `run_frame()` and
+  `read_output_nchw()`. The final browser run exited 0 with zero page and
+  console errors.
+- Inputs: a synthetic shoe outline, a synthetic line pattern, and the
+  **left 256x256 edge half** of a public paired shoe example at
+  `https://raw.githubusercontent.com/HafsaSheikh/edges2shoes/master/train_imge_sample.jpg`.
+  The source paired photograph on the right was not used as a comparison target.
+  The real paired example yields a recognizable shoe; the synthetic inputs
+  yield cyan/noisy poor-looking images and should **not** establish semantic
+  quality or useful generalization.
+- Quantitative comparison is *relative to the original model's output*, not
+  perceptual fidelity to the photographic ground truth. Each RGB8 metric is
+  across all 3 channels of 256x256 output pixels.
+
+### Actual result on the representative shoe example
+
+| Variant (re-expanded FP32 runtime format) | Mean absolute RGB8 difference (0–255) | RGB channels within ±1 | Max absolute NCHW FP32 delta |
+|---|---:|---:|---:|
+| FP16 round-trip, d2/d3/d4 | 0.001811 | 100.000% | 0.0004235 |
+| INT8 per-output-channel, d2/d3/d4 | 0.078033 | 99.9995% | 0.0094202 |
+| FP16 round-trip, **all 16 convolutions** | 0.065481 | 100.000% | 0.0081178 |
+| INT8 per-output-channel, **all 16 convolutions** | 1.129674 | 71.509% | 0.1984882 |
+
+The synthetic inputs also ran with distinct changed outputs, including
+larger outliers under INT8. This is a three-input numerical screen, not a
+validated broad quality benchmark. Browser processing-time samples varied
+with warm-up, and are **not used to claim faster quantized inference**.
+
+### Decision and realistic next step
+
+- **Good fit:** an *opt-in* FP16-on-disk convolution-weight format for
+  `@lil-local/pix2pix-webgpu` is supported by preliminary visual/numerical
+  tolerance on the actual model. The current architecture has 54,404,096
+  convolution weights and 15,363 other FP32 parameters. FP16 convolution
+  storage while leaving bias/norm FP32 would theoretically reduce the model
+  file from 217,677,836 to **108,869,644 bytes** (approximately half).
+- **Not yet implemented:** the variant files were round-tripped back to FP32,
+  so actual binary size, browser transfer, RAM/VRAM residency, GPU execution
+  latency, and real compressed-format loading remain completely unverified.
+- **Do not conflate:** FP16 is a conventional compression baseline, not a
+  novel analytic layer replacement. Symbolic/structured replacement still
+  needs a separate hypothesis and fair comparison *against* this baseline.
+- **Integration gate:** only add a packed-format path to the real Lil Local
+  package if it can be implemented without breaking the existing pinned
+  FP32 model, then verify real-browser unpacking/output on the correct device,
+  load/storage savings, unchanged application contracts, and project tests.
+  Do not spawn an independent inference runtime or silently substitute model
+  weights.
