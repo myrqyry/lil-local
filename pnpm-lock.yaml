@@ -295,6 +295,9 @@ importers:
       '@litertjs/core':
         specifier: ^2.5.3
         version: 2.5.3
+      '@mediapipe/tasks-audio':
+        specifier: 1.2.2
+        version: 1.2.2
       '@mingcute/react':
         specifier: ^3.0.2
         version: 3.0.2(react@19.2.8)
@@ -1265,6 +1268,9 @@ packages:
 
   '@litertjs/wasm-utils@2.5.3':
     resolution: {integrity: sha512-4fJiw6tBQnIs+0jH/OQ16nYOiSl8/+zZnn5h2ul8aTKHi05sVqZW580Tmk78pC2kT39A9OYBVdFawteZ/sI1kQ==}
+
+  '@mediapipe/tasks-audio@1.2.2':
+    resolution: {integrity: sha512-8kv9v6+bGb+cbonbB/oU7xPKY7/eWp1bxD5FKhiApHbj0yGXlgVOq9PvjFMFwISs28nYlMUL/fcCsyLsmzyGdQ==}
 
   '@mediapipe/tasks-genai@0.10.29':
     resolution: {integrity: sha512-PRznwHOprGNoSbTbtAyHkMD1rslPLEBSidvz/Ga7qWVr86CXmPEcQpFCidLciBpWNKF8VhQMU2YA51YyBCbPKg==}
@@ -2651,6 +2657,8 @@ snapshots:
       '@litertjs/wasm-utils': 2.5.3
 
   '@litertjs/wasm-utils@2.5.3': {}
+
+  '@mediapipe/tasks-audio@1.2.2': {}
 
   '@mediapipe/tasks-genai@0.10.29': {}
 

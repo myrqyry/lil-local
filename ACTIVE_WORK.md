@@ -1,5 +1,12 @@
 <!-- meristem-template:v1 -->
 # Active Work
+
+## 2026-11-04 — Opt-in browser MediaPipe Parakeet speech transcription
+- Added a separate Parakeet TDT 0.6B v3 browser ASR model entry/panel alongside Nemotron; implemented 16-kHz mono file and AudioWorklet microphone input with streaming `AudioTranscriber`, interim/final segment reconciliation, explicit model loading, optional local `.litertlm` file, and resource cleanup.
+- Pinned `@mediapipe/tasks-audio@1.2.2` and publisher model revision; no automatic model download, no cloud transcription fallback. Browser weights/WASM are fetched on Load unless explicitly local; browser weight SHA and real speech inference remain unverified.
+- Four new focused tests written RED-first, then green. Complete playground tests 206/206, TypeScript typecheck, production build and authoritative `pnpm verify` all passed. No real 615 MB model download or microphone/Chromium inference proof.
+- Receipt and next acceptance: `docs/verification/2026-11-04-parakeet-mediapipe-asr.md`.
+
 ## 2026-11-03 — Consolidate surviving image-segmentation/moderation branches
 - `aster/polish-moderation-backend-20261027` carried one still-missing correctness fix: the moderation substrate now reports only the backend actually requested from Transformers.js. Cherry-picked onto `master`; package tests 15/15 and typecheck pass.
 - `aster/forma-image-segmentation` was not safe to merge wholesale because `master` now has a newer `@lil-local/image-segmentation` package for face parsing and SAM 2.1. Recovered only the still-missing portable U²-Net foreground-matte path (`mask.ts`, `pipeline.ts`, focused tests/manifest), wired it into the current public entrypoint, combined peer dependencies with the existing Transformers.js path, and added packed-consumer coverage. The matte path remains explicitly unqualified for real model execution/output quality.

@@ -5,6 +5,7 @@ import { LfmPipelinePanel } from './components/LfmPipelinePanel'
 import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { Pix2PixPanel } from './components/Pix2PixPanel'
 import { NemotronAsrPanel } from './components/NemotronAsrPanel'
+import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
 
@@ -65,6 +66,18 @@ const nemotronAsrEntry: ModelAdapter = {
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
 }
 
+const parakeetAsrEntry: ModelAdapter = {
+  modelId: 'parakeet-tdt-0.6b-mediapipe',
+  metadata: {
+    name: 'Parakeet TDT · MediaPipe Audio Transcriber',
+    description: 'Opt-in local browser speech recognition · audio files and microphone · ~615 MB LiteRT-LM',
+    modelPath: '',
+    tags: ['audio', 'asr', 'mediapipe', 'wasm', 'pipeline'],
+  },
+  inputSpecs: [], outputSpecs: [], isPipeline: true,
+  prepareInputs: () => ({}), parseOutputs: async () => ({}),
+}
+
 const bonsaiCandidate: ModelAdapter = {
   modelId: 'bonsai2-2b-onnx-webgpu-candidate',
   metadata: {
@@ -83,6 +96,14 @@ const bonsaiCandidate: ModelAdapter = {
 
 export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  if (selectedId === 'parakeet-tdt-0.6b-mediapipe') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">Parakeet TDT · Local Speech Recognition</h1>
+      <ParakeetAsrPanel />
+    </div></div>
+  }
 
   if (selectedId === 'nemotron-3.5-asr-onnx-int4') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
@@ -158,7 +179,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />
