@@ -2,7 +2,7 @@
 """Opt-in real Chromium qualification for Lil Local's packed Vision consumer.
 
 Needs Chromium and Python websocket-client. Runs a disposable fake camera,
-downloads five official Vision weights only after explicit model actions,
+downloads eight official Vision task models only after explicit model actions,
 checks browser inference/cleanup and never touches the user's webcam.
 No model weights are saved to the repository.
 """
@@ -145,10 +145,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Seven Local Tasks"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Eight Local Tasks"]\')'),
           'new Vision model card', 40)
-        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task', 'deeplab_v3.tflite')), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Seven Local Tasks')
+        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task', 'deeplab_v3.tflite', 'blaze_face_short_range.tflite')), 'Early weights fetch'
+        assert browser.click('Open MediaPipe Vision · Eight Local Tasks')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -398,11 +398,65 @@ def main():
         print('SEMANTIC_VIDEO',browser.status(),flush=True)
         browser.stop()
 
+        # Short-range face detection needs a face-sized, SHA-pinned portrait,
+        # not the upstream detector's dog photo or the distant full-body pose image.
+        face_image=Path(OUT)/'face_model.png'
+        face_url=('https://raw.githubusercontent.com/google-ai-edge/mediapipe-samples-web/'
+          '6887f6399745dc549dadd0022c31fc9ab01f26d6/public/face_model.png')
+        with urllib.request.urlopen(face_url,timeout=25) as response:
+            face_image.write_bytes(response.read())
+        assert hashlib.sha256(face_image.read_bytes()).hexdigest()==(
+            '75171e877e92b7a126cca2e7a388fc430225e07e9cd2e9e801eaa67ea6d7f4d9')
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='blazeFace';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'blazeFace'
+        blaze_dom=browser.send('DOM.getDocument')
+        blaze_node=browser.send('DOM.querySelector',{
+          'nodeId':blaze_dom['root']['nodeId'],
+          'selector':'input[aria-label="Image for local vision analysis"]',
+        })['nodeId']
+        assert blaze_node, 'Face detector still-image input missing'
+        browser.send('DOM.setFileInputFiles',{
+          'nodeId':blaze_node,'files':[str(face_image)],
+        })
+        browser.eval("""(() => {
+          document.querySelector('input[aria-label="Image for local vision analysis"]')
+            .dispatchEvent(new Event('change',{bubbles:true}));
+        })()""")
+        until(lambda: browser.click('Analyze selected image locally'),
+              'BlazeFace analyze action',15)
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real human BlazeFace GPU detector',90)
+        blaze_error=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if blaze_error:raise AssertionError('Native BlazeFace failure: '+blaze_error)
+        blaze_summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        blaze_boxes=browser.eval(
+          "document.querySelectorAll('svg rect').length")
+        blaze_marks=browser.eval(
+          "document.querySelectorAll('svg circle').length")
+        print('BLAZEFACE_IMAGE',blaze_summary[:520],
+              'BOXES',blaze_boxes,'KEYPOINT_DOTS',blaze_marks,flush=True)
+        assert 'Face 1' in blaze_summary, 'Human photo produced no face detection'
+        assert 'keypoints' in blaze_summary, 'Face keypoint count missing'
+        assert blaze_boxes>=1 and blaze_marks>=1, 'Face ROI/landmark overlay not drawn'
+        assert any('blaze_face_short_range.tflite' in u for u in browser.resources), (
+          'Publisher BlazeFace asset missing')
+        assert browser.eval("window.__visionTestTracks.length === 7"), (
+          'Still-image face detection unexpectedly opened webcam')
+        assert browser.click('Start local vision')
+        browser.wait_running('blazeFace')
+        print('BLAZEFACE_VIDEO',browser.status(),flush=True)
+        browser.stop()
+
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: 7 SHA-verified models; real human/dog inference and class mask; all seven native video paths; camera cleanup',flush=True)
+        print('PASS: 8 SHA-verified models; real human face ROI and keypoints, pose/holistic, dog inference, semantic mask; all eight video paths; camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):

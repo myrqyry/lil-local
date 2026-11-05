@@ -9,6 +9,10 @@ scheduling, UX, and any persistence. It does not access a camera itself.
 
 ## Supported, qualified tasks
 
+- **BlazeFace Short-Range Face Detector**: tiny 229,746-byte face ROI model;
+  outputs pixel-space boxes, scored face categories, and normalized eye/nose/
+  mouth/ear keypoints. Choose explicit MediaPipe WebGL GPU or CPU delegate.
+  Unlike the 478-point face landmarker, this is for lightweight localization.
 - **Face Landmarker**: normalized 3D landmarks and *per-face* blendshape
   coefficients, with configurable 1–8 faces.
 - **Gesture Recognizer**: multiple hands with normalized landmarks, world
@@ -39,11 +43,12 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   Outputs caller-owned float confidence masks, not category IDs or
   cutout compositing. Requires 30.5 MB official int8 model.
 
-All seven use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
-runtime. Official model bytes are verified against **both length and SHA-256**
+All eight frame tasks and the separate MagicTouch session use pinned
+official Google `.task` or `.tflite` weights and MediaPipe Tasks Vision WASM. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
 EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB;
-holistic ~13.68 MB; DeepLab V3 ~2.78 MB; MagicTouch V2 ~30.53 MB.
+holistic ~13.68 MB; DeepLab V3 ~2.78 MB; MagicTouch V2 ~30.53 MB;
+BlazeFace Short Range ~0.23 MB.
 The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
@@ -69,6 +74,17 @@ console.log(result.faces[0]?.blendshapes)
 await runner.dispose() // closes the native task; caller stops its camera separately
 ```
 
+For lightweight face ROI localization, use
+`createFaceDetectorSubstrate({delegate:'GPU',minDetectionConfidence:0.5})`.
+The `GPU` option is **MediaPipe WebGL**, *not* WebGPU. The default
+delegate for this new task is GPU, and callers can explicitly select
+`delegate:'CPU'`. No automatic fallback is hidden: if GPU initialization
+fails, the caller receives the error. GPU execution on an actual physical
+device was **not benchmarked**; the Chromium qualification uses
+SwiftShader/WebGL. The generic substrate advertises WASM because
+the library's backend enum has no WebGL member; that is not a
+WebGPU qualification.
+
 Use `createGestureRecognizerSubstrate({ numHands: 2 })`,
 `createPoseLandmarkerSubstrate({ numPoses: 2 })`, or
 `createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })`, or
@@ -81,7 +97,8 @@ is the **model class index**, not RGBA or confidence. Model labels may be
 absent; do not invent them or reassign indices when using another model. For still images,
 provide an `HTMLImageElement` or `ImageBitmap` **without a timestamp**; the
 playground offers explicit local image uploads, a pose skeleton overlay,
-and object bounding-box/label overlays. Holistic results show body, face
+and object bounding-box/label overlays. BlazeFace adds lightweight face
+bounding boxes and normalized keypoint dots. Holistic results show body, face
 and hand points from the same inference; the hand side is supplied by the SDK.
 Image classification shows per-head
 category scores without drawing a fake bounding box. The DeepLab preview
@@ -104,8 +121,8 @@ The separate official 640×640 pose-reference image **did** produce 33 image
 and 33 world landmarks for one detected person in real Chromium inference,
 but this is not an accuracy benchmark. Gesture handedness follows the
 *subject*; do not mirror frames without adjusting downstream semantics.
-Standalone hand landmarking, prompt-conditioned object segmentation
-and standalone face detection are **not** implemented yet. A single real holistic inference
+Standalone hand landmarking and prompt-conditioned object segmentation
+are **not** implemented yet. A single real holistic inference
 on the publisher-provided human pose image returned 478 face points with
 blendshapes, 33 body/world points, and 21 points/world coordinates for
 each hand. That is a correctness example, not a tracking accuracy study.
@@ -116,6 +133,11 @@ EfficientNet-Lite0. DeepLab V3 class segmentation of that exact
 dog photo returned a 640 × 640 category-ID map with class 12 (`dog`)
 covering 40.8% and class 0 (`background`) covering 59.2%. All three
 are single reference examples, not generalized quality benchmarks.
+BlazeFace Short Range detected a face on the SHA-pinned upstream
+`face_model.png` reference image: 0.94 score, 215 × 215 pixel box,
+and six normalized keypoints. It returned **no detection** on the separate
+full-body `pose_model.png` reference, underscoring that a single
+positive portrait result does not establish robustness to distant faces.
 
 ## Interactive segmentation usage
 
@@ -172,7 +194,7 @@ See [actual model, source comparison and browser evidence](
 pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
-pnpm test:vision:browser                   # Chromium: fake webcam + 7 models + human/dog images
+pnpm test:vision:browser                   # Chromium: fake webcam + 8 frame tasks + human/dog images
 pnpm test:interactive:browser              # real MagicTouch model, positive/negative strokes, cleanup
 pnpm verify                                # full authoritative CI gate
 ```
@@ -189,4 +211,5 @@ See `docs/verification/2026-11-04-mediapipe-vision-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-object-detection.md` and
 `docs/verification/2026-11-04-mediapipe-image-classification.md`, and
 `docs/verification/2026-11-04-mediapipe-holistic-landmarker.md`, and
-`docs/verification/2026-11-04-mediapipe-semantic-segmentation.md`.
+`docs/verification/2026-11-04-mediapipe-semantic-segmentation.md` and
+`docs/verification/2026-11-04-mediapipe-blazeface-detector.md`.

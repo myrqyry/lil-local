@@ -3,12 +3,12 @@ import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/infere
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
   createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate,
-  createSemanticSegmenterSubstrate,
+  createSemanticSegmenterSubstrate, createFaceDetectorSubstrate,
   type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult,
-  type HolisticVisionResult, type SemanticVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
+  type HolisticVisionResult, type SemanticVisionResult, type FaceDetectorVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult | SemanticVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult | SemanticVisionResult | FaceDetectorVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -115,7 +115,9 @@ export function MediaPipeVisionPanel() {
               ? createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })
               : kind === 'holistic'
                 ? createHolisticLandmarkerSubstrate()
-                : createSemanticSegmenterSubstrate()
+                : kind === 'semantic'
+                  ? createSemanticSegmenterSubstrate()
+                  : createFaceDetectorSubstrate({delegate:'GPU',minDetectionConfidence:0.5})
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -298,7 +300,17 @@ export function MediaPipeVisionPanel() {
                     scores:[],
                   })),
                 ]
-              : result?.kind === 'semantic-segmentation'
+              : result?.kind === 'face-detections'
+                ? result.detections.map((detection,index)=>({
+                  key:index,
+                  title:'Face '+(index+1)+(detection.boundingBox
+                    ? ' · '+Math.round(detection.boundingBox.width)+' × '+
+                      Math.round(detection.boundingBox.height)+' px box'
+                    : ' · no bounding box')+
+                      ' · '+detection.keypoints.length+' keypoints',
+                  scores:detection.categories.slice(0,3),
+                }))
+                : result?.kind === 'semantic-segmentation'
                 ? Object.entries(
                     result.categoryIds.reduce((counts: Record<string,number>, id) => {
                       counts[id] = (counts[id] ?? 0) + 1
@@ -333,6 +345,7 @@ export function MediaPipeVisionPanel() {
           <option value="classifier">EfficientNet-Lite0 · Image classification · 18.6 MB</option>
           <option value="holistic">Holistic · Face + body + left/right hands · 13.7 MB</option>
           <option value="semantic">DeepLab V3 · Per-pixel semantic classes · 2.8 MB</option>
+          <option value="blazeFace">BlazeFace · Lightweight face boxes · 230 KB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
@@ -393,6 +406,22 @@ export function MediaPipeVisionPanel() {
         {result?.kind === 'semantic-segmentation' &&
           <canvas ref={maskCanvasRef} aria-label="Semantic segmentation class overlay"
             className="pointer-events-none absolute inset-0 h-full w-full" />}
+        {result?.kind === 'face-detections' && imageDimensions && <svg
+          viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {result.detections.map((detected,index)=>{
+            const bounds=detected.boundingBox
+            return <g key={index}>
+              {bounds && <rect x={bounds.originX} y={bounds.originY}
+                width={bounds.width} height={bounds.height} fill="none"
+                stroke="#e9b16b" strokeWidth={3}/>}
+              {detected.keypoints.map((point,i)=><circle key={i}
+                cx={point.x*imageDimensions.width} cy={point.y*imageDimensions.height}
+                r={4} fill="#85b5bb"/>)}
+            </g>
+          })}
+        </svg>}
         {result?.kind === 'object-detections' && imageDimensions && <svg
           viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
           preserveAspectRatio="none"
@@ -451,7 +480,9 @@ export function MediaPipeVisionPanel() {
         Google MediaPipe may send usage/performance metrics; do not treat this as a
         telemetry-free runtime. Model and WASM require an initial network fetch
         unless the calling app supplies verified local weights and self-hosted WASM.
-        Camera permission and tracking are opt-in. CPU inference at ≤8.3 FPS.
+        Camera permission and tracking are opt-in. BlazeFace requests MediaPipe's
+        WebGL GPU delegate (not WebGPU); other Vision tasks remain CPU/WASM.
+        Camera processing is capped at ≤8.3 FPS.
       </p>
     </div>
   )

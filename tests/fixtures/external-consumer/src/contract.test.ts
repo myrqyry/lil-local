@@ -9,7 +9,7 @@ import {
 import { assertAddOutput } from './add-parity'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, validateInteractiveStrokes, copyInteractiveMask, copySemanticCategoryMask, mapHolisticLandmarkerResult, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, mapFaceDetectorResult, validateInteractiveStrokes, copyInteractiveMask, copySemanticCategoryMask, mapHolisticLandmarkerResult, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
   id: 'external-packed-consumer',
@@ -151,7 +151,9 @@ describe('installed packed vision-mediapipe public contract', () => {
     const holistic = new BrowserSubstrateRunner(createHolisticLandmarkerSubstrate())
     const semantic = new BrowserSubstrateRunner(createSemanticSegmenterSubstrate())
     const interactive = new BrowserSubstrateRunner(createInteractiveSegmenterSubstrate())
-    expect([face.status, gesture.status, pose.status, object.status, classifier.status, holistic.status, semantic.status, interactive.status]).toEqual(['idle','idle','idle','idle','idle','idle','idle','idle'])
+    const blazeFace = new BrowserSubstrateRunner(createFaceDetectorSubstrate({delegate:'GPU'}))
+    expect([face.status, gesture.status, pose.status, object.status, classifier.status, holistic.status, semantic.status, interactive.status, blazeFace.status]).toEqual(['idle','idle','idle','idle','idle','idle','idle','idle','idle'])
+    expect(mapFaceDetectorResult({detections:[{categories:[],keypoints:[]}]}).detections).toHaveLength(1)
     expect(interactive.substrate.capabilities).toContain('image-segmentation')
     expect(validateInteractiveStrokes([{mode:'positive',points:[{x:.1,y:.2},{x:.3,y:.4}]}])[0].brushMode).toBe(1)
     expect(copyInteractiveMask({width:1,height:1,values:Float32Array.of(.9)}).confidence[0]).toBeCloseTo(.9)

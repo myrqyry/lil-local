@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker, ImageSegmenter, InteractiveSegmenter, Stroke } from '@mediapipe/tasks-vision'
+import type { FaceDetector, FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker, ImageSegmenter, InteractiveSegmenter, Stroke } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -45,6 +45,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     url: 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task',
     bytes: 30_525_312,
     sha256: '38431bc66b883404e8397f74c3579404315b9b52b04a46c6346fe906a7309b03',
+  },
+  blazeFace: {
+    url: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+    bytes: 229_746,
+    sha256: 'b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f',
   },
 } as const
 
@@ -145,6 +150,20 @@ export interface HolisticVisionResult {
     landmarks: PoseVisionLandmark[]
     worldLandmarks: PoseVisionLandmark[]
   }[]
+}
+
+export interface FaceDetectorVisionOptions extends VisionOptions {
+  minDetectionConfidence?: number
+  minSuppressionThreshold?: number
+  /**
+   * GPU selects the MediaPipe WebGL delegate, NOT WebGPU.
+   * No hidden fallback. CPU explicitly selects the native CPU interpreter.
+   */
+  delegate?: 'GPU' | 'CPU'
+}
+export interface FaceDetectorVisionResult {
+  kind: 'face-detections'
+  detections: ObjectVisionResult['detections']
 }
 
 export interface ObjectVisionOptions extends VisionOptions {
@@ -494,6 +513,14 @@ export function copyInteractiveMask(input:{
   if(values.some(value=>!Number.isFinite(value)||value<0||value>1))
     throw new Error('Interactive mask confidence must be finite in [0,1]')
   return {kind:'interactive-segmentation',width,height,confidence:Float32Array.from(values)}
+}
+
+/** Reuse our existing strict bounding-box/category/keypoint validation. */
+export function mapFaceDetectorResult(
+  raw:Parameters<typeof mapObjectDetectorResult>[0],
+): FaceDetectorVisionResult {
+  const validated=mapObjectDetectorResult(raw)
+  return {kind:'face-detections',detections:validated.detections}
 }
 
 export function validateVisionFrame(frame: VisionFrame, lastVideoTimestamp = -Infinity): 'IMAGE' | 'VIDEO' {
@@ -1075,6 +1102,71 @@ export function createInteractiveSegmenterSubstrate(
               }
             }
             throw new Error('Unrecognized interactive segmenter request')
+          },
+          async dispose(){engine.close()},
+        }
+      }finally{task?.close()}
+    },
+  }
+}
+
+/**
+ * BlazeFace Short Range: ~230 KB face ROI detector; intentionally not
+ * another 478-point landmark task. MediaPipe GPU means WebGL, not WebGPU.
+ */
+export function createFaceDetectorSubstrate(
+  options:FaceDetectorVisionOptions={},
+):BrowserSubstrate<VisionFrame,FaceDetectorVisionResult,VisionProgress>{
+  for(const key of ['minDetectionConfidence','minSuppressionThreshold'] as const){
+    const val=options[key]
+    if(val!==undefined && (!Number.isFinite(val)||val<0||val>1))
+      throw new Error(key+' must be a finite number between 0 and 1')
+  }
+  const delegate=options.delegate??'GPU'
+  if(delegate!=='GPU'&&delegate!=='CPU')
+    throw new Error('Face Detector delegate must be GPU (WebGL) or CPU')
+  return {
+    id:'mediapipe:blazeface-short-range-float16-1',
+    format:'tflite',
+    capabilities:['image-detection'],
+    // The SDK always uses WASM, even when its optional delegate is WebGL.
+    // This is deliberately not misrepresented as the WebGPU backend.
+    requestedBackends:['wasm'],
+    async create(progress,signal){
+      const bytes=await modelBytes('blazeFace',options,progress,signal)
+      progress?.('wasm')
+      const {FaceDetector,FilesetResolver}=await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset=await FilesetResolver.forVisionTasks(
+        options.wasmBase??MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task:FaceDetector|null=null
+      try{
+        task=await FaceDetector.createFromOptions(fileset,{
+          baseOptions:{modelAssetBuffer:bytes,delegate},
+          runningMode:'IMAGE',
+          minDetectionConfidence:options.minDetectionConfidence,
+          minSuppressionThreshold:options.minSuppressionThreshold,
+        })
+        checkAbort(signal)
+        const engine=task
+        task=null
+        let mode:'IMAGE'|'VIDEO'='IMAGE'
+        let lastVideoTimestamp=-Infinity
+        return {
+          async infer(frame){
+            const nextMode=validateVisionFrame(frame,mode==='VIDEO'?lastVideoTimestamp:-Infinity)
+            if(nextMode!==mode){
+              await engine.setOptions({runningMode:nextMode})
+              mode=nextMode
+              if(mode==='IMAGE')lastVideoTimestamp=-Infinity
+            }
+            const raw=nextMode==='VIDEO'
+              ?engine.detectForVideo(frame.image,frame.timestampMs!)
+              :engine.detect(frame.image)
+            if(nextMode==='VIDEO')lastVideoTimestamp=frame.timestampMs!
+            return mapFaceDetectorResult(raw)
           },
           async dispose(){engine.close()},
         }

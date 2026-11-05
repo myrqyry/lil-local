@@ -124,8 +124,8 @@ const magicTouchEntry: ModelAdapter = {
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
-    name: 'MediaPipe Vision · Seven Local Tasks',
-    description: 'Face, gesture, pose, objects, classification, holistic landmarks and semantic pixel classes · opt-in verified models',
+    name: 'MediaPipe Vision · Eight Local Tasks',
+    description: 'Lightweight BlazeFace boxes plus face, gestures, pose, objects, classification, holistic and semantic pixel classes · verified models',
     modelPath: '',
     tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'classification', 'holistic', 'segmentation', 'mediapipe', 'wasm', 'pipeline'],
   },
@@ -171,7 +171,7 @@ export default function App() {
   if (selectedId === 'mediapipe-vision-local') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
-      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Seven Local Inference Tasks</h1>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Eight Local Inference Tasks</h1>
       <MediaPipeVisionPanel />
     </div></div>
   }
