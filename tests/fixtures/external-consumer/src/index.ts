@@ -14,6 +14,7 @@ import {
   type LiteRtLmWorkerPrompt,
 } from '@lil-local/text-gen'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
+import { createUniversalRetrievalSubstrate, type UniversalRetrievalInput } from '@lil-local/retrieval-mediapipe'
 import { EncoderPipeline } from '@lil-local/encoder'
 import { createPrivacyFilterSubstrate, redactPrivacySpans, type PrivacyResult } from '@lil-local/privacy-filter'
 import { D1OnnxWebGpu, type D1Question } from '@lil-local/decision-onnx'
@@ -74,6 +75,13 @@ export const packedTtsRunner = new BrowserSubstrateRunner(createMediaPipeTtsSubs
 }))
 export const packedYamNetSha256: string = YAMNET_MODEL.sha256
 export type PackedAudioClip = AudioClip
+
+// Real downstream packed MediaPipe universal embedder + SemanticRetriever,
+// sharing exactly one caller-owned model and native provider.
+export const packedUniversalRetriever = new BrowserSubstrateRunner(createUniversalRetrievalSubstrate({
+  model: new Blob(['cold fixture; weights not loaded during pack/TypeScript tests']),
+}))
+export type PackedUniversalRetrievalInput = UniversalRetrievalInput
 
 // Importing the public symbols cannot load model weights automatically.
 export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id

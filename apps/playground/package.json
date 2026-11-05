@@ -23,6 +23,7 @@
     "@lil-local/pix2pix-webgpu": "workspace:*",
     "@lil-local/qwen3-tts": "workspace:*",
     "@lil-local/retrieval": "workspace:*",
+    "@lil-local/retrieval-mediapipe": "workspace:*",
     "@lil-local/runtime-litert": "workspace:*",
     "@lil-local/text-gen": "workspace:*",
     "@lil-local/vision-mediapipe": "workspace:*",

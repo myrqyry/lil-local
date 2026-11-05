@@ -7,6 +7,7 @@ import {
   collectSuffixDraftCandidates,
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
+import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, mapFaceLandmarkerResult } from '@lil-local/vision-mediapipe'
 
@@ -162,5 +163,18 @@ describe('installed packed MediaPipe audio substrate', () => {
     expect([yamnet.status,parakeet.status,tts.status]).toEqual(['idle','idle','idle'])
     expect(mapYamNetResults([]).windows).toEqual([])
     expect(yamnet.substrate.capabilities).toContain('audio-classification')
+  })
+})
+
+
+describe('installed packed MediaPipe universal retrieval surface', () => {
+  it('constructs the typed universal embedding + semantic retriever without loading model weights', () => {
+    const runner = new BrowserSubstrateRunner(createUniversalRetrievalSubstrate({
+      model: new Blob(['caller-owned fixture']),
+    }))
+    expect(runner.status).toBe('idle')
+    expect(runner.substrate.capabilities).toContain('semantic-retrieval')
+    expect(runner.substrate.capabilities).toContain('image-embedding')
+    expect(() => validateRetrievalRequest({kind:'search',query:'local photo',limit:5})).not.toThrow()
   })
 })

@@ -26,6 +26,7 @@ const packages = [
   ['video-classification', 'video-classification.tgz'],
   ['vision-mediapipe', 'vision-mediapipe.tgz'],
   ['audio-mediapipe', 'audio-mediapipe.tgz'],
+  ['retrieval-mediapipe', 'retrieval-mediapipe.tgz'],
   ['depth-estimation', 'depth-estimation.tgz'],
   ['image-segmentation', 'image-segmentation.tgz'],
   ['moderation', 'moderation.tgz'],

@@ -41,6 +41,7 @@ packages/browser-cache     Browser-side model/tensor cache
 packages/video-classification  MoViNet video classification
 packages/vision-mediapipe  optional browser face/gesture landmarks (MediaPipe Vision)
 packages/audio-mediapipe   optional browser sound classification, ASR and TTS (MediaPipe Audio)
+packages/retrieval-mediapipe optional browser shared universal embeddings + semantic retrieval
 packages/depth-estimation    canonical DepthFrame + monocular depth pipelines
 packages/image-segmentation  optional face-class and point-prompted SAM 2.1 masks
 packages/moderation       opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX)

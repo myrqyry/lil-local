@@ -22,6 +22,7 @@ export type Capability =
   | 'text-classification'
   | 'reranking'
   | 'multi-vector-embedding'
+  | 'semantic-retrieval'
   | 'policy-classification'
   | 'reasoning'
 

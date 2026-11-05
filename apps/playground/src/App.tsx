@@ -8,8 +8,24 @@ import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
 import { MediaPipeAudioClassifierPanel } from './components/MediaPipeAudioClassifierPanel'
 import { MediaPipeVisionPanel } from './components/MediaPipeVisionPanel'
+import { MediaPipeRetrievalPanel } from './components/MediaPipeRetrievalPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
+
+const universalRetrieverEntry: ModelAdapter = {
+  modelId: 'universal-embedding-retrieval-mediapipe',
+  metadata: {
+    name: 'Universal Embedder · MediaPipe Search',
+    description: 'One caller-selected LiteRT-LM model for text/image/audio embeddings and an in-memory semantic index. Local WebGPU; model selection required.',
+    modelPath: '',
+    tags: ['retrieval', 'embedding', 'text', 'image', 'audio', 'mediapipe', 'webgpu', 'pipeline'],
+  },
+  inputSpecs: [],
+  outputSpecs: [],
+  isPipeline: true,
+  prepareInputs: () => ({}),
+  parseOutputs: async () => ({}),
+}
 
 const ttsEntry: ModelAdapter = {
   modelId: 'qwen3-tts',
@@ -123,6 +139,14 @@ const bonsaiCandidate: ModelAdapter = {
 export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  if (selectedId === 'universal-embedding-retrieval-mediapipe') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">Universal Embedder + Semantic Retriever</h1>
+      <MediaPipeRetrievalPanel />
+    </div></div>
+  }
+
   if (selectedId === 'mediapipe-vision-local') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
@@ -221,7 +245,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, mediaPipeVisionEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

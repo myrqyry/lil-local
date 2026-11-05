@@ -22,6 +22,21 @@ Lil Local is built around a deliberately boring workflow:
 The workspace covers text, retrieval, speech, audio, vision, OCR, image
 embeddings, video classification, and related local inference workloads.
 
+### MediaPipe Universal Embedder + Semantic Retriever
+
+The opt-in `@lil-local/retrieval-mediapipe` package turns the
+[official MediaPipe Web Samples](https://github.com/google-ai-edge/mediapipe-samples-web)
+Universal Embedder and Semantic Retriever into **one reusable, cold-loaded
+model session**. It supports real text/image/audio embedding and a local
+in-memory semantic index, using one shared native provider rather than a
+separate model per task. The playground accepts an explicit `.litertlm`
+file or URL; the pinned official 165 MB text model has been qualified
+in Chromium with **768-dimensional text embeddings** and native text
+search. Image/audio model execution requires separately selected
+Text-Vision/Omnimodal weights and is not claimed qualified.
+See [usage](packages/retrieval-mediapipe/README.md) and
+[source-to-substrate verification](docs/verification/2026-11-04-mediapipe-samples-retrieval.md).
+
 ### MediaPipe Audio as a reusable substrate
 
 The opt-in `@lil-local/audio-mediapipe` package provides real MediaPipe

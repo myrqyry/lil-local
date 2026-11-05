@@ -26,6 +26,7 @@
     "@lil-local/video-classification": "file:./archives/video-classification.tgz",
     "@lil-local/vision-mediapipe": "file:./archives/vision-mediapipe.tgz",
     "@lil-local/audio-mediapipe": "file:./archives/audio-mediapipe.tgz",
+    "@lil-local/retrieval-mediapipe": "file:./archives/retrieval-mediapipe.tgz",
     "@lil-local/depth-estimation": "file:./archives/depth-estimation.tgz",
     "@lil-local/react-litert": "file:./archives/react-litert.tgz",
     "react": "^19.2.8",

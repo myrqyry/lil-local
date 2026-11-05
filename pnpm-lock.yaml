@@ -289,6 +289,9 @@ importers:
       '@lil-local/retrieval':
         specifier: workspace:*
         version: link:../../packages/retrieval
+      '@lil-local/retrieval-mediapipe':
+        specifier: workspace:*
+        version: link:../../packages/retrieval-mediapipe
       '@lil-local/runtime-litert':
         specifier: workspace:*
         version: link:../../packages/runtime-litert
@@ -670,6 +673,22 @@ importers:
       '@huggingface/transformers':
         specifier: ^3.8.1
         version: 3.8.1
+    devDependencies:
+      '@lil-local/inference-core':
+        specifier: workspace:*
+        version: link:../inference-core
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/retrieval-mediapipe:
+    dependencies:
+      '@mediapipe/tasks-retrieval':
+        specifier: 1.2.2
+        version: 1.2.2
     devDependencies:
       '@lil-local/inference-core':
         specifier: workspace:*
@@ -1312,6 +1331,9 @@ packages:
 
   '@mediapipe/tasks-genai@0.10.29':
     resolution: {integrity: sha512-PRznwHOprGNoSbTbtAyHkMD1rslPLEBSidvz/Ga7qWVr86CXmPEcQpFCidLciBpWNKF8VhQMU2YA51YyBCbPKg==}
+
+  '@mediapipe/tasks-retrieval@1.2.2':
+    resolution: {integrity: sha512-TCNNeHE21DERFsZ+vLXOroct6IfI0hMDcH6eZOEQ8fD2lpOSv3xq/XU+VvyWTMo+I6cfJXkREnzlicE7cQYW0g==}
 
   '@mediapipe/tasks-vision@1.2.2':
     resolution: {integrity: sha512-Z7BikxnTvlKgc3d/Nw+LV6B0xyAACxYeAHHUu/xUhm1SV7jlExa9M37beiF/wZFoy0H+cs1PlIT2Z4km02UEHQ==}
@@ -2702,6 +2724,8 @@ snapshots:
   '@mediapipe/tasks-audio@1.2.2': {}
 
   '@mediapipe/tasks-genai@0.10.29': {}
+
+  '@mediapipe/tasks-retrieval@1.2.2': {}
 
   '@mediapipe/tasks-vision@1.2.2': {}
 
