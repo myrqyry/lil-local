@@ -56,7 +56,9 @@ The opt-in `@lil-local/vision-mediapipe` package provides verified, locally
 executed face landmarks/blendshapes, hand gesture recognition, and full-body
 pose/world-landmark detection, **EfficientDet-Lite0 object detection**
 with scored labels and pixel-space bounding boxes, and **EfficientNet-Lite0
-whole-image classification** with scored ImageNet categories. The playground has a **MediaPipe Vision** test
+whole-image classification** with scored ImageNet categories. The same
+package now includes **Holistic Landmarker**, one shared face/body/hands
+model session with world landmarks and native left/right hands. The playground has a **MediaPipe Vision** test
 entry with opt-in still-image analysis and webcam tracking; external applications
 consume the same typed package rather than rebuilding MediaPipe lifecycle
 code. No model downloads or webcam access happen until explicit activation.
@@ -64,7 +66,8 @@ See [package usage](packages/vision-mediapipe/README.md) and
 [the original browser verification](docs/verification/2026-11-04-mediapipe-vision-substrate.md),
 [pose qualification](docs/verification/2026-11-04-mediapipe-pose-substrate.md), and
 [object detection qualification](docs/verification/2026-11-04-mediapipe-object-detection.md),
-and [image classification qualification](docs/verification/2026-11-04-mediapipe-image-classification.md).
+[image classification qualification](docs/verification/2026-11-04-mediapipe-image-classification.md),
+and [holistic qualification](docs/verification/2026-11-04-mediapipe-holistic-landmarker.md).
 
 ## What it provides
 

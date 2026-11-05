@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
-  createObjectDetectorSubstrate, createImageClassifierSubstrate,
+  createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate,
   type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult,
-  type VisionFrame, type VisionKind, type VisionProgress,
+  type HolisticVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -85,7 +85,9 @@ export function MediaPipeVisionPanel() {
           ? createPoseLandmarkerSubstrate({ numPoses: 2 })
           : kind === 'object'
             ? createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })
-            : createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })
+            : kind === 'classifier'
+              ? createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })
+              : createHolisticLandmarkerSubstrate()
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -248,7 +250,27 @@ export function MediaPipeVisionPanel() {
               title: 'Classification head ' + head.headIndex + (head.headName ? ' · ' + head.headName : ''),
               scores: head.categories,
             }))
-            : []
+            : result?.kind === 'holistic-landmarks'
+              ? [
+                  ...result.poses.map((pose,index)=>({
+                    key:'pose-'+index,
+                    title:'Holistic pose '+(index+1)+' · '+pose.landmarks.length+
+                      ' image / '+pose.worldLandmarks.length+' world points',
+                    scores:[],
+                  })),
+                  ...result.faces.map((face,index)=>({
+                    key:'face-'+index,
+                    title:'Holistic face '+(index+1)+' · '+face.landmarks.length+' points',
+                    scores:[...face.blendshapes].sort((a,b)=>b.score-a.score).slice(0,5),
+                  })),
+                  ...result.hands.map((hand,index)=>({
+                    key:hand.side+'-'+index,
+                    title:'Holistic '+hand.side+' hand · '+hand.landmarks.length+
+                      ' image / '+hand.worldLandmarks.length+' world points',
+                    scores:[],
+                  })),
+                ]
+              : []
 
   return (
     <div className="space-y-4">
@@ -262,6 +284,7 @@ export function MediaPipeVisionPanel() {
           <option value="pose">Full-body pose + 3D world landmarks · 5.8 MB</option>
           <option value="object">EfficientDet-Lite0 · Object detection · 13.8 MB</option>
           <option value="classifier">EfficientNet-Lite0 · Image classification · 18.6 MB</option>
+          <option value="holistic">Holistic · Face + body + left/right hands · 13.7 MB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
@@ -295,6 +318,28 @@ export function MediaPipeVisionPanel() {
             })}
             {pose.landmarks.map((point,i) => <circle key={i} cx={point.x} cy={point.y} r={0.005}
               fill="#e9b16b" stroke="#28231e" strokeWidth={0.002} />)}
+          </g>)}
+        </svg>}
+        {result?.kind === 'holistic-landmarks' && <svg
+          viewBox="0 0 1 1" preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {result.poses.map((pose,index)=><g key={'p'+index}>
+            {POSE_EDGES.map(([a,b])=>{
+              const start=pose.landmarks[a],end=pose.landmarks[b]
+              if(!start||!end)return null
+              return <line key={a+'-'+b} x1={start.x} y1={start.y} x2={end.x} y2={end.y}
+                stroke="#e9b16b" strokeWidth={0.003}/>
+            })}
+            {pose.landmarks.map((pt,i)=><circle key={i} cx={pt.x} cy={pt.y}
+              r={0.004} fill="#e9b16b"/>)}
+          </g>)}
+          {result.faces.map((face,index)=><g key={'f'+index}>
+            {face.landmarks.map((pt,i)=><circle key={i} cx={pt.x} cy={pt.y}
+              r={0.0015} fill="#85b5bb"/>)}
+          </g>)}
+          {result.hands.map((hand,index)=><g key={hand.side+index}>
+            {hand.landmarks.map((pt,i)=><circle key={i} cx={pt.x} cy={pt.y}
+              r={0.004} fill={hand.side==='left'?'#c78f92':'#85b5bb'}/>)}
           </g>)}
         </svg>}
         {result?.kind === 'object-detections' && imageDimensions && <svg

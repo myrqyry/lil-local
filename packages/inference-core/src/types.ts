@@ -13,6 +13,7 @@ export type Capability =
   | 'image-matting'
   | 'image-detection'
   | 'image-pose'
+  | 'holistic-landmarks'
   | 'audio-classification'
   | 'audio-generation'
   | 'text-embedding'

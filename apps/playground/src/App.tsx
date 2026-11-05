@@ -111,10 +111,10 @@ const parakeetAsrEntry: ModelAdapter = {
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
-    name: 'MediaPipe Vision · Five Local Tasks',
-    description: 'Face, gesture, pose, object localization and whole-image classification · opt-in SHA-verified models',
+    name: 'MediaPipe Vision · Six Local Tasks',
+    description: 'Face, gesture, pose, object detection, image classification, and holistic body landmarks · SHA-verified opt-in models',
     modelPath: '',
-    tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'classification', 'mediapipe', 'wasm', 'pipeline'],
+    tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'classification', 'holistic', 'mediapipe', 'wasm', 'pipeline'],
   },
   inputSpecs: [], outputSpecs: [], isPipeline: true,
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
@@ -150,7 +150,7 @@ export default function App() {
   if (selectedId === 'mediapipe-vision-local') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
-      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Landmarks, Detection & Classification</h1>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Six Local Inference Tasks</h1>
       <MediaPipeVisionPanel />
     </div></div>
   }

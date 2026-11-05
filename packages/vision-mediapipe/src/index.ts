@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -30,6 +30,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     url: 'https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/float32/1/efficientnet_lite0.tflite',
     bytes: 18_582_189,
     sha256: '6c7ab0a6e5dcbf38a8c33b960996a55a3b4300b36a018c4545801de3a3c8bde0',
+  },
+  holistic: {
+    url: 'https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/1/holistic_landmarker.task',
+    bytes: 13_683_609,
+    sha256: 'e2dab61191e2dcd0a15f943d8e3ed1dce13c82dfa597b9dd39f562975a50c3f8',
   },
 } as const
 
@@ -87,6 +92,25 @@ export interface ImageClassifierVisionResult {
       displayName: string
       score: number
     }[]
+  }[]
+}
+
+export interface HolisticVisionOptions extends VisionOptions {
+  minFaceDetectionConfidence?: number
+  minFacePresenceConfidence?: number
+  minHandLandmarksConfidence?: number
+  minPoseDetectionConfidence?: number
+  minPosePresenceConfidence?: number
+}
+export interface HolisticVisionResult {
+  kind: 'holistic-landmarks'
+  faces: { landmarks: PoseVisionLandmark[]; blendshapes: VisionScore[] }[]
+  poses: { landmarks: PoseVisionLandmark[]; worldLandmarks: PoseVisionLandmark[] }[]
+  /** Native left/right handedness, not inferred from mirror orientation. */
+  hands: {
+    side: 'left' | 'right'
+    landmarks: PoseVisionLandmark[]
+    worldLandmarks: PoseVisionLandmark[]
   }[]
 }
 
@@ -292,6 +316,71 @@ export function mapImageClassifierResult(
         }
       }),
     })),
+  }
+}
+
+type HolisticLandmark = {x:number;y:number;z:number;visibility?:number;presence?:number}
+type HolisticCategories = {categories:readonly MinimalCategory[]}
+
+/** One model's complete result, with no synthetic gesture labels or swapped hands. */
+export function mapHolisticLandmarkerResult(result:{
+  faceLandmarks:readonly (readonly HolisticLandmark[])[]
+  faceBlendshapes:readonly HolisticCategories[]
+  poseLandmarks:readonly (readonly HolisticLandmark[])[]
+  poseWorldLandmarks:readonly (readonly HolisticLandmark[])[]
+  leftHandLandmarks:readonly (readonly HolisticLandmark[])[]
+  leftHandWorldLandmarks:readonly (readonly HolisticLandmark[])[]
+  rightHandLandmarks:readonly (readonly HolisticLandmark[])[]
+  rightHandWorldLandmarks:readonly (readonly HolisticLandmark[])[]
+}):HolisticVisionResult {
+  if(result.poseLandmarks.length!==result.poseWorldLandmarks.length)
+    throw new Error('Holistic pose count mismatch between normalized and world landmarks')
+  if(result.leftHandLandmarks.length!==result.leftHandWorldLandmarks.length)
+    throw new Error('Holistic left hand count mismatch')
+  if(result.rightHandLandmarks.length!==result.rightHandWorldLandmarks.length)
+    throw new Error('Holistic right hand count mismatch')
+  if(result.faceBlendshapes.length &&
+      result.faceLandmarks.length!==result.faceBlendshapes.length)
+    throw new Error('Holistic face count mismatch between landmarks and blendshapes')
+  const copy=(points:readonly HolisticLandmark[]):PoseVisionLandmark[]=>
+    points.map(point=>{
+      if(![point.x,point.y,point.z].every(Number.isFinite))
+        throw new Error('Holistic landmark coordinates must be finite')
+      for(const key of ['visibility','presence'] as const) {
+        const val=point[key]
+        if(val!==undefined && (!Number.isFinite(val)||val<0||val>1))
+          throw new Error('Holistic landmark '+key+' must be a finite probability')
+      }
+      return {
+        x:point.x,y:point.y,z:point.z,
+        ...(point.visibility===undefined?{}:{visibility:point.visibility}),
+        ...(point.presence===undefined?{}:{presence:point.presence}),
+      }
+    })
+  const categories=(source:readonly MinimalCategory[]):VisionScore[]=>source.map(item=>{
+    if(!item.categoryName || !Number.isFinite(item.score)||item.score<0||item.score>1)
+      throw new Error('Holistic blendshape score must be finite in [0,1]')
+    return {categoryName:item.categoryName,score:item.score}
+  })
+  const hands:HolisticVisionResult['hands']=[]
+  for(const [side,normalized,world] of [
+    ['left',result.leftHandLandmarks,result.leftHandWorldLandmarks],
+    ['right',result.rightHandLandmarks,result.rightHandWorldLandmarks],
+  ] as const) {
+    normalized.forEach((landmarks,index)=>hands.push({
+      side,landmarks:copy(landmarks),worldLandmarks:copy(world[index]),
+    }))
+  }
+  return {
+    kind:'holistic-landmarks',
+    faces:result.faceLandmarks.map((landmarks,i)=>({
+      landmarks:copy(landmarks),
+      blendshapes:categories(result.faceBlendshapes[i]?.categories??[]),
+    })),
+    poses:result.poseLandmarks.map((landmarks,i)=>({
+      landmarks:copy(landmarks),worldLandmarks:copy(result.poseWorldLandmarks[i]),
+    })),
+    hands,
   }
 }
 
@@ -673,6 +762,77 @@ export function createImageClassifierSubstrate(
       } finally {
         task?.close()
       }
+    },
+  }
+}
+
+/**
+ * One real native Holistic Landmarker, not three independent face/hand/pose
+ * engines. No camera capture, gesture-to-action routing or output policies.
+ */
+export function createHolisticLandmarkerSubstrate(
+  options:HolisticVisionOptions={},
+):BrowserSubstrate<VisionFrame,HolisticVisionResult,VisionProgress>{
+  for(const key of [
+    'minFaceDetectionConfidence','minFacePresenceConfidence',
+    'minHandLandmarksConfidence','minPoseDetectionConfidence',
+    'minPosePresenceConfidence',
+  ] as const){
+    const value=options[key]
+    if(value!==undefined && (!Number.isFinite(value)||value<0||value>1))
+      throw new Error(key+' must be a finite confidence from 0 to 1')
+  }
+  return {
+    id:'mediapipe:holistic-landmarker-float16-1',
+    format:'mediapipe-task',
+    capabilities:['holistic-landmarks'],
+    requestedBackends:['wasm'],
+    async create(progress,signal){
+      const bytes=await modelBytes('holistic',options,progress,signal)
+      progress?.('wasm')
+      const {HolisticLandmarker,FilesetResolver}=await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset=await FilesetResolver.forVisionTasks(
+        options.wasmBase??MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task:HolisticLandmarker|null=null
+      try{
+        task=await HolisticLandmarker.createFromOptions(fileset,{
+          baseOptions:{modelAssetBuffer:bytes,delegate:'CPU'},
+          runningMode:'IMAGE',
+          outputFaceBlendshapes:true,
+          outputPoseSegmentationMasks:false,
+          minFaceDetectionConfidence:options.minFaceDetectionConfidence,
+          minFacePresenceConfidence:options.minFacePresenceConfidence,
+          minHandLandmarksConfidence:options.minHandLandmarksConfidence,
+          minPoseDetectionConfidence:options.minPoseDetectionConfidence,
+          minPosePresenceConfidence:options.minPosePresenceConfidence,
+        })
+        checkAbort(signal)
+        const engine=task
+        task=null
+        let mode:'IMAGE'|'VIDEO'='IMAGE'
+        let lastVideoTimestamp=-Infinity
+        return {
+          async infer(frame){
+            const nextMode=validateVisionFrame(
+              frame,mode==='VIDEO'?lastVideoTimestamp:-Infinity,
+            )
+            if(nextMode!==mode){
+              await engine.setOptions({runningMode:nextMode})
+              mode=nextMode
+              if(mode==='IMAGE')lastVideoTimestamp=-Infinity
+            }
+            const result=nextMode==='VIDEO'
+              ?engine.detectForVideo(frame.image,frame.timestampMs!)
+              :engine.detect(frame.image)
+            if(nextMode==='VIDEO')lastVideoTimestamp=frame.timestampMs!
+            return mapHolisticLandmarkerResult(result)
+          },
+          async dispose(){engine.close()},
+        }
+      }finally{task?.close()}
     },
   }
 }

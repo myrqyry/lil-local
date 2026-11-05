@@ -145,10 +145,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Five Local Tasks"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Six Local Tasks"]\')'),
           'new Vision model card', 40)
-        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite')), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Five Local Tasks')
+        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task')), 'Early weights fetch'
+        assert browser.click('Open MediaPipe Vision · Six Local Tasks')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -295,11 +295,59 @@ def main():
         print('CLASSIFIER_VIDEO',browser.status(),flush=True)
         browser.stop()
 
+        # One actual native holistic session (face + pose + both-hand channels).
+        # Use the upstream human image, independently pinned above, and no
+        # camera permission until the separate VIDEO test.
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='holistic';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'holistic'
+        holistic_dom=browser.send('DOM.getDocument')
+        holistic_node=browser.send('DOM.querySelector',{
+          'nodeId':holistic_dom['root']['nodeId'],
+          'selector':'input[aria-label="Image for local vision analysis"]',
+        })['nodeId']
+        assert holistic_node, 'Holistic image selection input is missing'
+        browser.send('DOM.setFileInputFiles',{
+          'nodeId':holistic_node,'files':[str(pose_image)],
+        })
+        browser.eval("""(() => {
+          document.querySelector('input[aria-label="Image for local vision analysis"]')
+            .dispatchEvent(new Event('change',{bubbles:true}));
+        })()""")
+        until(lambda: browser.click('Analyze selected image locally'),
+              'Holistic still-image action',15)
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real Holistic human photo inference',100)
+        holistic_error=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if holistic_error:
+            raise AssertionError('Native Holistic inference failed: '+holistic_error)
+        holistic_summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        holistic_dots=browser.eval("document.querySelectorAll('svg circle').length")
+        print('HOLISTIC_IMAGE',holistic_summary[:550],'OVERLAY_DOTS',holistic_dots,flush=True)
+        assert 'Holistic pose 1' in holistic_summary, (
+            'Upstream human photo produced no holistic pose')
+        assert '33 image / 33 world points' in holistic_summary, (
+            'Holistic pose image/world coordinates unpaired')
+        assert holistic_dots >= 33, 'Holistic pose overlay missing'
+        assert any('holistic_landmarker.task' in u for u in browser.resources), (
+            'Official Holistic model was not requested')
+        assert browser.eval("window.__visionTestTracks.length === 5"), (
+            'Holistic photo unexpectedly opened a camera')
+
+        assert browser.click('Start local vision')
+        browser.wait_running('holistic')
+        print('HOLISTIC_VIDEO',browser.status(),flush=True)
+        browser.stop()
+
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: 5 SHA-verified models; real human pose, dog boxes and category inference; five native video tasks; camera cleanup',flush=True)
+        print('PASS: 6 SHA-verified models; human pose and holistic landmarks; dog object/category inference; all six video paths; camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):

@@ -23,11 +23,15 @@ scheduling, UX, and any persistence. It does not access a camera itself.
 - **Whole-image Classifier (EfficientNet-Lite0)**: native scored ImageNet
   categories, preserving multiple classifier heads (if present), each native
   head ID and label. This classifies the overall frame, not object locations.
+- **Holistic Landmarker**: one model session for aligned body pose (image
+  and world landmarks), face (including blendshapes), and separately labeled
+  left/right hands (image and world landmarks). It does not guess gesture
+  categories. The three outputs are not stitched from independent runtimes.
 
-All five use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
+All six use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
 runtime. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
-EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB.
+EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB; holistic ~13.68 MB.
 The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
@@ -56,11 +60,13 @@ await runner.dispose() // closes the native task; caller stops its camera separa
 Use `createGestureRecognizerSubstrate({ numHands: 2 })`,
 `createPoseLandmarkerSubstrate({ numPoses: 2 })`, or
 `createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })`, or
-`createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })`
-similarly. For still images,
+`createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })`,
+or `createHolisticLandmarkerSubstrate()` similarly. For still images,
 provide an `HTMLImageElement` or `ImageBitmap` **without a timestamp**; the
 playground offers explicit local image uploads, a pose skeleton overlay,
-and object bounding-box/label overlays. Image classification shows per-head
+and object bounding-box/label overlays. Holistic results show body, face
+and hand points from the same inference; the hand side is supplied by the SDK.
+Image classification shows per-head
 category scores without drawing a fake bounding box. Box coordinates are **pixels in the
 original unmirrored image**; only the optional object keypoints are normalized.
 For video, provide a strictly increasing `timestampMs` and capture your own
@@ -79,8 +85,11 @@ The separate official 640×640 pose-reference image **did** produce 33 image
 and 33 world landmarks for one detected person in real Chromium inference,
 but this is not an accuracy benchmark. Gesture handedness follows the
 *subject*; do not mirror frames without adjusting downstream semantics.
-Standalone hand landmarking, image/object segmentation, and holistic
-tracking are **not** implemented yet; do not advertise them as supported.
+Standalone hand landmarking, image/object segmentation and standalone
+face detection are **not** implemented yet. A single real holistic inference
+on the publisher-provided human pose image returned 478 face points with
+blendshapes, 33 body/world points, and 21 points/world coordinates for
+each hand. That is a correctness example, not a tracking accuracy study.
 The upstream dog reference image produced one actual object labeled `dog`
 (score 0.84) and a 512 × 556 pixel box in Chromium. The same image
 produced whole-image class `golden retriever` (score 0.85) under
@@ -93,7 +102,7 @@ benchmarks or evidence that the two models agree on all images.
 pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
-pnpm test:vision:browser                   # Chromium: fake webcam + pose/dog image + classifier
+pnpm test:vision:browser                   # Chromium: fake webcam + 6 native models + human/dog images
 pnpm verify                                # full authoritative CI gate
 ```
 
@@ -107,4 +116,5 @@ inference tests, never using or storing the user's photos. No personal camera da
 See `docs/verification/2026-11-04-mediapipe-vision-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-pose-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-object-detection.md` and
-`docs/verification/2026-11-04-mediapipe-image-classification.md`.
+`docs/verification/2026-11-04-mediapipe-image-classification.md`, and
+`docs/verification/2026-11-04-mediapipe-holistic-landmarker.md`.
