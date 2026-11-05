@@ -31,7 +31,7 @@ import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -64,6 +64,8 @@ export const packedFaceRunner = new BrowserSubstrateRunner(createFaceLandmarkerS
 export const packedGestureRunner = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
 export const packedPoseRunner = new BrowserSubstrateRunner(createPoseLandmarkerSubstrate({numPoses:2}))
 export const packedObjectRunner = new BrowserSubstrateRunner(createObjectDetectorSubstrate({maxResults:5}))
+export const packedClassifierRunner = new BrowserSubstrateRunner(createImageClassifierSubstrate({maxResults:5}))
+export type PackedImageClassifierVision = ImageClassifierVisionResult
 export type PackedObjectVision = ObjectVisionResult
 export type PackedPoseVision = PoseVisionResult
 export type PackedVisionFrame = VisionFrame

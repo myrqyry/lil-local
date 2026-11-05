@@ -20,11 +20,15 @@ scheduling, UX, and any persistence. It does not access a camera itself.
 - **Object Detector (EfficientDet-Lite0)**: scored COCO-style label categories,
   original **pixel-space** bounding boxes (not normalized), and optional
   normalized keypoints per detection. Configurable score threshold and result count.
+- **Whole-image Classifier (EfficientNet-Lite0)**: native scored ImageNet
+  categories, preserving multiple classifier heads (if present), each native
+  head ID and label. This classifies the overall frame, not object locations.
 
-All four use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
+All five use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
 runtime. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
-EfficientDet-Lite0 ~13.84 MB. The matching WASM base is pinned to
+EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB.
+The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
 `model: Blob | Uint8Array` for offline models (still checked against the
@@ -51,11 +55,13 @@ await runner.dispose() // closes the native task; caller stops its camera separa
 
 Use `createGestureRecognizerSubstrate({ numHands: 2 })`,
 `createPoseLandmarkerSubstrate({ numPoses: 2 })`, or
-`createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })`
+`createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })`, or
+`createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })`
 similarly. For still images,
 provide an `HTMLImageElement` or `ImageBitmap` **without a timestamp**; the
 playground offers explicit local image uploads, a pose skeleton overlay,
-and object bounding-box/label overlays. Box coordinates are **pixels in the
+and object bounding-box/label overlays. Image classification shows per-head
+category scores without drawing a fake bounding box. Box coordinates are **pixels in the
 original unmirrored image**; only the optional object keypoints are normalized.
 For video, provide a strictly increasing `timestampMs` and capture your own
 frames. The `BrowserSubstrateRunner` serializes calls; the caller must await each run.
@@ -76,8 +82,10 @@ but this is not an accuracy benchmark. Gesture handedness follows the
 Standalone hand landmarking, image/object segmentation, and holistic
 tracking are **not** implemented yet; do not advertise them as supported.
 The upstream dog reference image produced one actual object labeled `dog`
-(score 0.84) and a 512 × 556 pixel box in Chromium; this establishes one
-real image inference path, not general object-detection accuracy.
+(score 0.84) and a 512 × 556 pixel box in Chromium. The same image
+produced whole-image class `golden retriever` (score 0.85) under
+EfficientNet-Lite0. Both are single real-model examples, not accuracy
+benchmarks or evidence that the two models agree on all images.
 
 ## Verification
 
@@ -85,17 +93,18 @@ real image inference path, not general object-detection accuracy.
 pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
-pnpm test:vision:browser                   # Chromium: fake webcam + SHA-pinned pose/dog images
+pnpm test:vision:browser                   # Chromium: fake webcam + pose/dog image + classifier
 pnpm verify                                # full authoritative CI gate
 ```
 
 The browser smoke uses system Chromium and Python `websocket-client`; it
 requests fake camera streams in an isolated Chrome profile, fetches the
-publisher models only after Start, checks successful inference/Stop, and cleans
+publisher models only after explicit model actions, checks real inference, and cleans
 all temporary state. It also downloads two SHA-verified **upstream sample
 images** (human pose and dog) from a pinned Google Git commit for positive
 inference tests, never using or storing the user's photos. No personal camera data is required.
 
 See `docs/verification/2026-11-04-mediapipe-vision-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-pose-substrate.md` and
-`docs/verification/2026-11-04-mediapipe-object-detection.md`.
+`docs/verification/2026-11-04-mediapipe-object-detection.md` and
+`docs/verification/2026-11-04-mediapipe-image-classification.md`.

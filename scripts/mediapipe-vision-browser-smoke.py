@@ -2,7 +2,7 @@
 """Opt-in real Chromium qualification for Lil Local's packed Vision consumer.
 
 Needs Chromium and Python websocket-client. Runs a disposable fake camera,
-downloads official face, gesture, pose and object weights only after explicit Start,
+downloads five official Vision weights only after explicit model actions,
 checks browser inference/cleanup and never touches the user's webcam.
 No model weights are saved to the repository.
 """
@@ -85,10 +85,12 @@ class Browser:
         try:
             until(lambda: self.status() == 'Running locally · camera active',
                   'real ' + task + ' model and webcam initialized', 75)
+            expected = 'classification heads' if task == 'classifier' else 'detected'
             until(lambda: self.eval("""(() => {
               const s=[...document.querySelectorAll('[aria-label="Vision detections"] p')][0];
-              return !!s && s.textContent.includes('detected');
-            })()"""), task + ' inference completed', 25)
+              return !!s && s.textContent.includes(EXPECTED);
+            })()""".replace('EXPECTED', json.dumps(expected))),
+                  task + ' inference completed', 25)
         except Exception:
             print('STATE', self.status(), 'ERROR', self.eval("document.querySelector('[role=alert]')?.textContent"),flush=True)
             raise
@@ -143,10 +145,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Landmarks & Objects"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Five Local Tasks"]\')'),
           'new Vision model card', 40)
-        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite')), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Landmarks & Objects')
+        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite')), 'Early weights fetch'
+        assert browser.click('Open MediaPipe Vision · Five Local Tasks')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -263,11 +265,41 @@ def main():
         print('OBJECT_VIDEO',browser.status(),flush=True)
         browser.stop()
 
+        # Whole-image category classification is distinct from bounding-box detection.
+        # Reuse the same SHA-verified upstream dog image, without opening the camera.
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='classifier';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'classifier'
+        assert browser.click('Analyze selected image locally')
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real EfficientNet category classification', 80)
+        classifier_error=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if classifier_error:
+            raise AssertionError('Native image classification failed: '+classifier_error)
+        classifier_summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        print('CLASSIFIER_IMAGE',classifier_summary[:680],flush=True)
+        assert any(word in classifier_summary.lower()
+                   for word in ('dog','retriever','labrador','canine')), (
+            'Official dog photo produced no expected image category')
+        assert any('efficientnet_lite0.tflite' in u for u in browser.resources), (
+            'Official EfficientNet-Lite0 model not loaded')
+        assert browser.eval("window.__visionTestTracks.length === 4"), (
+            'Still-image classification unexpectedly requested webcam')
+
+        assert browser.click('Start local vision')
+        browser.wait_running('classifier')
+        print('CLASSIFIER_VIDEO',browser.status(),flush=True)
+        browser.stop()
+
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: 4 official SHA-verified models; real human pose and dog detections; four native video tasks; camera cleanup',flush=True)
+        print('PASS: 5 SHA-verified models; real human pose, dog boxes and category inference; five native video tasks; camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):

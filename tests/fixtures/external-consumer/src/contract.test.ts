@@ -9,7 +9,7 @@ import {
 import { assertAddOutput } from './add-parity'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
   id: 'external-packed-consumer',
@@ -147,7 +147,9 @@ describe('installed packed vision-mediapipe public contract', () => {
     const gesture = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
     const pose = new BrowserSubstrateRunner(createPoseLandmarkerSubstrate({numPoses:2}))
     const object = new BrowserSubstrateRunner(createObjectDetectorSubstrate({maxResults:3}))
-    expect([face.status, gesture.status, pose.status, object.status]).toEqual(['idle','idle','idle','idle'])
+    const classifier = new BrowserSubstrateRunner(createImageClassifierSubstrate({maxResults:3}))
+    expect([face.status, gesture.status, pose.status, object.status, classifier.status]).toEqual(['idle','idle','idle','idle','idle'])
+    expect(mapImageClassifierResult({classifications:[{headIndex:0,headName:'main',categories:[{index:1,categoryName:'dog',displayName:'Dog',score:.75}]}]}).heads[0].categories[0].score).toBe(.75)
     expect(mapObjectDetectorResult({detections:[{categories:[],keypoints:[]}]}).detections).toHaveLength(1)
     expect(mapPoseLandmarkerResult({landmarks:[[{x:.1,y:.2,z:.3}]],worldLandmarks:[[{x:1,y:2,z:3}]]}).poses[0].worldLandmarks[0].z).toBe(3)
     const mapped = mapFaceLandmarkerResult({

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
-  createObjectDetectorSubstrate,
-  type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult,
+  createObjectDetectorSubstrate, createImageClassifierSubstrate,
+  type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult,
   type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -83,7 +83,9 @@ export function MediaPipeVisionPanel() {
         ? createGestureRecognizerSubstrate({ numHands: 2 })
         : kind === 'pose'
           ? createPoseLandmarkerSubstrate({ numPoses: 2 })
-          : createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })
+          : kind === 'object'
+            ? createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })
+            : createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -240,7 +242,13 @@ export function MediaPipeVisionPanel() {
               : ' · no bounding box'),
             scores: detection.categories.slice(0, 3),
           }))
-          : []
+          : result?.kind === 'image-classifications'
+            ? result.heads.flatMap(head => ({
+              key: head.headIndex,
+              title: 'Classification head ' + head.headIndex + (head.headName ? ' · ' + head.headName : ''),
+              scores: head.categories,
+            }))
+            : []
 
   return (
     <div className="space-y-4">
@@ -253,6 +261,7 @@ export function MediaPipeVisionPanel() {
           <option value="gesture">Hand landmarks + gestures · 8.4 MB</option>
           <option value="pose">Full-body pose + 3D world landmarks · 5.8 MB</option>
           <option value="object">EfficientDet-Lite0 · Object detection · 13.8 MB</option>
+          <option value="classifier">EfficientNet-Lite0 · Image classification · 18.6 MB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
@@ -331,7 +340,7 @@ export function MediaPipeVisionPanel() {
       <p role="status" className="text-sm text-on-surface-variant">{status}</p>
       {error && <p role="alert" className="text-sm text-error">{error}</p>}
       <div aria-label="Vision detections" className="space-y-2">
-        <p className="text-sm font-semibold">{result ? summary.length + ' detected' : 'No inference results'}</p>
+        <p className="text-sm font-semibold">{result ? summary.length + (result.kind === 'image-classifications' ? ' classification heads' : ' detected') : 'No inference results'}</p>
         {summary.map(item => (
           <div key={item.key} className="rounded-lg border border-outline-variant p-3 text-sm">
             <strong>{item.title}</strong>
