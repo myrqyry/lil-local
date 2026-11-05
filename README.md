@@ -22,6 +22,19 @@ Lil Local is built around a deliberately boring workflow:
 The workspace covers text, retrieval, speech, audio, vision, OCR, image
 embeddings, video classification, and related local inference workloads.
 
+### MediaPipe Audio as a reusable substrate
+
+The opt-in `@lil-local/audio-mediapipe` package provides real MediaPipe
+Tasks Audio APIs for pinned **YAMNet** sound classification, existing
+**Parakeet** speech transcription, and optional caller-selected LiteRT-LM
+**TTS**. The playground now consumes the shared Parakeet loader and can
+run local YAMNet classification; its real-browser inference is covered by
+`pnpm test:audio:browser`. Other projects import the same package rather
+than duplicating the task SDK. Neither Parakeet nor TTS are claimed to have
+passed large-model real inference yet. See
+[usage](packages/audio-mediapipe/README.md) and
+[verification](docs/verification/2026-11-04-mediapipe-audio-substrate.md).
+
 ### MediaPipe Vision as a reusable substrate
 
 The opt-in `@lil-local/vision-mediapipe` package provides verified, locally

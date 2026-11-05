@@ -1,6 +1,13 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-04 — MediaPipe Audio becomes a reusable Lil Local substrate
+- MediaPipe's Audio catalog exposed the mismatch: our Parakeet ASR loader/segment logic was still playground-private although Lil Local is the shared inference substrate. Moved it and its four tests into the new `@lil-local/audio-mediapipe` package, without changing the working file/AudioWorklet UI path; added opt-in `createParakeetSubstrate` for one-shot external consumers.
+- Added a truly new capability, official YAMNet sound-event classification: 4,126,810 publisher bytes with SHA-256 `4d8b4a53282dc83ef04e3e7dbc4fbc98082e34e44ed798e16c3a0cdd4c584faf` checked on browser load, real WASM CPU classification of a synthetic 440 Hz audio file (three windows; top `Sine wave` 0.97), opt-in playground entry and unload. Exposed an opt-in MediaPipe LiteRT-LM TTS engine/substrate with caller-selected model and native streaming/voice APIs, *not* a replacement for existing Kokoro/Phonon/Qwen3-TTS.
+- RED-first tests for missing package and malformed native TTS PCM; **12/12** shared package tests, typecheck, playground **202/202**, packed external consumer with **22** packages, real Chromium synthetic-WAV YAMNet inference, and final `pnpm verify` all passed. No Parakeet ~615 MB model, microphone stream or MediaPipe TTS model was actually run; these remain unqualified. Documentation and exact reproduction command `pnpm test:audio:browser`: `docs/verification/2026-11-04-mediapipe-audio-substrate.md`.
+- Local branch `aster/mediapipe-audio-substrate` continues on the verified vision checkpoint; changes confined to Lil Local, no cross-repo dependency mutation, no push.
+
+
 ## 2026-11-04 — Reusable MediaPipe Vision package, not another app-local runtime
 - Added `@lil-local/vision-mediapipe` as a genuine `BrowserSubstrateRunner`-compatible, portable package for CPU/WASM face landmarks + per-face blendshapes and hand landmarks + gesture scores. Both official model artifacts are size/SHA-256 verified; JS/WASM pinned to 1.2.2, with optional caller-owned verified model weights and matching self-hosted WASM. No auto-download or camera access on import/construction, no OBS actions or character expression policy in the substrate.
 - The Lil Local playground now **consumes that package**, offering opt-in camera tracking for face or hands; explicit Start/Stop, bounded single-in-flight frame inference, real cleanup. The external consumer fixture independently packs/installs and exercises its public contract, rather than importing workspace source.

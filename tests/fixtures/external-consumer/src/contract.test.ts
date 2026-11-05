@@ -7,6 +7,7 @@ import {
   collectSuffixDraftCandidates,
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, mapFaceLandmarkerResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
@@ -149,5 +150,17 @@ describe('installed packed vision-mediapipe public contract', () => {
       faceBlendshapes: [{categories:[{categoryName:'jawOpen',score:.8}]}],
     })
     expect(mapped.faces[0].blendshapes[0].score).toBe(.8)
+  })
+})
+
+
+describe('installed packed MediaPipe audio substrate', () => {
+  it('instantiates all three opt-in model tasks without network access', () => {
+    const yamnet = new BrowserSubstrateRunner(createYamNetSubstrate())
+    const parakeet = new BrowserSubstrateRunner(createParakeetSubstrate())
+    const tts = new BrowserSubstrateRunner(createMediaPipeTtsSubstrate({model:new Uint8Array([1,2,3])}))
+    expect([yamnet.status,parakeet.status,tts.status]).toEqual(['idle','idle','idle'])
+    expect(mapYamNetResults([]).windows).toEqual([])
+    expect(yamnet.substrate.capabilities).toContain('audio-classification')
   })
 })

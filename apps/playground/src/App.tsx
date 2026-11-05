@@ -6,6 +6,7 @@ import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { Pix2PixPanel } from './components/Pix2PixPanel'
 import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
+import { MediaPipeAudioClassifierPanel } from './components/MediaPipeAudioClassifierPanel'
 import { MediaPipeVisionPanel } from './components/MediaPipeVisionPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
@@ -67,6 +68,18 @@ const nemotronAsrEntry: ModelAdapter = {
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
 }
 
+const yamNetEntry: ModelAdapter = {
+  modelId: 'yamnet-mediapipe',
+  metadata: {
+    name: 'YAMNet · MediaPipe Audio Classification',
+    description: 'Opt-in local 521-class sound recognition; publisher model SHA-256 checked, 4.1 MB',
+    modelPath: '',
+    tags: ['audio', 'classification', 'mediapipe', 'wasm', 'pipeline'],
+  },
+  inputSpecs: [], outputSpecs: [], isPipeline: true,
+  prepareInputs: () => ({}), parseOutputs: async () => ({}),
+}
+
 const parakeetAsrEntry: ModelAdapter = {
   modelId: 'parakeet-tdt-0.6b-mediapipe',
   metadata: {
@@ -115,6 +128,14 @@ export default function App() {
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
       <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Local Tracking</h1>
       <MediaPipeVisionPanel />
+    </div></div>
+  }
+
+  if (selectedId === 'yamnet-mediapipe') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Audio · YAMNet</h1>
+      <MediaPipeAudioClassifierPanel />
     </div></div>
   }
 
@@ -200,7 +221,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, mediaPipeVisionEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, mediaPipeVisionEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

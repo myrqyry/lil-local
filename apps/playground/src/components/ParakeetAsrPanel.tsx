@@ -7,7 +7,7 @@ import {
   createParakeetTranscriber,
   parakeetTranscript,
   validateParakeetAudio,
-} from '../substrates/parakeetMediaPipe'
+} from '@lil-local/audio-mediapipe'
 
 const CAPTURE_WORKLET = `
 class ParakeetCapture extends AudioWorkletProcessor {

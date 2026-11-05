@@ -29,6 +29,7 @@ import { PhononPipeline } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
@@ -64,6 +65,15 @@ export type PackedVisionFrame = VisionFrame
 export type PackedFaceVision = FaceVisionResult
 export type PackedGestureVision = GestureVisionResult
 export const packedFaceModelSha256: string = MEDIAPIPE_VISION_MODELS.face.sha256
+
+// All three MediaPipe Audio tasks resolve from the packed public entrypoint.
+export const packedYamNetRunner = new BrowserSubstrateRunner(createYamNetSubstrate())
+export const packedParakeetRunner = new BrowserSubstrateRunner(createParakeetSubstrate())
+export const packedTtsRunner = new BrowserSubstrateRunner(createMediaPipeTtsSubstrate({
+  model: new Blob(['placeholder model; never loaded during discovery']),
+}))
+export const packedYamNetSha256: string = YAMNET_MODEL.sha256
+export type PackedAudioClip = AudioClip
 
 // Importing the public symbols cannot load model weights automatically.
 export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id
