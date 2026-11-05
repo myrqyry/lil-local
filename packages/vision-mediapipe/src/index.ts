@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker, ImageSegmenter } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -35,6 +35,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     url: 'https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/1/holistic_landmarker.task',
     bytes: 13_683_609,
     sha256: 'e2dab61191e2dcd0a15f943d8e3ed1dce13c82dfa597b9dd39f562975a50c3f8',
+  },
+  semantic: {
+    url: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite',
+    bytes: 2_780_176,
+    sha256: 'ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3',
   },
 } as const
 
@@ -93,6 +98,17 @@ export interface ImageClassifierVisionResult {
       score: number
     }[]
   }[]
+}
+
+/** Pixel semantic classes, NOT an alpha/foreground mask. Class IDs may have
+ * no human-readable label when model metadata omits the mapping. */
+export interface SemanticVisionResult {
+  kind: 'semantic-segmentation'
+  width: number
+  height: number
+  categoryIds: Uint8Array
+  labels: string[]
+  qualityScores?: number[]
 }
 
 export interface HolisticVisionOptions extends VisionOptions {
@@ -381,6 +397,33 @@ export function mapHolisticLandmarkerResult(result:{
       landmarks:copy(landmarks),worldLandmarks:copy(result.poseWorldLandmarks[i]),
     })),
     hands,
+  }
+}
+
+/**
+ * Copy the native borrowed MediaPipe mask before its callback releases it.
+ * Do not flatten pixel-category IDs to a single mask or assume 0 is 'dog'.
+ */
+export function copySemanticCategoryMask(input: {
+  width:number;height:number;values:Uint8Array;
+  labels:readonly string[];qualityScores?:readonly number[]
+}):SemanticVisionResult {
+  const {width,height,values,labels,qualityScores}=input
+  if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||
+     width<1||height<1||width*height>4_194_304)
+    throw new Error('Semantic mask dimensions must be positive and within 4M pixels')
+  if(!(values instanceof Uint8Array)||values.length!==width*height)
+    throw new Error('Semantic mask length must equal its pixel dimensions')
+  if(!Array.isArray(labels)||labels.some(x=>typeof x!=='string'))
+    throw new Error('Semantic mask labels must be strings')
+  if(qualityScores!==undefined && (!Array.isArray(qualityScores)||
+      qualityScores.some(x=>!Number.isFinite(x)||x<0||x>1)))
+    throw new Error('Semantic mask quality scores must be finite probabilities')
+  return {
+    kind:'semantic-segmentation',width,height,
+    categoryIds:Uint8Array.from(values),
+    labels:[...labels],
+    ...(qualityScores===undefined?{}:{qualityScores:[...qualityScores]}),
   }
 }
 
@@ -829,6 +872,77 @@ export function createHolisticLandmarkerSubstrate(
               :engine.detect(frame.image)
             if(nextMode==='VIDEO')lastVideoTimestamp=frame.timestampMs!
             return mapHolisticLandmarkerResult(result)
+          },
+          async dispose(){engine.close()},
+        }
+      }finally{task?.close()}
+    },
+  }
+}
+
+/**
+ * DeepLab V3 semantic category masking. Different from point-prompted
+ * SAM-style masks in @lil-local/image-segmentation: this retains native
+ * per-pixel class IDs and model labels, not guessed alpha.
+ */
+export function createSemanticSegmenterSubstrate(
+  options:VisionOptions={},
+):BrowserSubstrate<VisionFrame,SemanticVisionResult,VisionProgress>{
+  return {
+    id:'mediapipe:deeplab-v3-float32-1',
+    format:'tflite',
+    capabilities:['image-segmentation'],
+    requestedBackends:['wasm'],
+    async create(progress,signal){
+      const bytes=await modelBytes('semantic',options,progress,signal)
+      progress?.('wasm')
+      const {ImageSegmenter,FilesetResolver}=await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset=await FilesetResolver.forVisionTasks(
+        options.wasmBase??MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task:ImageSegmenter|null=null
+      try{
+        task=await ImageSegmenter.createFromOptions(fileset,{
+          baseOptions:{modelAssetBuffer:bytes,delegate:'CPU'},
+          runningMode:'IMAGE',
+          outputCategoryMask:true,
+          outputConfidenceMasks:false,
+        })
+        checkAbort(signal)
+        const engine=task
+        const labels=engine.getLabels()
+        task=null
+        let mode:'IMAGE'|'VIDEO'='IMAGE'
+        let lastVideoTimestamp=-Infinity
+        return {
+          async infer(frame){
+            const nextMode=validateVisionFrame(frame,
+              mode==='VIDEO'?lastVideoTimestamp:-Infinity)
+            if(nextMode!==mode){
+              await engine.setOptions({runningMode:nextMode})
+              mode=nextMode
+              if(mode==='IMAGE')lastVideoTimestamp=-Infinity
+            }
+            let mapped:SemanticVisionResult|undefined
+            // Callback-based output remains borrowed native memory.
+            // Copy synchronously inside the callback to own the pixels.
+            const capture=(result:import('@mediapipe/tasks-vision').ImageSegmenterResult)=>{
+              const mask=result.categoryMask
+              if(!mask)throw new Error('Native MediaPipe returned no category mask')
+              mapped=copySemanticCategoryMask({
+                width:mask.width,height:mask.height,
+                values:mask.getAsUint8Array(),
+                labels,qualityScores:result.qualityScores,
+              })
+            }
+            if(nextMode==='VIDEO'){
+              engine.segmentForVideo(frame.image,frame.timestampMs!,capture)
+              lastVideoTimestamp=frame.timestampMs!
+            }else engine.segment(frame.image,capture)
+            if(!mapped)throw new Error('Native MediaPipe did not deliver a category mask callback')
+            return mapped
           },
           async dispose(){engine.close()},
         }

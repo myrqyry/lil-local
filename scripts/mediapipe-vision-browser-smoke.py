@@ -85,7 +85,7 @@ class Browser:
         try:
             until(lambda: self.status() == 'Running locally · camera active',
                   'real ' + task + ' model and webcam initialized', 75)
-            expected = 'classification heads' if task == 'classifier' else 'detected'
+            expected = ('classification heads' if task == 'classifier' else 'semantic classes' if task == 'semantic' else 'detected')
             until(lambda: self.eval("""(() => {
               const s=[...document.querySelectorAll('[aria-label="Vision detections"] p')][0];
               return !!s && s.textContent.includes(EXPECTED);
@@ -145,10 +145,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Six Local Tasks"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Seven Local Tasks"]\')'),
           'new Vision model card', 40)
-        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task')), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Six Local Tasks')
+        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task', 'deeplab_v3.tflite')), 'Early weights fetch'
+        assert browser.click('Open MediaPipe Vision · Seven Local Tasks')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -343,11 +343,66 @@ def main():
         print('HOLISTIC_VIDEO',browser.status(),flush=True)
         browser.stop()
 
+        # Semantic segmentation returns per-pixel class IDs, not one object
+        # bounding box nor a SAM foreground/alpha mask.
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='semantic';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'semantic'
+        seg_doc=browser.send('DOM.getDocument')
+        seg_node=browser.send('DOM.querySelector',{
+          'nodeId':seg_doc['root']['nodeId'],
+          'selector':'input[aria-label="Image for local vision analysis"]',
+        })['nodeId']
+        assert seg_node, 'Semantic mask image picker is missing'
+        browser.send('DOM.setFileInputFiles', {
+          'nodeId':seg_node,'files':[str(dog_image)],
+        })
+        browser.eval("""(() => {
+          document.querySelector('input[aria-label="Image for local vision analysis"]')
+            .dispatchEvent(new Event('change',{bubbles:true}));
+        })()""")
+        until(lambda: browser.click('Analyze selected image locally'),
+              'Semantic mask still-image action',15)
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real DeepLab V3 dog-photo segmentation',100)
+        semantic_error=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if semantic_error: raise AssertionError('Native DeepLab segmentation failed: '+semantic_error)
+        semantic_summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        semantic_canvas=browser.eval("""(() => {
+          const canvas=document.querySelector('canvas[aria-label="Semantic segmentation class overlay"]');
+          if(!canvas)return null;
+          const ctx=canvas.getContext('2d');
+          if(!ctx)return null;
+          const rgba=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+          let colored=0;
+          for(let i=3;i<rgba.length;i+=4) if(rgba[i]>0)colored++;
+          return {width:canvas.width,height:canvas.height,colored};
+        })()""")
+        print('SEMANTIC_IMAGE',semantic_summary[:700], 'CANVAS',semantic_canvas,flush=True)
+        assert 'semantic classes' in semantic_summary, 'Semantic output type missing'
+        assert semantic_canvas and semantic_canvas['colored'] > 0, (
+          'No actual class segmentation colors drawn')
+        assert 'dog' in semantic_summary.lower(), (
+          'Official dog reference image lacks expected dog semantic class')
+        assert any('deeplab_v3.tflite' in u for u in browser.resources), (
+          'DeepLab official model was not loaded')
+        assert browser.eval("window.__visionTestTracks.length === 6"), (
+          'Still-image semantic segmentation unexpectedly requested camera')
+
+        assert browser.click('Start local vision')
+        browser.wait_running('semantic')
+        print('SEMANTIC_VIDEO',browser.status(),flush=True)
+        browser.stop()
+
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: 6 SHA-verified models; human pose and holistic landmarks; dog object/category inference; all six video paths; camera cleanup',flush=True)
+        print('PASS: 7 SHA-verified models; real human/dog inference and class mask; all seven native video paths; camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):

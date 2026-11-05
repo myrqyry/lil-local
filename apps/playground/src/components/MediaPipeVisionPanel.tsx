@@ -3,11 +3,12 @@ import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/infere
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
   createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate,
+  createSemanticSegmenterSubstrate,
   type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult,
-  type HolisticVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
+  type HolisticVisionResult, type SemanticVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult | SemanticVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -20,6 +21,7 @@ const POSE_EDGES: [number, number][] = [
 /** This is a consumer of the reusable package, not a second MediaPipe runtime. */
 export function MediaPipeVisionPanel() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const maskCanvasRef = useRef<HTMLCanvasElement>(null)
   const runnerRef = useRef<Runner | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -76,6 +78,30 @@ export function MediaPipeVisionPanel() {
     return () => URL.revokeObjectURL(url)
   }, [imageFile])
 
+  // A preview-only, deterministic palette. The package itself returns class IDs.
+  // We never use this colorization in model output or inference contracts.
+  useEffect(() => {
+    if (result?.kind !== 'semantic-segmentation' || !imagePreview) return
+    const canvas = maskCanvasRef.current
+    if (!canvas) return
+    const {width, height, categoryIds, labels} = result
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    canvas.width=width
+    canvas.height=height
+    const rgba=new Uint8ClampedArray(width*height*4)
+    for(let i=0;i<categoryIds.length;i++){
+      const id=categoryIds[i]
+      const background = id===0 && /background|^bg$/i.test(labels[id]??'')
+      const shift=i*4
+      rgba[shift]=(id*97+55)%256
+      rgba[shift+1]=(id*61+115)%256
+      rgba[shift+2]=(id*139+65)%256
+      rgba[shift+3]=background?0:128
+    }
+    ctx.putImageData(new ImageData(rgba,width,height),0,0)
+  }, [result, imagePreview])
+
   const createSelectedSubstrate = (): BrowserSubstrate<VisionFrame, VisionOutput, VisionProgress> =>
     kind === 'face'
       ? createFaceLandmarkerSubstrate({ numFaces: 2 })
@@ -87,7 +113,9 @@ export function MediaPipeVisionPanel() {
             ? createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })
             : kind === 'classifier'
               ? createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })
-              : createHolisticLandmarkerSubstrate()
+              : kind === 'holistic'
+                ? createHolisticLandmarkerSubstrate()
+                : createSemanticSegmenterSubstrate()
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -270,7 +298,26 @@ export function MediaPipeVisionPanel() {
                     scores:[],
                   })),
                 ]
-              : []
+              : result?.kind === 'semantic-segmentation'
+                ? Object.entries(
+                    result.categoryIds.reduce((counts: Record<string,number>, id) => {
+                      counts[id] = (counts[id] ?? 0) + 1
+                      return counts
+                    }, {}),
+                  )
+                    .sort(([,a],[,b]) => b-a)
+                    .slice(0,12)
+                    .map(([idString,pixels]) => {
+                      const id=Number(idString)
+                      const category=result.labels[id]
+                      return {
+                        key:id,
+                        title:(category || 'Class '+id) + ' · '+id+' · '+
+                          (100*pixels/result.categoryIds.length).toFixed(1)+'% of mask',
+                        scores:[],
+                      }
+                    })
+                : []
 
   return (
     <div className="space-y-4">
@@ -285,6 +332,7 @@ export function MediaPipeVisionPanel() {
           <option value="object">EfficientDet-Lite0 · Object detection · 13.8 MB</option>
           <option value="classifier">EfficientNet-Lite0 · Image classification · 18.6 MB</option>
           <option value="holistic">Holistic · Face + body + left/right hands · 13.7 MB</option>
+          <option value="semantic">DeepLab V3 · Per-pixel semantic classes · 2.8 MB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
@@ -342,6 +390,9 @@ export function MediaPipeVisionPanel() {
               r={0.004} fill={hand.side==='left'?'#c78f92':'#85b5bb'}/>)}
           </g>)}
         </svg>}
+        {result?.kind === 'semantic-segmentation' &&
+          <canvas ref={maskCanvasRef} aria-label="Semantic segmentation class overlay"
+            className="pointer-events-none absolute inset-0 h-full w-full" />}
         {result?.kind === 'object-detections' && imageDimensions && <svg
           viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
           preserveAspectRatio="none"
@@ -385,7 +436,7 @@ export function MediaPipeVisionPanel() {
       <p role="status" className="text-sm text-on-surface-variant">{status}</p>
       {error && <p role="alert" className="text-sm text-error">{error}</p>}
       <div aria-label="Vision detections" className="space-y-2">
-        <p className="text-sm font-semibold">{result ? summary.length + (result.kind === 'image-classifications' ? ' classification heads' : ' detected') : 'No inference results'}</p>
+        <p className="text-sm font-semibold">{result ? summary.length + (result.kind === 'image-classifications' ? ' classification heads' : result.kind === 'semantic-segmentation' ? ' semantic classes' : ' detected') : 'No inference results'}</p>
         {summary.map(item => (
           <div key={item.key} className="rounded-lg border border-outline-variant p-3 text-sm">
             <strong>{item.title}</strong>

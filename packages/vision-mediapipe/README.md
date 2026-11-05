@@ -27,11 +27,17 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   and world landmarks), face (including blendshapes), and separately labeled
   left/right hands (image and world landmarks). It does not guess gesture
   categories. The three outputs are not stitched from independent runtimes.
+- **Semantic Segmenter (DeepLab V3)**: 2.78 MB model returns a copied
+  per-pixel `Uint8Array` of class IDs plus the native label map and
+  optional quality scores; not a binary alpha mask and not SAM prompting.
+  Native borrowed masks are copied *inside* the SDK callback, without
+  retaining native GPU/memory-backed objects beyond the callback.
 
-All six use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
+All seven use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
 runtime. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
-EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB; holistic ~13.68 MB.
+EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB;
+holistic ~13.68 MB; DeepLab V3 ~2.78 MB.
 The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
@@ -61,13 +67,20 @@ Use `createGestureRecognizerSubstrate({ numHands: 2 })`,
 `createPoseLandmarkerSubstrate({ numPoses: 2 })`, or
 `createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })`, or
 `createImageClassifierSubstrate({ maxResults: 5, scoreThreshold: 0.1 })`,
-or `createHolisticLandmarkerSubstrate()` similarly. For still images,
+or `createHolisticLandmarkerSubstrate()` similarly.
+Use `createSemanticSegmenterSubstrate()` for a native class mask, e.g.
+`const {width,height,categoryIds,labels}=await runner.run({image:bitmap})`
+(with a runner created for that substrate). `categoryIds[y*width+x]`
+is the **model class index**, not RGBA or confidence. Model labels may be
+absent; do not invent them or reassign indices when using another model. For still images,
 provide an `HTMLImageElement` or `ImageBitmap` **without a timestamp**; the
 playground offers explicit local image uploads, a pose skeleton overlay,
 and object bounding-box/label overlays. Holistic results show body, face
 and hand points from the same inference; the hand side is supplied by the SDK.
 Image classification shows per-head
-category scores without drawing a fake bounding box. Box coordinates are **pixels in the
+category scores without drawing a fake bounding box. The DeepLab preview
+colorizes class IDs in a consumer-side canvas, with background transparent;
+the package exports only copied pixels, native labels and quality scores. Box coordinates are **pixels in the
 original unmirrored image**; only the optional object keypoints are normalized.
 For video, provide a strictly increasing `timestampMs` and capture your own
 frames. The `BrowserSubstrateRunner` serializes calls; the caller must await each run.
@@ -85,16 +98,18 @@ The separate official 640×640 pose-reference image **did** produce 33 image
 and 33 world landmarks for one detected person in real Chromium inference,
 but this is not an accuracy benchmark. Gesture handedness follows the
 *subject*; do not mirror frames without adjusting downstream semantics.
-Standalone hand landmarking, image/object segmentation and standalone
-face detection are **not** implemented yet. A single real holistic inference
+Standalone hand landmarking, prompt-conditioned object segmentation
+and standalone face detection are **not** implemented yet. A single real holistic inference
 on the publisher-provided human pose image returned 478 face points with
 blendshapes, 33 body/world points, and 21 points/world coordinates for
 each hand. That is a correctness example, not a tracking accuracy study.
 The upstream dog reference image produced one actual object labeled `dog`
 (score 0.84) and a 512 × 556 pixel box in Chromium. The same image
 produced whole-image class `golden retriever` (score 0.85) under
-EfficientNet-Lite0. Both are single real-model examples, not accuracy
-benchmarks or evidence that the two models agree on all images.
+EfficientNet-Lite0. DeepLab V3 class segmentation of that exact
+dog photo returned a 640 × 640 category-ID map with class 12 (`dog`)
+covering 40.8% and class 0 (`background`) covering 59.2%. All three
+are single reference examples, not generalized quality benchmarks.
 
 ## Verification
 
@@ -102,7 +117,7 @@ benchmarks or evidence that the two models agree on all images.
 pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
-pnpm test:vision:browser                   # Chromium: fake webcam + 6 native models + human/dog images
+pnpm test:vision:browser                   # Chromium: fake webcam + 7 models + human/dog images
 pnpm verify                                # full authoritative CI gate
 ```
 
@@ -117,4 +132,5 @@ See `docs/verification/2026-11-04-mediapipe-vision-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-pose-substrate.md` and
 `docs/verification/2026-11-04-mediapipe-object-detection.md` and
 `docs/verification/2026-11-04-mediapipe-image-classification.md`, and
-`docs/verification/2026-11-04-mediapipe-holistic-landmarker.md`.
+`docs/verification/2026-11-04-mediapipe-holistic-landmarker.md`, and
+`docs/verification/2026-11-04-mediapipe-semantic-segmentation.md`.

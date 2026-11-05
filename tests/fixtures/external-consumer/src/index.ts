@@ -31,7 +31,7 @@ import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -66,6 +66,8 @@ export const packedPoseRunner = new BrowserSubstrateRunner(createPoseLandmarkerS
 export const packedObjectRunner = new BrowserSubstrateRunner(createObjectDetectorSubstrate({maxResults:5}))
 export const packedClassifierRunner = new BrowserSubstrateRunner(createImageClassifierSubstrate({maxResults:5}))
 export const packedHolisticRunner = new BrowserSubstrateRunner(createHolisticLandmarkerSubstrate())
+export const packedSemanticRunner = new BrowserSubstrateRunner(createSemanticSegmenterSubstrate())
+export type PackedSemanticVision = SemanticVisionResult
 export type PackedHolisticVision = HolisticVisionResult
 export type PackedImageClassifierVision = ImageClassifierVisionResult
 export type PackedObjectVision = ObjectVisionResult
