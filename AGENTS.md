@@ -39,7 +39,7 @@ packages/pix2pix-webgpu    opt-in Rust/Wasm custom WebGPU Pix2Pix image translat
 packages/image-embedding   Image embeddings
 packages/browser-cache     Browser-side model/tensor cache
 packages/video-classification  MoViNet video classification
-packages/vision-mediapipe  optional browser face/gesture/pose/object/classifier/holistic/semantic masks (MediaPipe Vision)
+packages/vision-mediapipe  optional face/gesture/pose/object/classifier/holistic/semantic and MagicTouch stroke masks
 packages/audio-mediapipe   optional browser sound classification, ASR and TTS (MediaPipe Audio)
 packages/retrieval-mediapipe optional browser shared universal embeddings + semantic retrieval
 packages/depth-estimation    canonical DepthFrame + monocular depth pipelines

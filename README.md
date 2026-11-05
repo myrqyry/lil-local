@@ -72,6 +72,24 @@ See [package usage](packages/vision-mediapipe/README.md) and
 [holistic qualification](docs/verification/2026-11-04-mediapipe-holistic-landmarker.md),
 and [semantic class-mask qualification](docs/verification/2026-11-04-mediapipe-semantic-segmentation.md).
 
+### MagicTouch V2 — stateful interactive selection
+
+The opt-in **MagicTouch V2** path in `@lil-local/vision-mediapipe`
+uses one 30.5 MB SHA-verified native model to **encode a still image
+once, then repeatedly refine its soft mask with include/exclude/lasso
+strokes**. A separate playground workbench provides direct on-image
+drawing, cumulative strokes, Undo, Clear and model Unload. Unlike
+SAM 2.1's existing one-shot point-prompted function, this exposes
+a persistent native image session; it **does not replace SAM** or
+promise better accuracy. Real Chromium changed selection coverage
+from **42.4%** to **8.0%** after a negative stroke, but CPU/WASM
+took **several seconds per stroke**. No webcam, app integrations,
+hidden model downloads or GPU performance claims.
+
+See [usage](packages/vision-mediapipe/README.md) and
+[qualified model/real browser receipt](
+docs/verification/2026-11-04-mediapipe-interactive-segmentation.md).
+
 ## What it provides
 
 ### Lil Local model library

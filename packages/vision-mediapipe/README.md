@@ -32,12 +32,18 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   optional quality scores; not a binary alpha mask and not SAM prompting.
   Native borrowed masks are copied *inside* the SDK callback, without
   retaining native GPU/memory-backed objects beyond the callback.
+- **Interactive Segmenter (MagicTouch V2)**: unlike the seven independent
+  frame tasks, a **stateful two-stage still-image session**. First
+  `set-image` encodes one photo; subsequent `segment` requests apply
+  cumulative positive, negative or lasso strokes over the cached image.
+  Outputs caller-owned float confidence masks, not category IDs or
+  cutout compositing. Requires 30.5 MB official int8 model.
 
 All seven use pinned official Google `.task` or `.tflite` weights and the CPU/WASM
 runtime. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
 EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB;
-holistic ~13.68 MB; DeepLab V3 ~2.78 MB.
+holistic ~13.68 MB; DeepLab V3 ~2.78 MB; MagicTouch V2 ~30.53 MB.
 The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
@@ -111,6 +117,55 @@ dog photo returned a 640 × 640 category-ID map with class 12 (`dog`)
 covering 40.8% and class 0 (`background`) covering 59.2%. All three
 are single reference examples, not generalized quality benchmarks.
 
+## Interactive segmentation usage
+
+This **separate** opt-in entrypoint reuses the exact same
+MediaPipe Tasks Vision 1.2.2 WASM, model-integrity verification and
+`BrowserSubstrateRunner`. It deliberately does not pretend to be a
+continuous camera detector.
+
+```ts
+import { BrowserSubstrateRunner } from '@lil-local/inference-core'
+import { createInteractiveSegmenterSubstrate } from '@lil-local/vision-mediapipe'
+
+const runner = new BrowserSubstrateRunner(createInteractiveSegmenterSubstrate())
+await runner.load() // explicitly fetch and SHA-verify 30.5 MB model
+await runner.run({kind:'set-image',image:bitmap})
+const initial = await runner.run({
+  kind:'segment',
+  strokes:[{mode:'positive',points:[{x:.36,y:.40},{x:.60,y:.47}]}],
+})
+const refined = await runner.run({
+  kind:'segment',
+  strokes:[
+    {mode:'positive',points:[{x:.36,y:.40},{x:.60,y:.47}]},
+    {mode:'negative',points:[{x:.45,y:.45},{x:.62,y:.62}]},
+  ],
+})
+// refined.kind is 'interactive-segmentation'; refined.confidence is
+// a copied Float32Array, preserving per-pixel native soft-mask scores.
+await runner.dispose()
+```
+
+Each stroke needs a valid normalized polyline (at least 0.05 length,
+2–256 points). The max is 32 accumulated strokes. A negative-only
+request is rejected. One native encoder is reused until the caller
+deliberately sets another image. The native mask always closes after
+its values are copied, including on validation error.
+
+A dedicated **MagicTouch V2 · Interactive Segmentation** playground
+workbench offers image upload, include/exclude/lasso drags,
+soft-mask overlay, Undo, Clear and Unload without opening a webcam.
+Unlike semantic DeepLab V3, this does **not** identify classes.
+Unlike our current SAM point-prompted convenience function, the
+native API explicitly separates image encoding from stroke decoding.
+It has not been demonstrated to be faster or more accurate than SAM.
+The real Chromium CPU/WASM test took **several seconds per stroke**;
+consider that a meaningful usability constraint, not a performance win.
+
+See [actual model, source comparison and browser evidence](
+../../docs/verification/2026-11-04-mediapipe-interactive-segmentation.md).
+
 ## Verification
 
 ```bash
@@ -118,6 +173,7 @@ pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
 pnpm test:vision:browser                   # Chromium: fake webcam + 7 models + human/dog images
+pnpm test:interactive:browser              # real MagicTouch model, positive/negative strokes, cleanup
 pnpm verify                                # full authoritative CI gate
 ```
 

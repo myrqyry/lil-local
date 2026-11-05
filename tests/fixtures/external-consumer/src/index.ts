@@ -31,7 +31,7 @@ import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult, type InteractiveSelectionRequest, type InteractiveSelectionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -67,6 +67,9 @@ export const packedObjectRunner = new BrowserSubstrateRunner(createObjectDetecto
 export const packedClassifierRunner = new BrowserSubstrateRunner(createImageClassifierSubstrate({maxResults:5}))
 export const packedHolisticRunner = new BrowserSubstrateRunner(createHolisticLandmarkerSubstrate())
 export const packedSemanticRunner = new BrowserSubstrateRunner(createSemanticSegmenterSubstrate())
+export const packedInteractiveRunner = new BrowserSubstrateRunner(createInteractiveSegmenterSubstrate())
+export type PackedInteractiveRequest = InteractiveSelectionRequest
+export type PackedInteractiveResult = InteractiveSelectionResult
 export type PackedSemanticVision = SemanticVisionResult
 export type PackedHolisticVision = HolisticVisionResult
 export type PackedImageClassifierVision = ImageClassifierVisionResult

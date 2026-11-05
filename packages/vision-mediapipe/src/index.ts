@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker, ImageSegmenter } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector, ImageClassifier, HolisticLandmarker, ImageSegmenter, InteractiveSegmenter, Stroke } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -40,6 +40,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     url: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite',
     bytes: 2_780_176,
     sha256: 'ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3',
+  },
+  interactive: {
+    url: 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task',
+    bytes: 30_525_312,
+    sha256: '38431bc66b883404e8397f74c3579404315b9b52b04a46c6346fe906a7309b03',
   },
 } as const
 
@@ -110,6 +115,18 @@ export interface SemanticVisionResult {
   labels: string[]
   qualityScores?: number[]
 }
+
+/** A stroke sequence on one loaded image; each pair is normalized [0,1]. */
+export interface InteractiveSelectionStroke {
+  mode: 'positive' | 'negative' | 'lasso'
+  points: readonly {x:number;y:number}[]
+}
+export type InteractiveSelectionRequest =
+  | {kind:'set-image';image:VisionImage}
+  | {kind:'segment';strokes:readonly InteractiveSelectionStroke[]}
+export type InteractiveSelectionResult =
+  | {kind:'image-ready'}
+  | {kind:'interactive-segmentation';width:number;height:number;confidence:Float32Array}
 
 export interface HolisticVisionOptions extends VisionOptions {
   minFaceDetectionConfidence?: number
@@ -425,6 +442,58 @@ export function copySemanticCategoryMask(input: {
     labels:[...labels],
     ...(qualityScores===undefined?{}:{qualityScores:[...qualityScores]}),
   }
+}
+
+/**
+ * Keep normalized strokes and polarity intact. A single tap isn't a stroke;
+ * the SDK requires a completed line of meaningful length.
+ */
+export function validateInteractiveStrokes(
+  strokes:readonly InteractiveSelectionStroke[],
+):Stroke[]{
+  if(!Array.isArray(strokes)||!strokes.length)
+    throw new Error('Provide at least one completed stroke')
+  if(strokes.length>32)throw new Error('Too many interactive strokes (max 32)')
+  const modeToNumber={positive:1,negative:2,lasso:3} as const
+  if(strokes.some(stroke=>!stroke || !Object.prototype.hasOwnProperty.call(modeToNumber,stroke.mode)))
+    throw new Error('Invalid interactive stroke mode')
+  if(!strokes.some(stroke=>stroke.mode==='positive'||stroke.mode==='lasso'))
+    throw new Error('At least one positive or lasso stroke is required')
+  return strokes.map((stroke:InteractiveSelectionStroke,index:number)=>{
+    if(!stroke || !Object.prototype.hasOwnProperty.call(modeToNumber,stroke.mode))
+      throw new Error('Invalid interactive stroke mode at index '+index)
+    if(!Array.isArray(stroke.points)||stroke.points.length<2||stroke.points.length>256)
+      throw new Error('Interactive stroke requires 2 to 256 points')
+    let length=0
+    const points=stroke.points.map((point:{x:number;y:number},i:number)=>{
+      if(!point || !Number.isFinite(point.x)||!Number.isFinite(point.y)||
+         point.x<0||point.y<0||point.x>1||point.y>1)
+        throw new Error('Interactive stroke points must use normalized [0,1] coordinates')
+      if(i>0)length+=Math.hypot(point.x-stroke.points[i-1].x,point.y-stroke.points[i-1].y)
+      return {x:point.x,y:point.y}
+    })
+    if(length<.05)throw new Error('Interactive stroke length must be at least 0.05 normalized units')
+    return {
+      brushMode:modeToNumber[stroke.mode],
+      point:points,
+      isCompleted:true,
+    }
+  })
+}
+
+/** A fresh copy; nothing references the native mask once its owner closes. */
+export function copyInteractiveMask(input:{
+  width:number;height:number;values:Float32Array,
+}):Extract<InteractiveSelectionResult,{kind:'interactive-segmentation'}>{
+  const {width,height,values}=input
+  if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||width<1||height<1||
+     width*height>4_194_304)
+    throw new Error('Interactive mask dimensions must be positive and under 4M pixels')
+  if(!(values instanceof Float32Array)||values.length!==width*height)
+    throw new Error('Interactive mask length must equal its width × height')
+  if(values.some(value=>!Number.isFinite(value)||value<0||value>1))
+    throw new Error('Interactive mask confidence must be finite in [0,1]')
+  return {kind:'interactive-segmentation',width,height,confidence:Float32Array.from(values)}
 }
 
 export function validateVisionFrame(frame: VisionFrame, lastVideoTimestamp = -Infinity): 'IMAGE' | 'VIDEO' {
@@ -943,6 +1012,69 @@ export function createSemanticSegmenterSubstrate(
             }else engine.segment(frame.image,capture)
             if(!mapped)throw new Error('Native MediaPipe did not deliver a category mask callback')
             return mapped
+          },
+          async dispose(){engine.close()},
+        }
+      }finally{task?.close()}
+    },
+  }
+}
+
+/**
+ * MagicTouch V2 two-stage session: setImage encodes once; each new stroke
+ * set only runs the lightweight native decoder. Unlike SAM's current
+ * one-shot request, repeat refinements reuse the in-memory image embedding.
+ */
+export function createInteractiveSegmenterSubstrate(
+  options:VisionOptions={},
+):BrowserSubstrate<InteractiveSelectionRequest,InteractiveSelectionResult,VisionProgress>{
+  return {
+    id:'mediapipe:magic-touch-v2-int8-1',
+    format:'mediapipe-task',
+    capabilities:['image-segmentation'],
+    requestedBackends:['wasm'],
+    async create(progress,signal){
+      const bytes=await modelBytes('interactive',options,progress,signal)
+      progress?.('wasm')
+      const {InteractiveSegmenter,FilesetResolver}=await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset=await FilesetResolver.forVisionTasks(
+        options.wasmBase??MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task:InteractiveSegmenter|null=null
+      try{
+        task=await InteractiveSegmenter.createFromOptions(fileset,{
+          baseOptions:{modelAssetBuffer:bytes,delegate:'CPU'},
+        })
+        checkAbort(signal)
+        const engine=task
+        task=null
+        let imageReady=false
+        return {
+          async infer(input){
+            if(!input)throw new Error('Interactive segmenter request is required')
+            if(input.kind==='set-image'){
+              if(!input.image)throw new Error('Interactive segmenter image is required')
+              imageReady=false
+              engine.setImage(input.image)
+              imageReady=true
+              return {kind:'image-ready'}
+            }
+            if(input.kind==='segment'){
+              if(!imageReady)throw new Error('Set the image before providing strokes')
+              const strokes=validateInteractiveStrokes(input.strokes)
+              const mask=engine.segment(strokes)
+              if(!mask)throw new Error('Native interactive segmentation returned no mask')
+              try{
+                return copyInteractiveMask({
+                  width:mask.width,height:mask.height,values:mask.getAsFloat32Array(),
+                })
+              }finally{
+                mask.close()
+              }
+            }
+            throw new Error('Unrecognized interactive segmenter request')
           },
           async dispose(){engine.close()},
         }

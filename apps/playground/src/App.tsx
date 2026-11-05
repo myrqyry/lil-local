@@ -8,6 +8,7 @@ import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
 import { MediaPipeAudioClassifierPanel } from './components/MediaPipeAudioClassifierPanel'
 import { MediaPipeVisionPanel } from './components/MediaPipeVisionPanel'
+import { MediaPipeInteractivePanel } from './components/MediaPipeInteractivePanel'
 import { MediaPipeRetrievalPanel } from './components/MediaPipeRetrievalPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
@@ -108,6 +109,18 @@ const parakeetAsrEntry: ModelAdapter = {
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
 }
 
+const magicTouchEntry: ModelAdapter = {
+  modelId: 'magic-touch-v2-mediapipe',
+  metadata: {
+    name: 'MagicTouch V2 · Interactive Segmentation',
+    description: 'One cached image encoding, repeat include/exclude/lasso stroke refinements. Local CPU/WASM, 30.5 MB; opt-in.',
+    modelPath: '',
+    tags: ['vision','segmentation','interactive','mask','brush','mediapipe','wasm','pipeline'],
+  },
+  inputSpecs: [], outputSpecs: [], isPipeline:true,
+  prepareInputs:()=>({}),parseOutputs:async()=>({}),
+}
+
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
@@ -144,6 +157,14 @@ export default function App() {
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
       <h1 className="text-2xl font-bold text-on-surface">Universal Embedder + Semantic Retriever</h1>
       <MediaPipeRetrievalPanel />
+    </div></div>
+  }
+
+  if (selectedId === 'magic-touch-v2-mediapipe') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">MagicTouch V2 · Interactive Segmentation</h1>
+      <MediaPipeInteractivePanel />
     </div></div>
   }
 
@@ -245,7 +266,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, magicTouchEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />
