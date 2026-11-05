@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-04 — MediaPipe EfficientDet-Lite0 object detection in shared Vision
+- Continued the [Google MediaPipe web gallery](https://google-ai-edge.github.io/mediapipe-samples-web/) investigation **within Lil Local**, examining upstream object detector, worker and Playwright dog fixture at `google-ai-edge/mediapipe-samples-web@6887f6399745dc549dadd0022c31fc9ab01f26d6`. Existing Vision included face/gesture/pose but lacked general object detection; no changes to other apps were made.
+- Added `createObjectDetectorSubstrate()` and native `mapObjectDetectorResult()` inside `@lil-local/vision-mediapipe`, reusing its cold-loaded MediaPipe Tasks Vision 1.2.2 CPU/WASM lifecycle and full SHA verification. Official EfficientDet-Lite0 model: **13,836,895 bytes**, SHA-256 `40338edf5ec70d43e318b0a716a84d4564cd1802759a7a07170c7e43796dbf58`. Preserves pixel-space boxes, per-object scores/categories, keypoints, IMAGE and VIDEO paths; no implicit webcam.
+- Existing playground Vision panel now has object detection and pixel-aligned labeled box overlay on opt-in local image; positive **actual Chromium inference** on the official pinned dog photo detected `dog` score **0.84**, box **512 × 556 px**. Same isolated fake-camera test exercised face, gesture, pose and object VIDEO methods, with all four official model checks, no real user camera and successful cleanup. Reproduce with `pnpm test:vision:browser`.
+- Six object contract tests RED then GREEN; Vision **19/19**, playground **202/202**. Packed downstream fixture includes the new public API; initial broad gate found a **test-only assertion** still expecting three idle runners after adding the fourth; corrected to four, independently packed consumer **23/23** passed. Full `pnpm verify`: **exit 0** (typechecks, tests, boundaries, packed consumer, conversion assets, qualification and builds).
+- Evidence and limitations in `docs/verification/2026-11-04-mediapipe-object-detection.md`; branch `aster/mediapipe-object-detection` inherits pose checkpoint `8b5db73`; keep work local and preserve a focused Git commit, do not push merely as a side effect.
+
+
 ## 2026-11-04 — MediaPipe Pose Landmarker added to reusable Vision package
 - Continued from Google's MediaPipe Web Samples gallery, **inside Lil Local**. Inspected upstream pose task, worker and Playwright source at `google-ai-edge/mediapipe-samples-web@6887f6399745dc549dadd0022c31fc9ab01f26d6`. No changes to ViiRM, Stagehand or other consumers.
 - Added a verified `pose_landmarker_lite.task` manifest (5,777,746 bytes, SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`), one true `createPoseLandmarkerSubstrate()` using existing MediaPipe Vision 1.2.2 CPU/WASM and `BrowserSubstrateRunner` lifecycle, and precise image/world landmarks with optional native visibility/presence. Masks intentionally disabled.

@@ -111,10 +111,10 @@ const parakeetAsrEntry: ModelAdapter = {
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
-    name: 'MediaPipe Vision · Face, Gestures & Pose',
-    description: 'Reusable local face blendshapes, hand gestures and full-body pose/world landmarks · opt-in, verified model assets',
+    name: 'MediaPipe Vision · Landmarks & Objects',
+    description: 'Local face, gesture, full-body pose, and EfficientDet object detection · opt-in SHA-verified model assets',
     modelPath: '',
-    tags: ['vision', 'face', 'gesture', 'mediapipe', 'wasm', 'pipeline'],
+    tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'mediapipe', 'wasm', 'pipeline'],
   },
   inputSpecs: [], outputSpecs: [], isPipeline: true,
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
@@ -150,7 +150,7 @@ export default function App() {
   if (selectedId === 'mediapipe-vision-local') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
-      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Local Tracking</h1>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Landmarks & Object Detection</h1>
       <MediaPipeVisionPanel />
     </div></div>
   }

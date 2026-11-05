@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
-  type FaceVisionResult, type GestureVisionResult, type PoseVisionResult,
+  createObjectDetectorSubstrate,
+  type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult,
   type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -28,6 +29,7 @@ export function MediaPipeVisionPanel() {
   const [kind, setKind] = useState<VisionKind>('face')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageDimensions, setImageDimensions] = useState<{width:number;height:number} | null>(null)
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState('Camera off')
@@ -79,7 +81,9 @@ export function MediaPipeVisionPanel() {
       ? createFaceLandmarkerSubstrate({ numFaces: 2 })
       : kind === 'gesture'
         ? createGestureRecognizerSubstrate({ numHands: 2 })
-        : createPoseLandmarkerSubstrate({ numPoses: 2 })
+        : kind === 'pose'
+          ? createPoseLandmarkerSubstrate({ numPoses: 2 })
+          : createObjectDetectorSubstrate({ maxResults: 5, scoreThreshold: 0.35 })
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -110,6 +114,7 @@ export function MediaPipeVisionPanel() {
       if (!isCurrent()) return
       const output = await runner.run({ image: bitmap })
       if (!isCurrent()) return
+      setImageDimensions({width: bitmap.width, height: bitmap.height})
       setResult(output)
       setStatus('Image analyzed locally')
     } catch (issue) {
@@ -226,7 +231,16 @@ export function MediaPipeVisionPanel() {
             ' image points / ' + pose.worldLandmarks.length + ' world points',
           scores: [],
         }))
-        : []
+        : result?.kind === 'object-detections'
+          ? result.detections.map((detection, index) => ({
+            key: index,
+            title: 'Object ' + (index + 1) + (detection.boundingBox
+              ? ' · ' + Math.round(detection.boundingBox.width) + ' × ' +
+                Math.round(detection.boundingBox.height) + ' px box'
+              : ' · no bounding box'),
+            scores: detection.categories.slice(0, 3),
+          }))
+          : []
 
   return (
     <div className="space-y-4">
@@ -238,6 +252,7 @@ export function MediaPipeVisionPanel() {
           <option value="face">Face landmarks + blendshapes · 3.8 MB</option>
           <option value="gesture">Hand landmarks + gestures · 8.4 MB</option>
           <option value="pose">Full-body pose + 3D world landmarks · 5.8 MB</option>
+          <option value="object">EfficientDet-Lite0 · Object detection · 13.8 MB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
@@ -249,7 +264,11 @@ export function MediaPipeVisionPanel() {
         Analyze a still image (no webcam)
         <input aria-label="Image for local vision analysis" type="file" accept="image/*"
           disabled={busy || running}
-          onChange={event => { setImageFile(event.target.files?.[0] ?? null); setResult(null) }}
+          onChange={event => {
+            setImageFile(event.target.files?.[0] ?? null)
+            setImageDimensions(null)
+            setResult(null)
+          }}
           className="mt-2 block w-full text-sm" />
       </label>
       {imagePreview && <div className="relative inline-block w-full overflow-hidden rounded-xl">
@@ -268,6 +287,27 @@ export function MediaPipeVisionPanel() {
             {pose.landmarks.map((point,i) => <circle key={i} cx={point.x} cy={point.y} r={0.005}
               fill="#e9b16b" stroke="#28231e" strokeWidth={0.002} />)}
           </g>)}
+        </svg>}
+        {result?.kind === 'object-detections' && imageDimensions && <svg
+          viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {result.detections.map((detected, index) => {
+            const box = detected.boundingBox
+            if (!box) return null
+            const name = detected.categories[0]?.displayName ||
+              detected.categories[0]?.categoryName || 'Object'
+            const confidence = detected.categories[0]?.score
+            const label = name + (confidence === undefined
+              ? '' : ' ' + Math.round(confidence * 100) + '%')
+            return <g key={index}>
+              <rect x={box.originX} y={box.originY} width={box.width} height={box.height}
+                fill="none" stroke="#e9b16b" strokeWidth={3} />
+              <text x={box.originX + 4} y={Math.max(20, box.originY - 5)}
+                fill="#e9b16b" stroke="#28231e" strokeWidth={3}
+                paintOrder="stroke" fontSize={18} fontWeight="600">{label}</text>
+            </g>
+          })}
         </svg>}
       </div>}
       <button type="button" disabled={!imageFile || busy || running}

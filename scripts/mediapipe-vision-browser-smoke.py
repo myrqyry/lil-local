@@ -2,7 +2,7 @@
 """Opt-in real Chromium qualification for Lil Local's packed Vision consumer.
 
 Needs Chromium and Python websocket-client. Runs a disposable fake camera,
-downloads official face, gesture and pose weights only after explicit Start,
+downloads official face, gesture, pose and object weights only after explicit Start,
 checks browser inference/cleanup and never touches the user's webcam.
 No model weights are saved to the repository.
 """
@@ -143,10 +143,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Face, Gestures & Pose"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Landmarks & Objects"]\')'),
           'new Vision model card', 40)
-        assert not any('face_landmarker.task' in u or 'gesture_recognizer.task' in u for u in browser.resources), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Face, Gestures & Pose')
+        assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite')), 'Early weights fetch'
+        assert browser.click('Open MediaPipe Vision · Landmarks & Objects')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -215,11 +215,59 @@ def main():
         browser.wait_running('pose')
         print('POSE_VIDEO',browser.status(),flush=True)
         browser.stop()
+
+        # Google's own Object Detector test uses a dog reference image.
+        # Download only for the opt-in qualification run, at pinned source SHA.
+        dog_image = Path(OUT) / 'dog.jpg'
+        dog_url = ('https://raw.githubusercontent.com/google-ai-edge/mediapipe-samples-web/'
+          '6887f6399745dc549dadd0022c31fc9ab01f26d6/public/dog.jpg')
+        with urllib.request.urlopen(dog_url, timeout=25) as response:
+            dog_image.write_bytes(response.read())
+        dog_digest='87295aa79a9e285f86a94c58230c50401453dbc8cca946d544ce0e3de3f71cf7'
+        assert hashlib.sha256(dog_image.read_bytes()).hexdigest() == dog_digest, 'Upstream dog photo changed'
+
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='object';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'object'
+        dog_dom=browser.send('DOM.getDocument')
+        dog_node=browser.send('DOM.querySelector',{
+          'nodeId':dog_dom['root']['nodeId'],
+          'selector':'input[aria-label="Image for local vision analysis"]',
+        })['nodeId']
+        assert dog_node,'Object detector image picker missing'
+        browser.send('DOM.setFileInputFiles', {'nodeId':dog_node,'files':[str(dog_image)]})
+        browser.eval("""(() => {
+          document.querySelector('input[aria-label="Image for local vision analysis"]')
+            .dispatchEvent(new Event('change',{bubbles:true}));
+        })()""")
+        until(lambda: browser.click('Analyze selected image locally'),
+              'Analyze dog image', 15)
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real dog object detection', 80)
+        dog_error=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if dog_error: raise AssertionError('Native object detection failed: '+dog_error)
+        dog_summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        rectangles=browser.eval("document.querySelectorAll('svg rect').length")
+        print('OBJECT_IMAGE',dog_summary,'BBOX_OVERLAYS',rectangles,flush=True)
+        assert 'dog' in dog_summary.lower(), 'Official dog photo produced no dog detection'
+        assert rectangles >= 1, 'Object detector pixel-space bounding boxes not rendered'
+        assert any('efficientdet_lite0.tflite' in u for u in browser.resources), 'Official EfficientDet model missing'
+        assert browser.eval("window.__visionTestTracks.length === 3"), 'Still-image object inference unexpectedly requested camera'
+
+        assert browser.click('Start local vision')
+        browser.wait_running('object')
+        print('OBJECT_VIDEO',browser.status(),flush=True)
+        browser.stop()
+
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: 3 model SHA checks, human pose image + 33/33 landmarks, all 3 real native video tasks, camera cleanup',flush=True)
+        print('PASS: 4 official SHA-verified models; real human pose and dog detections; four native video tasks; camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):

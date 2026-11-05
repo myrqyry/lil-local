@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer, PoseLandmarker } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, GestureRecognizer, PoseLandmarker, ObjectDetector } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -20,6 +20,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     url: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
     bytes: 5_777_746,
     sha256: '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a',
+  },
+  object: {
+    url: 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float32/1/efficientdet_lite0.tflite',
+    bytes: 13_836_895,
+    sha256: '40338edf5ec70d43e318b0a716a84d4564cd1802759a7a07170c7e43796dbf58',
   },
 } as const
 
@@ -57,6 +62,40 @@ export interface PoseVisionResult {
     landmarks: PoseVisionLandmark[]
     /** Coordinates in model-relative 3D world units, not image-normalized. */
     worldLandmarks: PoseVisionLandmark[]
+  }[]
+}
+
+export interface ObjectVisionOptions extends VisionOptions {
+  maxResults?: number
+  scoreThreshold?: number
+}
+export interface ObjectVisionCategory {
+  index: number
+  categoryName: string
+  displayName: string
+  score: number
+}
+export interface ObjectVisionBoundingBox {
+  /** Pixel-space rectangle in original source image coordinates, never normalized. */
+  originX: number
+  originY: number
+  width: number
+  height: number
+  angle: number
+}
+export interface ObjectVisionKeypoint {
+  /** Keypoints, unlike bounding boxes, are normalized to the image dimensions. */
+  x: number
+  y: number
+  label?: string
+  score?: number
+}
+export interface ObjectVisionResult {
+  kind: 'object-detections'
+  detections: {
+    categories: ObjectVisionCategory[]
+    boundingBox?: ObjectVisionBoundingBox
+    keypoints: ObjectVisionKeypoint[]
   }[]
 }
 
@@ -140,6 +179,57 @@ export function mapPoseLandmarkerResult(
       landmarks: copy(landmarks),
       worldLandmarks: copy(result.worldLandmarks[i]),
     })),
+  }
+}
+
+type MinimalObjectCategory = {index: number; categoryName: string; displayName: string; score: number}
+type MinimalObjectBox = ObjectVisionBoundingBox
+type MinimalObjectKeypoint = ObjectVisionKeypoint
+
+/** Native categories remain per-object and native boxes remain pixel-space. */
+export function mapObjectDetectorResult(
+  result: {
+    detections: readonly {
+      categories: readonly MinimalObjectCategory[]
+      boundingBox?: MinimalObjectBox
+      keypoints: readonly MinimalObjectKeypoint[]
+    }[]
+  },
+): ObjectVisionResult {
+  return {
+    kind: 'object-detections',
+    detections: result.detections.map((detection) => {
+      const box = detection.boundingBox
+      if (box && (![
+        box.originX, box.originY, box.width, box.height, box.angle,
+      ].every(Number.isFinite) || box.width < 0 || box.height < 0))
+        throw new Error('MediaPipe object bounding box must have finite, nonnegative pixel dimensions')
+      const categories = detection.categories.map((category) => {
+        if (!Number.isFinite(category.score) || category.score < 0 || category.score > 1)
+          throw new Error('MediaPipe object category score must be a finite probability')
+        return {
+          index: category.index,
+          categoryName: category.categoryName,
+          displayName: category.displayName,
+          score: category.score,
+        }
+      })
+      const keypoints = detection.keypoints.map((point) => {
+        if (![point.x, point.y].every(Number.isFinite) ||
+            (point.score !== undefined && !Number.isFinite(point.score)))
+          throw new Error('MediaPipe object keypoint coordinates and score must be finite')
+        return {
+          x: point.x, y: point.y,
+          ...(point.label === undefined ? {} : {label: point.label}),
+          ...(point.score === undefined ? {} : {score: point.score}),
+        }
+      })
+      return {
+        categories,
+        keypoints,
+        ...(box === undefined ? {} : {boundingBox: {...box}}),
+      }
+    }),
   }
 }
 
@@ -383,6 +473,72 @@ export function createPoseLandmarkerSubstrate(
             } finally {
               raw.close()
             }
+          },
+          async dispose() { engine.close() },
+        }
+      } finally {
+        task?.close()
+      }
+    },
+  }
+}
+
+/**
+ * Official EfficientDet-Lite0 COCO object recognition. Caller owns camera,
+ * detection UX and thresholds; boxes are native pixel-space coordinates.
+ */
+export function createObjectDetectorSubstrate(
+  options: ObjectVisionOptions = {},
+): BrowserSubstrate<VisionFrame, ObjectVisionResult, VisionProgress> {
+  const maxResults = options.maxResults ?? 5
+  if (!Number.isSafeInteger(maxResults) || maxResults < 1 || maxResults > 100)
+    throw new Error('maxResults must be an integer between 1 and 100')
+  const scoreThreshold = options.scoreThreshold ?? 0.35
+  if (!Number.isFinite(scoreThreshold) || scoreThreshold < 0 || scoreThreshold > 1)
+    throw new Error('scoreThreshold must be a finite number between 0 and 1')
+  return {
+    id: 'mediapipe:efficientdet-lite0-float32-1',
+    format: 'tflite',
+    capabilities: ['image-detection'],
+    requestedBackends: ['wasm'],
+    async create(progress, signal) {
+      const bytes = await modelBytes('object', options, progress, signal)
+      progress?.('wasm')
+      const { ObjectDetector, FilesetResolver } = await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset = await FilesetResolver.forVisionTasks(
+        options.wasmBase ?? MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task: ObjectDetector | null = null
+      try {
+        task = await ObjectDetector.createFromOptions(fileset, {
+          baseOptions: {modelAssetBuffer: bytes, delegate: 'CPU'},
+          runningMode: 'IMAGE',
+          maxResults,
+          scoreThreshold,
+        })
+        checkAbort(signal)
+        const engine = task
+        let mode: 'IMAGE' | 'VIDEO' = 'IMAGE'
+        let lastVideoTimestamp = -Infinity
+        task = null
+        return {
+          async infer(frame) {
+            const nextMode = validateVisionFrame(
+              frame, mode === 'VIDEO' ? lastVideoTimestamp : -Infinity,
+            )
+            if (nextMode !== mode) {
+              await engine.setOptions({runningMode: nextMode})
+              mode = nextMode
+              if (mode === 'IMAGE') lastVideoTimestamp = -Infinity
+            }
+            if (nextMode === 'VIDEO') {
+              const result = engine.detectForVideo(frame.image, frame.timestampMs!)
+              lastVideoTimestamp = frame.timestampMs!
+              return mapObjectDetectorResult(result)
+            }
+            return mapObjectDetectorResult(engine.detect(frame.image))
           },
           async dispose() { engine.close() },
         }
