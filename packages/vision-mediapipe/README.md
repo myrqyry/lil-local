@@ -13,10 +13,14 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   coefficients, with configurable 1–8 faces.
 - **Gesture Recognizer**: multiple hands with normalized landmarks, world
   landmarks, all gesture scores, top gesture and per-hand handedness.
+- **Pose Landmarker Lite**: up to eight people, with 33 image-normalized
+  landmarks and 33 corresponding 3D world landmarks per detected pose.
+  Visibility/presence are retained when reported. Segmentation masks are
+  deliberately disabled; the API does not claim them.
 
-Both use pinned official Google `.task` weights and the CPU/WASM runtime.
+All three use pinned official Google `.task` weights and the CPU/WASM runtime.
 Official model bytes are verified against **both length and SHA-256** before
-execution. Face ~3.76 MB; gesture ~8.37 MB. The matching WASM base is pinned to
+execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB. The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide
 `model: Blob | Uint8Array` for offline models (still checked against the
@@ -41,8 +45,12 @@ console.log(result.faces[0]?.blendshapes)
 await runner.dispose() // closes the native task; caller stops its camera separately
 ```
 
-Use `createGestureRecognizerSubstrate({ numHands: 2 })` similarly. The
-`BrowserSubstrateRunner` serializes calls; the caller must await each run.
+Use `createGestureRecognizerSubstrate({ numHands: 2 })` or
+`createPoseLandmarkerSubstrate({ numPoses: 2 })` similarly. For still images,
+provide an `HTMLImageElement` or `ImageBitmap` **without a timestamp**; the
+playground offers explicit local image uploads and a pose skeleton preview.
+For video, provide a strictly increasing `timestampMs` and capture your own
+frames. The `BrowserSubstrateRunner` serializes calls; the caller must await each run.
 Use strictly increasing timestamps for video; no implicit CPU/cloud fallback,
 no automatic model fetching during import or construction, no OBS side effects.
 MediaPipe's `detectForVideo` is synchronous on the UI thread, so constrain
@@ -53,10 +61,12 @@ capture resolution and processing frequency in interactive consumers.
 this is *not* guaranteed telemetry-free. Initial model and WASM fetches need
 network access unless self-hosted/cached. Chrome fake-camera qualification does
 not establish accuracy with human faces/hands or latency on Android Safari.
-Gesture direction/handedness follows the *subject*; do not mirror input
-frames without adjusting downstream semantics. Pose tracking, object
-detection, segmentation and holistic tracking are **not** implemented yet;
-do not advertise them via this entrypoint.
+The separate official 640×640 pose-reference image **did** produce 33 image
+and 33 world landmarks for one detected person in real Chromium inference,
+but this is not an accuracy benchmark. Gesture handedness follows the
+*subject*; do not mirror frames without adjusting downstream semantics.
+Object detection, standalone hand landmarking, segmentation and holistic
+tracking are **not** implemented yet; do not advertise them as supported.
 
 ## Verification
 
@@ -64,13 +74,16 @@ do not advertise them via this entrypoint.
 pnpm --filter @lil-local/vision-mediapipe test
 pnpm --filter @lil-local/vision-mediapipe typecheck
 pnpm test:compatibility                    # real packed downstream consumer
-pnpm test:vision:browser                   # real Chromium, synthetic webcam
+pnpm test:vision:browser                   # Chromium: fake webcam + upstream pose image
 pnpm verify                                # full authoritative CI gate
 ```
 
 The browser smoke uses system Chromium and Python `websocket-client`; it
 requests fake camera streams in an isolated Chrome profile, fetches the
 publisher models only after Start, checks successful inference/Stop, and cleans
-all temporary state. No personal images or camera data are required.
+all temporary state. It also downloads one SHA-verified **upstream sample pose
+image** at a pinned Google Git commit for a positive detection test, never
+using or storing the user's photos. No personal camera data is required.
 
-See `docs/verification/2026-11-04-mediapipe-vision-substrate.md`.
+See `docs/verification/2026-11-04-mediapipe-vision-substrate.md` and
+`docs/verification/2026-11-04-mediapipe-pose-substrate.md`.

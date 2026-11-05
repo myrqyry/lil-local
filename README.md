@@ -53,8 +53,9 @@ passed large-model real inference yet. See
 ### MediaPipe Vision as a reusable substrate
 
 The opt-in `@lil-local/vision-mediapipe` package provides verified, locally
-executed face landmarks/blendshapes and hand gesture recognition. The playground
-has a **MediaPipe Vision · Face & Gestures** test entry; external applications
+executed face landmarks/blendshapes, hand gesture recognition, and full-body
+pose/world-landmark detection. The playground has a **MediaPipe Vision** test
+entry with opt-in still-image analysis and webcam tracking; external applications
 consume the same typed package rather than rebuilding MediaPipe lifecycle
 code. No model downloads or webcam access happen until explicit activation.
 See [package usage](packages/vision-mediapipe/README.md) and

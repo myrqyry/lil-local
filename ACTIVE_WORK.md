@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-04 — MediaPipe Pose Landmarker added to reusable Vision package
+- Continued from Google's MediaPipe Web Samples gallery, **inside Lil Local**. Inspected upstream pose task, worker and Playwright source at `google-ai-edge/mediapipe-samples-web@6887f6399745dc549dadd0022c31fc9ab01f26d6`. No changes to ViiRM, Stagehand or other consumers.
+- Added a verified `pose_landmarker_lite.task` manifest (5,777,746 bytes, SHA-256 `59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a`), one true `createPoseLandmarkerSubstrate()` using existing MediaPipe Vision 1.2.2 CPU/WASM and `BrowserSubstrateRunner` lifecycle, and precise image/world landmarks with optional native visibility/presence. Masks intentionally disabled.
+- The playground consumes the same shared package for **local opt-in still-image analysis without webcam permission**, including pose-skeleton overlay; original face/gesture camera modes remain. One pinned upstream 640x640 test photo yielded **one pose with 33 normalized image landmarks, 33 world landmarks and 33 visible overlay points**. Fake webcam ran all three real SDK video tasks. Still image was ephemeral and SHA-verified; no personal camera accessed. Repeat: `pnpm test:vision:browser`.
+- Six focused pose tests RED then GREEN; Vision 13/13, playground 202/202; independent packed-consumer fixture includes the pose API. Authoritative `pnpm verify` and browser smoke: completed successfully. Receipt: `docs/verification/2026-11-04-mediapipe-pose-substrate.md`.
+- Branch `aster/mediapipe-pose-substrate` continues from verified retrieval `ec0122b`. Keep these capabilities reusable and don't force downstream integrations; local commit checkpoint, no push.
+
+
 ## 2026-11-04 — Official MediaPipe Web Samples → shared retrieval substrate
 - Mat supplied the [official web sample gallery](https://google-ai-edge.github.io/mediapipe-samples-web/), pointing to reusable Lil Local capabilities rather than arbitrary integrations. Examined upstream `google-ai-edge/mediapipe-samples-web@6887f6399745dc549dadd0022c31fc9ab01f26d6` in temporary isolation; the meaningful novel pattern was **one shared Universal Embedder model/provider for Semantic Retriever**, while other gallery tasks overlap existing Lil Local packages or need their own qualification.
 - Added `@lil-local/retrieval-mediapipe` (MediaPipe Tasks Retrieval 1.2.2), a real cold-loadable `BrowserSubstrateRunner` that supports typed text/image/audio embeddings, text/image/audio indexing, scored semantic retrieval, IDs/deletion, strict output validation, cancellation, and native cleanup. Created a thin playground client with explicit File/URL model selection and index/search, plus public packed-consumer integration; existing ColBERT and embedding packages unchanged.

@@ -53,7 +53,7 @@ Dependency flow: `inference-core → runtime-litert → model packages → playg
   preflight, telemetry.
 - Model packages — `text-gen`, `retrieval`, `encoder`, `image-embedding`,
   `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`, `image-segmentation`,
-  the opt-in `vision-mediapipe` face/gesture, `audio-mediapipe` sound/ASR/TTS,
+  the opt-in `vision-mediapipe` face/gesture/pose, `audio-mediapipe` sound/ASR/TTS,
   and `retrieval-mediapipe` universal embedding/index substrates,
   and the custom-WebGPU `pix2pix-webgpu` image-translation candidate.
 - `packages/browser-cache` — browser-side model/tensor cache.

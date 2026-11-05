@@ -9,7 +9,7 @@ import {
 import { assertAddOutput } from './add-parity'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, mapFaceLandmarkerResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, mapFaceLandmarkerResult, mapPoseLandmarkerResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
   id: 'external-packed-consumer',
@@ -145,7 +145,9 @@ describe('installed packed vision-mediapipe public contract', () => {
   it('instantiates cold runners and maps distinct face results without starting a model download', () => {
     const face = new BrowserSubstrateRunner(createFaceLandmarkerSubstrate())
     const gesture = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
-    expect([face.status, gesture.status]).toEqual(['idle','idle'])
+    const pose = new BrowserSubstrateRunner(createPoseLandmarkerSubstrate({numPoses:2}))
+    expect([face.status, gesture.status, pose.status]).toEqual(['idle','idle','idle'])
+    expect(mapPoseLandmarkerResult({landmarks:[[{x:.1,y:.2,z:.3}]],worldLandmarks:[[{x:1,y:2,z:3}]]}).poses[0].worldLandmarks[0].z).toBe(3)
     const mapped = mapFaceLandmarkerResult({
       faceLandmarks: [[{x:.2,y:.3,z:.4}]],
       faceBlendshapes: [{categories:[{categoryName:'jawOpen',score:.8}]}],

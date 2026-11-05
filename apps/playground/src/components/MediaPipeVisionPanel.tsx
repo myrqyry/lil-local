@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
 import {
-  createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate,
-  type FaceVisionResult, type GestureVisionResult,
+  createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
+  type FaceVisionResult, type GestureVisionResult, type PoseVisionResult,
   type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
+// Display-only skeleton connections. The inference package does not own rendering.
+const POSE_EDGES: [number, number][] = [
+  [11,12], [11,13], [13,15], [12,14], [14,16],
+  [11,23], [12,24], [23,24],
+  [23,25], [25,27], [24,26], [26,28],
+]
 
 /** This is a consumer of the reusable package, not a second MediaPipe runtime. */
 export function MediaPipeVisionPanel() {
@@ -20,6 +26,8 @@ export function MediaPipeVisionPanel() {
   const serialRef = useRef(0)
   const mountedRef = useRef(true)
   const [kind, setKind] = useState<VisionKind>('face')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState('Camera off')
@@ -56,6 +64,69 @@ export function MediaPipeVisionPanel() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(imageFile)
+    setImagePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imageFile])
+
+  const createSelectedSubstrate = (): BrowserSubstrate<VisionFrame, VisionOutput, VisionProgress> =>
+    kind === 'face'
+      ? createFaceLandmarkerSubstrate({ numFaces: 2 })
+      : kind === 'gesture'
+        ? createGestureRecognizerSubstrate({ numHands: 2 })
+        : createPoseLandmarkerSubstrate({ numPoses: 2 })
+
+  /** Explicit still-image local inference. No webcam permission or uploads. */
+  const analyzeImage = async () => {
+    if (busy || running || !imageFile) return
+    stop()
+    const serial = serialRef.current
+    const isCurrent = () => mountedRef.current && serial === serialRef.current
+    setBusy(true)
+    setError('')
+    setStatus('Loading model for local image analysis…')
+    const abort = new AbortController()
+    abortRef.current = abort
+    const runner = new BrowserSubstrateRunner(createSelectedSubstrate())
+    runnerRef.current = runner
+    let bitmap: ImageBitmap | null = null
+    try {
+      if (!imageFile.type.startsWith('image/')) throw new Error('Choose an image file')
+      await runner.load(stage => {
+        if (isCurrent()) setStatus({
+          model: 'Downloading pinned model…',
+          integrity: 'Verifying model SHA-256…',
+          wasm: 'Initializing local MediaPipe WASM…',
+        }[stage])
+      }, abort.signal)
+      if (!isCurrent()) return
+      setStatus('Decoding and analyzing image locally…')
+      bitmap = await createImageBitmap(imageFile)
+      if (!isCurrent()) return
+      const output = await runner.run({ image: bitmap })
+      if (!isCurrent()) return
+      setResult(output)
+      setStatus('Image analyzed locally')
+    } catch (issue) {
+      if (isCurrent() && !(issue instanceof DOMException && issue.name === 'AbortError')) {
+        setError(issue instanceof Error ? issue.message : String(issue))
+        setStatus('Image analysis failed')
+      }
+    } finally {
+      bitmap?.close()
+      if (runnerRef.current === runner) runnerRef.current = null
+      if (abortRef.current === abort) abortRef.current = null
+      try { await runner.dispose() }
+      catch (issue) { if (isCurrent()) setError(String(issue)) }
+      if (isCurrent()) setBusy(false)
+    }
+  }
+
   const start = async () => {
     if (busy || running) return
     stop()
@@ -65,9 +136,7 @@ export function MediaPipeVisionPanel() {
     setError('')
     const abort = new AbortController()
     abortRef.current = abort
-    const substrate: BrowserSubstrate<VisionFrame, VisionOutput, VisionProgress> = kind === 'face'
-      ? createFaceLandmarkerSubstrate({ numFaces: 2 })
-      : createGestureRecognizerSubstrate({ numHands: 2 })
+    const substrate = createSelectedSubstrate()
     const runner = new BrowserSubstrateRunner(substrate)
     runnerRef.current = runner
     let pendingStream: MediaStream | null = null
@@ -150,24 +219,62 @@ export function MediaPipeVisionPanel() {
         title: hand.handedness + ' hand · ' + hand.landmarks.length + ' landmarks',
         scores: hand.gestures.slice(0, 6),
       }))
-      : []
+      : result?.kind === 'pose-landmarks'
+        ? result.poses.map((pose, index) => ({
+          key: index,
+          title: 'Pose ' + (index + 1) + ' · ' + pose.landmarks.length +
+            ' image points / ' + pose.worldLandmarks.length + ' world points',
+          scores: [],
+        }))
+        : []
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-outline-variant p-3">
         <label htmlFor="vision-task" className="block text-sm font-semibold">Vision task</label>
         <select id="vision-task" value={kind} disabled={busy || running}
-          onChange={event => setKind(event.target.value as VisionKind)}
+          onChange={event => { setKind(event.target.value as VisionKind); setResult(null) }}
           className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2">
           <option value="face">Face landmarks + blendshapes · 3.8 MB</option>
           <option value="gesture">Hand landmarks + gestures · 8.4 MB</option>
+          <option value="pose">Full-body pose + 3D world landmarks · 5.8 MB</option>
         </select>
         <p className="mt-2 text-sm text-on-surface-variant">
           This playground calls the shared @lil-local/vision-mediapipe package.
-          No model downloads or camera access occur until Start.
+          Model loading is opt-in. Still-image analysis never requests camera access.
         </p>
       </div>
 
+      <label className="block text-sm font-semibold">
+        Analyze a still image (no webcam)
+        <input aria-label="Image for local vision analysis" type="file" accept="image/*"
+          disabled={busy || running}
+          onChange={event => { setImageFile(event.target.files?.[0] ?? null); setResult(null) }}
+          className="mt-2 block w-full text-sm" />
+      </label>
+      {imagePreview && <div className="relative inline-block w-full overflow-hidden rounded-xl">
+        <img src={imagePreview} alt="Selected image for local inference" className="block w-full" />
+        {result?.kind === 'pose-landmarks' && <svg
+          viewBox="0 0 1 1" preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {result.poses.map((pose, personIndex) => <g key={personIndex}>
+            {POSE_EDGES.map(([a,b]) => {
+              const start=pose.landmarks[a]
+              const end=pose.landmarks[b]
+              if (!start || !end) return null
+              return <line key={a+'-'+b} x1={start.x} y1={start.y} x2={end.x} y2={end.y}
+                stroke="#e9b16b" strokeWidth={0.003} />
+            })}
+            {pose.landmarks.map((point,i) => <circle key={i} cx={point.x} cy={point.y} r={0.005}
+              fill="#e9b16b" stroke="#28231e" strokeWidth={0.002} />)}
+          </g>)}
+        </svg>}
+      </div>}
+      <button type="button" disabled={!imageFile || busy || running}
+        onClick={() => void analyzeImage()}
+        className="rounded-xl border border-outline-variant px-4 py-2 disabled:opacity-50">
+        Analyze selected image locally
+      </button>
       <video ref={videoRef} playsInline muted autoPlay aria-label="Local vision camera"
         className="aspect-[4/3] w-full rounded-xl bg-black object-cover"
         style={{ transform: 'scaleX(-1)' }} />

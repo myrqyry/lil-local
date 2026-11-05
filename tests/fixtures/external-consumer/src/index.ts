@@ -31,7 +31,7 @@ import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
   da3SmallPortraitManifest,
@@ -62,6 +62,8 @@ import {
 // without installing SDK internals or accessing a Lil Local workspace source path.
 export const packedFaceRunner = new BrowserSubstrateRunner(createFaceLandmarkerSubstrate())
 export const packedGestureRunner = new BrowserSubstrateRunner(createGestureRecognizerSubstrate())
+export const packedPoseRunner = new BrowserSubstrateRunner(createPoseLandmarkerSubstrate({numPoses:2}))
+export type PackedPoseVision = PoseVisionResult
 export type PackedVisionFrame = VisionFrame
 export type PackedFaceVision = FaceVisionResult
 export type PackedGestureVision = GestureVisionResult

@@ -111,8 +111,8 @@ const parakeetAsrEntry: ModelAdapter = {
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
-    name: 'MediaPipe Vision · Face & Gestures',
-    description: 'Reusable local browser face landmarks, blendshapes and hand gestures · opt-in, verified model assets',
+    name: 'MediaPipe Vision · Face, Gestures & Pose',
+    description: 'Reusable local face blendshapes, hand gestures and full-body pose/world landmarks · opt-in, verified model assets',
     modelPath: '',
     tags: ['vision', 'face', 'gesture', 'mediapipe', 'wasm', 'pipeline'],
   },

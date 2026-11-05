@@ -1,5 +1,5 @@
 import type { BrowserSubstrate } from '@lil-local/inference-core'
-import type { FaceLandmarker, GestureRecognizer } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, GestureRecognizer, PoseLandmarker } from '@mediapipe/tasks-vision'
 
 export const MEDIAPIPE_VISION_WASM_BASE =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
@@ -16,10 +16,15 @@ export const MEDIAPIPE_VISION_MODELS = {
     bytes: 8_373_440,
     sha256: '97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f2b0482',
   },
+  pose: {
+    url: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+    bytes: 5_777_746,
+    sha256: '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a',
+  },
 } as const
 
 export type VisionKind = keyof typeof MEDIAPIPE_VISION_MODELS
-export type VisionImage = ImageData | HTMLCanvasElement | HTMLImageElement | HTMLVideoElement
+export type VisionImage = ImageData | ImageBitmap | HTMLCanvasElement | HTMLImageElement | HTMLVideoElement
 export interface VisionFrame {
   image: VisionImage
   /** Provide for video frames; must be strictly increasing per streaming run. */
@@ -34,6 +39,27 @@ export interface VisionOptions {
 }
 export interface FaceVisionOptions extends VisionOptions { numFaces?: number }
 export interface GestureVisionOptions extends VisionOptions { numHands?: number }
+/** The SDK's confidence values remain caller-configurable; no hidden thresholding. */
+export interface PoseVisionOptions extends VisionOptions {
+  numPoses?: number
+  minPoseDetectionConfidence?: number
+  minPosePresenceConfidence?: number
+  minTrackingConfidence?: number
+}
+export interface PoseVisionLandmark extends VisionLandmark {
+  visibility?: number
+  presence?: number
+}
+export interface PoseVisionResult {
+  kind: 'pose-landmarks'
+  poses: {
+    /** x/y are image normalized; z relative to model's pose convention. */
+    landmarks: PoseVisionLandmark[]
+    /** Coordinates in model-relative 3D world units, not image-normalized. */
+    worldLandmarks: PoseVisionLandmark[]
+  }[]
+}
+
 export interface VisionLandmark { x: number; y: number; z: number }
 export interface VisionScore { categoryName: string; score: number }
 export interface FaceVisionResult {
@@ -88,6 +114,32 @@ export function mapGestureRecognizerResult(
         handedness: label === 'Left' || label === 'Right' ? label : 'Unknown',
       }
     }),
+  }
+}
+
+type MinimalPoseLandmark = { x: number; y: number; z: number; visibility?: number; presence?: number }
+
+/** Preserve per-person alignment and native visibility/presence scores. */
+export function mapPoseLandmarkerResult(
+  result: {
+    landmarks: readonly (readonly MinimalPoseLandmark[])[]
+    worldLandmarks: readonly (readonly MinimalPoseLandmark[])[]
+  },
+): PoseVisionResult {
+  if (result.landmarks.length !== result.worldLandmarks.length)
+    throw new Error('Pose count mismatch between image and world landmarks')
+  const copy = (points: readonly MinimalPoseLandmark[]): PoseVisionLandmark[] =>
+    points.map(point => ({
+      x: point.x, y: point.y, z: point.z,
+      ...(point.visibility === undefined ? {} : { visibility: point.visibility }),
+      ...(point.presence === undefined ? {} : { presence: point.presence }),
+    }))
+  return {
+    kind: 'pose-landmarks',
+    poses: result.landmarks.map((landmarks, i) => ({
+      landmarks: copy(landmarks),
+      worldLandmarks: copy(result.worldLandmarks[i]),
+    })),
   }
 }
 
@@ -261,6 +313,76 @@ export function createGestureRecognizerSubstrate(
               return mapGestureRecognizerResult(result)
             }
             return mapGestureRecognizerResult(engine.recognize(frame.image))
+          },
+          async dispose() { engine.close() },
+        }
+      } finally {
+        task?.close()
+      }
+    },
+  }
+}
+
+/**
+ * Verified lightweight full-body pose landmarks: image-normalized and world
+ * coordinates for each detected person. No segmentation masks, webcam ownership
+ * or skeleton/animation policy is added to the shared inference layer.
+ */
+export function createPoseLandmarkerSubstrate(
+  options: PoseVisionOptions = {},
+): BrowserSubstrate<VisionFrame, PoseVisionResult, VisionProgress> {
+  const count = options.numPoses ?? 1
+  assertCount(count, 'numPoses')
+  for (const key of ['minPoseDetectionConfidence', 'minPosePresenceConfidence', 'minTrackingConfidence'] as const) {
+    const value = options[key]
+    if (value !== undefined && (!Number.isFinite(value) || value < 0 || value > 1))
+      throw new Error(key + ' must be a confidence from 0 to 1')
+  }
+  return {
+    id: 'mediapipe:pose-landmarker-lite-float16-1',
+    format: 'mediapipe-task',
+    capabilities: ['image-pose'],
+    requestedBackends: ['wasm'],
+    async create(progress, signal) {
+      const bytes = await modelBytes('pose', options, progress, signal)
+      progress?.('wasm')
+      const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset = await FilesetResolver.forVisionTasks(options.wasmBase ?? MEDIAPIPE_VISION_WASM_BASE)
+      checkAbort(signal)
+      let task: PoseLandmarker | null = null
+      try {
+        task = await PoseLandmarker.createFromOptions(fileset, {
+          baseOptions: {modelAssetBuffer: bytes, delegate: 'CPU'},
+          runningMode: 'IMAGE',
+          numPoses: count,
+          minPoseDetectionConfidence: options.minPoseDetectionConfidence,
+          minPosePresenceConfidence: options.minPosePresenceConfidence,
+          minTrackingConfidence: options.minTrackingConfidence,
+          outputSegmentationMasks: false,
+        })
+        checkAbort(signal)
+        const engine = task
+        let mode: 'IMAGE' | 'VIDEO' = 'IMAGE'
+        let lastVideoTimestamp = -Infinity
+        task = null
+        return {
+          async infer(frame) {
+            const nextMode = validateVisionFrame(frame, mode === 'VIDEO' ? lastVideoTimestamp : -Infinity)
+            if (nextMode !== mode) {
+              await engine.setOptions({runningMode: nextMode})
+              mode = nextMode
+              if (mode === 'IMAGE') lastVideoTimestamp = -Infinity
+            }
+            const raw = nextMode === 'VIDEO'
+              ? engine.detectForVideo(frame.image, frame.timestampMs!)
+              : engine.detect(frame.image)
+            if (nextMode === 'VIDEO') lastVideoTimestamp = frame.timestampMs!
+            try {
+              return mapPoseLandmarkerResult(raw)
+            } finally {
+              raw.close()
+            }
           },
           async dispose() { engine.close() },
         }

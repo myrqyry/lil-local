@@ -2,10 +2,11 @@
 """Opt-in real Chromium qualification for Lil Local's packed Vision consumer.
 
 Needs Chromium and Python websocket-client. Runs a disposable fake camera,
-downloads official face and gesture weights only after explicit Start,
+downloads official face, gesture and pose weights only after explicit Start,
 checks browser inference/cleanup and never touches the user's webcam.
 No model weights are saved to the repository.
 """
+import hashlib
 import json
 import shutil
 import subprocess
@@ -142,10 +143,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Face & Gestures"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Face, Gestures & Pose"]\')'),
           'new Vision model card', 40)
         assert not any('face_landmarker.task' in u or 'gesture_recognizer.task' in u for u in browser.resources), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Face & Gestures')
+        assert browser.click('Open MediaPipe Vision · Face, Gestures & Pose')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'
@@ -165,11 +166,60 @@ def main():
         assert any('gesture_recognizer.task' in u for u in browser.resources), 'Gesture asset not loaded'
         print('GESTURE',browser.status(),flush=True)
         browser.stop()
+
+        # Real subject image from the upstream Pose Landmarker Playwright test.
+        # Fetch only inside this opt-in smoke; do not vendor someone else's photo.
+        pose_image = Path(OUT) / 'pose_model.png'
+        image_url = ('https://raw.githubusercontent.com/google-ai-edge/mediapipe-samples-web/'
+          '6887f6399745dc549dadd0022c31fc9ab01f26d6/public/pose_model.png')
+        with urllib.request.urlopen(image_url, timeout=25) as response:
+            pose_image.write_bytes(response.read())
+        expected_digest='884e822bf3f1585fdfdf1f36c06c47ceec3d745757cc14abac9cacf45353de63'
+        assert hashlib.sha256(pose_image.read_bytes()).hexdigest() == expected_digest, 'Upstream pose test photo changed'
+
+        assert browser.eval("""(() => {
+          const select=document.querySelector('#vision-task');
+          select.value='pose';select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()""") == 'pose'
+        doc=browser.send('DOM.getDocument')
+        node=browser.send('DOM.querySelector',{
+          'nodeId':doc['root']['nodeId'],
+          'selector':'input[aria-label="Image for local vision analysis"]',
+        })['nodeId']
+        assert node,'No still-image input'
+        browser.send('DOM.setFileInputFiles', {'nodeId':node,'files':[str(pose_image)]})
+        browser.eval("""(() => {
+          document.querySelector('input[aria-label="Image for local vision analysis"]')
+            .dispatchEvent(new Event('change',{bubbles:true}));
+        })()""")
+        until(lambda: browser.click('Analyze selected image locally'),
+              'Analyze image action', 15)
+        until(lambda: browser.status()=='Image analyzed locally' or
+              bool(browser.eval("document.querySelector('[role=alert]')?.textContent")),
+              'Real official photo pose inference', 80)
+        err=browser.eval("document.querySelector('[role=alert]')?.textContent")
+        if err: raise AssertionError('Native pose inference failed: '+err)
+        summary=browser.eval(
+          "document.querySelector('[aria-label=\"Vision detections\"]')?.textContent || ''")
+        overlay_points=browser.eval("document.querySelectorAll('svg circle').length")
+        print('POSE_IMAGE',summary,'OVERLAY_POINTS',overlay_points,flush=True)
+        assert 'Pose 1' in summary, 'No actual human pose detected in official reference photo'
+        assert '33 image points / 33 world points' in summary, 'Wrong pose coordinate contract'
+        assert overlay_points >= 33, 'No skeleton overlay'
+        assert any('pose_landmarker_lite.task' in u for u in browser.resources), 'Pinned Pose model not loaded'
+        assert browser.eval("window.__visionTestTracks.length === 2"), 'Static image unexpectedly requested webcam'
+
+        # VIDEO path uses the same shared task; synthetic webcam can have zero people.
+        assert browser.click('Start local vision')
+        browser.wait_running('pose')
+        print('POSE_VIDEO',browser.status(),flush=True)
+        browser.stop()
         failures = [event for event in browser.errors
                     if 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.' not in event]
         print('CONSOLE_EVENTS',browser.errors[-4:],flush=True)
         assert not failures, 'Browser runtime exceptions: '+repr(failures)
-        print('PASS: both model SHA checks, MediaPipe WASM, real synthetic-camera inference, cleanup',flush=True)
+        print('PASS: 3 model SHA checks, human pose image + 33/33 landmarks, all 3 real native video tasks, camera cleanup',flush=True)
     finally:
         if connection: connection.close()
         for proc in (chrome, preview):
