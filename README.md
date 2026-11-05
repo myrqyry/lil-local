@@ -50,6 +50,23 @@ passed large-model real inference yet. See
 [usage](packages/audio-mediapipe/README.md) and
 [verification](docs/verification/2026-11-04-mediapipe-audio-substrate.md).
 
+### Language identification as a reusable text substrate
+
+`@lil-local/text-mediapipe` adds Google's **315 KB SHA-256-verified
+MediaPipe Language Detector** with scored, native language codes.
+It uses a separate opt-in text playground, without automatic
+translation, TTS voice selection, transcript modification or
+camera permissions. Real Chromium classified English (`en`),
+Spanish (`es`) and Japanese (`ja`) samples correctly, using
+the actual model and the MediaPipe WebGL delegate. **WebGL is not
+WebGPU**, and three passages do not establish language-recognition
+accuracy in general. The native detector is cold until explicit
+load, and an external packed consumer uses the same public API.
+
+See [package usage](packages/text-mediapipe/README.md) and
+[actual model/browser qualification](
+docs/verification/2026-11-04-mediapipe-language-detection.md).
+
 ### MediaPipe Vision as a reusable substrate
 
 The opt-in `@lil-local/vision-mediapipe` package provides verified, locally
@@ -239,6 +256,7 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/kokoro` | `@lil-local/kokoro` | Kokoro TTS through `kokoro-js` using q8/WASM |
 | `packages/qwen3-tts` | `@lil-local/qwen3-tts` | Phased Qwen3-TTS pipeline over talker, MTP, and codec LiteRT graphs |
 | `packages/text-gen` | `@lil-local/text-gen` | `LiteRtLmTextPipeline` over `@litert-lm/core` plus LFM2.5, Gemma 4, and Qwen3 manifests |
+| `packages/text-mediapipe` | `@lil-local/text-mediapipe` | Small SHA-verified MediaPipe language-ID model, native text/WASM lifecycle and scored ISO codes |
 | `packages/retrieval` | `@lil-local/retrieval` | `ColBertPipeline`, multi-vector embeddings, and late-interaction scoring |
 | `packages/encoder` | `@lil-local/encoder` | Text embeddings and token-classification pipelines |
 | `packages/image-embedding` | `@lil-local/image-embedding` | Reusable image-embedding package |

@@ -8,6 +8,7 @@ import {
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
+import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,mapLanguageDetectorResult,validateLanguageText} from '@lil-local/text-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, mapFaceDetectorResult, validateInteractiveStrokes, copyInteractiveMask, copySemanticCategoryMask, mapHolisticLandmarkerResult, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
 
@@ -140,6 +141,18 @@ describe('installed packed inference-core contract', () => {
   })
 })
 
+
+describe('installed packed text-mediapipe language detection contract',()=>{
+  it('uses the public package without any eager fetch',()=>{
+    const runner=new BrowserSubstrateRunner(createLanguageDetectorSubstrate({delegate:'GPU'}))
+    expect(runner.status).toBe('idle')
+    expect(runner.substrate.capabilities).toContain('text-classification')
+    expect(LANGUAGE_DETECTOR_MODEL.bytes).toBe(315294)
+    expect(validateLanguageText('  Esta frase está en español  ')).toContain('español')
+    const result=mapLanguageDetectorResult({languages:[{languageCode:'es',probability:.97}]})
+    expect(result.languages[0]).toEqual({languageCode:'es',probability:.97})
+  })
+})
 
 describe('installed packed vision-mediapipe public contract', () => {
   it('instantiates cold runners and maps distinct face results without starting a model download', () => {

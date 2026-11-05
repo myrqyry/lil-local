@@ -8,10 +8,22 @@ import { NemotronAsrPanel } from './components/NemotronAsrPanel'
 import { ParakeetAsrPanel } from './components/ParakeetAsrPanel'
 import { MediaPipeAudioClassifierPanel } from './components/MediaPipeAudioClassifierPanel'
 import { MediaPipeVisionPanel } from './components/MediaPipeVisionPanel'
+import { MediaPipeLanguagePanel } from './components/MediaPipeLanguagePanel'
 import { MediaPipeInteractivePanel } from './components/MediaPipeInteractivePanel'
 import { MediaPipeRetrievalPanel } from './components/MediaPipeRetrievalPanel'
 import { registeredAdapters } from './adapters/registry'
 import type { ModelAdapter } from './adapters/types'
+
+const languageDetectionEntry: ModelAdapter = {
+  modelId:'mediapipe-language-detector',
+  metadata:{
+    name:'Language Detector · MediaPipe Text',
+    description:'Local text language identification with scored ISO language codes; SHA-verified 315 KB model and explicit WebGL/CPU choice.',
+    modelPath:'',tags:['language','identification','text','mediapipe','multilingual','pipeline'],
+  },
+  inputSpecs:[],outputSpecs:[],isPipeline:true,
+  prepareInputs:()=>({}),parseOutputs:async()=>({}),
+}
 
 const universalRetrieverEntry: ModelAdapter = {
   modelId: 'universal-embedding-retrieval-mediapipe',
@@ -152,6 +164,14 @@ const bonsaiCandidate: ModelAdapter = {
 export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  if (selectedId === 'mediapipe-language-detector') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">MediaPipe · Local Language Detection</h1>
+      <MediaPipeLanguagePanel />
+    </div></div>
+  }
+
   if (selectedId === 'universal-embedding-retrieval-mediapipe') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
@@ -266,7 +286,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, magicTouchEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, magicTouchEntry, languageDetectionEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

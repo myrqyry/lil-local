@@ -14,6 +14,7 @@ import {
   type LiteRtLmWorkerPrompt,
 } from '@lil-local/text-gen'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
+import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,type LanguageDetectionResult} from '@lil-local/text-mediapipe'
 import { createUniversalRetrievalSubstrate, type UniversalRetrievalInput } from '@lil-local/retrieval-mediapipe'
 import { EncoderPipeline } from '@lil-local/encoder'
 import { createPrivacyFilterSubstrate, redactPrivacySpans, type PrivacyResult } from '@lil-local/privacy-filter'
@@ -57,6 +58,10 @@ import {
   MODERATION_MODEL_REVISION,
   type ModerationResult,
 } from '@lil-local/moderation'
+
+export const packedLanguageDetector = new BrowserSubstrateRunner(createLanguageDetectorSubstrate({delegate:'GPU'}))
+export const packedLanguageDetectorDigest:string = LANGUAGE_DETECTOR_MODEL.sha256
+export type PackedLanguageDetectionResult = LanguageDetectionResult
 
 // Packed downstream consumers can instantiate the same reusable vision substrate
 // without installing SDK internals or accessing a Lil Local workspace source path.

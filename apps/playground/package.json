@@ -36,7 +36,8 @@
     "onnxruntime-web": "1.30.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "@lil-local/text-mediapipe": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

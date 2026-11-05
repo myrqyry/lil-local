@@ -40,6 +40,7 @@ packages/image-embedding   Image embeddings
 packages/browser-cache     Browser-side model/tensor cache
 packages/video-classification  MoViNet video classification
 packages/vision-mediapipe  optional BlazeFace/face/gesture/pose/object/classifier/holistic/semantic and MagicTouch stroke masks
+packages/text-mediapipe   optional MediaPipe text language-ID with native scored language codes
 packages/audio-mediapipe   optional browser sound classification, ASR and TTS (MediaPipe Audio)
 packages/retrieval-mediapipe optional browser shared universal embeddings + semantic retrieval
 packages/depth-estimation    canonical DepthFrame + monocular depth pipelines

@@ -32,7 +32,8 @@
     "react": "^19.2.8",
     "@lil-local/image-segmentation": "file:./archives/image-segmentation.tgz",
     "@lil-local/moderation": "file:./archives/moderation.tgz",
-    "@lil-local/sharp-onnx": "file:./archives/sharp-onnx.tgz"
+    "@lil-local/sharp-onnx": "file:./archives/sharp-onnx.tgz",
+    "@lil-local/text-mediapipe": "file:./archives/text-mediapipe.tgz"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
