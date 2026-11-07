@@ -15,6 +15,7 @@
     "test:interactive:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-interactive-browser-smoke.py",
     "test:language:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-language-browser-smoke.py",
     "test:audio:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-audio-browser-smoke.py",
+    "test:tts:browser": "node scripts/mediapipe-tts-browser-smoke.mjs",
     "test:retrieval:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-retrieval-browser-smoke.py",
     "test:compatibility:wasm": "node scripts/package-compatibility.mjs --browser-wasm",
     "test:compatibility:webgpu": "node scripts/package-compatibility.mjs --browser-webgpu",

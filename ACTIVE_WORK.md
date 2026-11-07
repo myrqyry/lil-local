@@ -1,6 +1,12 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-06 — Phonon 31M MediaPipe TTS real browser qualification
+- On branch `aster/mediapipe-tts-qualification` from the verified Audio8 candidate `866edb8`, added an **opt-in browser smoke** that imports the existing Lil Local `createMediaPipeTtsEngine` public implementation and serves the external, already-cached `phonon_int8.litertlm` via a loopback-only temporary Vite endpoint. No model download, production UI, other app integration or hidden fallback.
+- Verified real 87,205,888-byte model SHA-256 `b33a9a0d65acec36762db38a2bff6d899f4aab34b196bb56d89fab5665eabebe` matched Hugging Face LFS metadata. Chromium MediaPipe 1.2.2 CPU/WASM actually synthesized 109,440 PCM samples (4.56 seconds at 24 kHz), peak 0.5149, RMS 0.07156, and 10 word timestamps; 3.26 sec unary inference on the sampled run. Streaming yielded 19 ordered chunks/113,280 samples with final marker. Same engine switched from freya to claire and returned 72,960 non-silent samples. Browser page exceptions absent.
+- Current publisher docs call Phonon English-only; actual bundle `listVoices()` surfaced locales en-US, fr-FR, de-DE, es-ES, pt-BR. French-labeled speech generation passed, but **intelligibility and language accuracy are not established**. No human listening, active cancellation, worker isolation, WebGPU, or Android performance verification.
+- Repo-wide `pnpm verify` **exit 0** with the fixture/browser harness (prior to documentation-only changes). Exact reproduction/limits: `docs/verification/2026-11-06-mediapipe-phonon-tts-browser.md`. No push/merge/deploy/release.
+
 ## 2026-11-06 — Audio8 Realistic Air LiteRT candidate asset contract
 - Added `@lil-local/audio8-tts` as an **asset/provenance-only** package on `aster/audio8-litert-candidate`, from LiteRT-community revision `752cd650bf5f649f2c0139ea02ac5627e9e60a5a`. The publisher's Android LiteRT 2.2.0 route is *not* evidence of LiteRT.js browser inference.
 - Asset plans: synthesis (tokenizer, slow/fast AR, T128 codec, two bundled voice entries); extendedDecode (adds T192 codec); voiceRegistration (adds 10-second encoder only on explicit selection). Profiles pin byte sizes and SHA-256 for ten assets. Independently compared all ten digest strings against the pinned `SHA256SUMS` on the publisher; no model weight bytes were downloaded or hashed locally.

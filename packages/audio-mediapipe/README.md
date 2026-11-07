@@ -12,7 +12,7 @@ OBS actions and user consent. Importing this package does not fetch a model.
 | --- | --- | --- |
 | Sound event classifier (YAMNet, 521 classes) | `createYamNetSubstrate()` | **Real Chromium CPU/WASM inference** on a generated 440 Hz WAV, official 4,126,810-byte model SHA-256 verified |
 | Parakeet TDT 0.6B speech transcription | `createParakeetSubstrate()` (one-shot); `createParakeetTranscriber()` (streaming SDK engine) | Unit/packed tests only; **real 615 MB model and speech inference unverified** |
-| MediaPipe text-to-speech | `createMediaPipeTtsSubstrate({model})`; `createMediaPipeTtsEngine({model})` | Installed SDK declaration/pack tests only; **no TTS model has been qualified** |
+| MediaPipe text-to-speech | `createMediaPipeTtsSubstrate({model})`; `createMediaPipeTtsEngine({model})` | **Real Chromium CPU/WASM Phonon 31M synthesis, streaming and voice-switch test passed**; other model bundles not qualified |
 
 This does not replace `@lil-local/kokoro`, `@lil-local/phonon`,
 `@lil-local/qwen3-tts` or the ONNX Nemotron browser ASR path. MediaPipe
@@ -96,6 +96,7 @@ pnpm --filter @lil-local/audio-mediapipe test
 pnpm --filter @lil-local/audio-mediapipe typecheck
 pnpm test:compatibility
 pnpm test:audio:browser
+LIL_LOCAL_TTS_MODEL=/absolute/path/to/phonon_int8.litertlm pnpm test:tts:browser
 pnpm verify
 ```
 
@@ -105,3 +106,11 @@ requires system Chromium and Python `websocket-client`, opens **no mic**,
 checks real classification time windows and unload behavior, then deletes its
 own profile. Full receipt:
 `docs/verification/2026-11-04-mediapipe-audio-substrate.md`.
+
+The separate `test:tts:browser` executes this package's actual public TTS engine
+with an explicitly supplied, existing, independently SHA-256-verified Phonon
+bundle in Chromium. It verifies 24 kHz non-silent PCM, multi-chunk streaming,
+voice switching and close; see
+`docs/verification/2026-11-06-mediapipe-phonon-tts-browser.md`.
+This does **not** qualify human-audible quality, active cancellation, other
+bundles or Android performance.
