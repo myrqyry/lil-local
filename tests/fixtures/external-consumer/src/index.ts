@@ -31,7 +31,7 @@ import { PhononPipeline } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
-import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, YAMNET_MODEL, type AudioClip } from '@lil-local/audio-mediapipe'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, YAMNET_MODEL, type AudioClip, type MediaPipeTtsStreamChunk } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult, type InteractiveSelectionRequest, type InteractiveSelectionResult, type FaceDetectorVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
@@ -95,6 +95,8 @@ export const packedTtsRunner = new BrowserSubstrateRunner(createMediaPipeTtsSubs
 }))
 export const packedYamNetSha256: string = YAMNET_MODEL.sha256
 export type PackedAudioClip = AudioClip
+export type PackedMediaPipeTtsChunk = MediaPipeTtsStreamChunk
+export const packedMediaPipeTtsSessionFactory = createMediaPipeTtsStreamSession
 
 // Real downstream packed MediaPipe universal embedder + SemanticRetriever,
 // sharing exactly one caller-owned model and native provider.

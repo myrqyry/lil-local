@@ -18,3 +18,9 @@ export {
   validateTtsResult, type MediaPipeTtsOptions, type MediaPipeTtsInput,
   type MediaPipeTtsResult,
 } from './tts'
+
+export {
+  createMediaPipeTtsStreamSession,
+  type MediaPipeTtsStreamSession, type MediaPipeTtsStreamChunk,
+  type MediaPipeTtsUtteranceOptions,
+} from './ttsSession'

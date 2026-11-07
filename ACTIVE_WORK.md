@@ -1,6 +1,12 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-06 — Typed MediaPipe TTS consumer streaming boundary for podQast / Voxa
+- Implemented opt-in `createMediaPipeTtsStreamSession(engine)` in `@lil-local/audio-mediapipe` over the existing MediaPipe task: copied/validated PCM chunks, preserved source sample rate, ordered chunk indices, optional word timings, voice IDs, one active utterance, abort-safe result invalidation, early-reader-exit cleanup and explicit one-time native engine disposal. Playback, worker isolation, cloud behavior and model download remain outside the library.
+- Added RED-first tests for the missing API and a separate early-reader-exit regression; external packed consumer now imports the public API and tests a minimal session contract. Focused package tests **18/18**, package typecheck and full `pnpm verify` **exit 0** (including independently packed external consumer). Evidence and limits in `docs/verification/2026-11-06-mediapipe-tts-consumer-session.md`.
+- **No downstream app integration**: current podQast pins the historical `@litert-playground/*` namespace and a 24-kHz PCM16 worker protocol. Renamed `@lil-local/*` packages must move together at one Git SHA; Voxa code checkout not located. Earlier real Phonon browser proof covers the underlying engine, not this wrapper or actual native cancellation.
+
+
 ## 2026-11-06 — Phonon 31M MediaPipe TTS real browser qualification
 - On branch `aster/mediapipe-tts-qualification` from the verified Audio8 candidate `866edb8`, added an **opt-in browser smoke** that imports the existing Lil Local `createMediaPipeTtsEngine` public implementation and serves the external, already-cached `phonon_int8.litertlm` via a loopback-only temporary Vite endpoint. No model download, production UI, other app integration or hidden fallback.
 - Verified real 87,205,888-byte model SHA-256 `b33a9a0d65acec36762db38a2bff6d899f4aab34b196bb56d89fab5665eabebe` matched Hugging Face LFS metadata. Chromium MediaPipe 1.2.2 CPU/WASM actually synthesized 109,440 PCM samples (4.56 seconds at 24 kHz), peak 0.5149, RMS 0.07156, and 10 word timestamps; 3.26 sec unary inference on the sampled run. Streaming yielded 19 ordered chunks/113,280 samples with final marker. Same engine switched from freya to claire and returned 72,960 non-silent samples. Browser page exceptions absent.

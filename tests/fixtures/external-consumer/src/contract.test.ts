@@ -9,7 +9,7 @@ import {
 import { assertAddOutput } from './add-parity'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,mapLanguageDetectorResult,validateLanguageText} from '@lil-local/text-mediapipe'
-import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, mapYamNetResults } from '@lil-local/audio-mediapipe'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, mapYamNetResults } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, mapFaceDetectorResult, validateInteractiveStrokes, copyInteractiveMask, copySemanticCategoryMask, mapHolisticLandmarkerResult, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
@@ -186,6 +186,29 @@ describe('installed packed vision-mediapipe public contract', () => {
 
 
 describe('installed packed MediaPipe audio substrate', () => {
+  it('exposes the cancellable speech stream session from the packed public API', async () => {
+    let released = 0
+    const engine = {
+      listVoices: async () => [{voiceId:'freya',locale:'en-US'}],
+      synthesizeStream: async () => ({
+        readNext: async () => ({samples:Float32Array.of(.25,-.25),sampleRateHz:24000,chunkIndex:0,isFinal:true}),
+        cancel: () => {},
+        close: () => {},
+      }),
+      cancel: () => {},
+      close: () => { released += 1 },
+    } as unknown as Parameters<typeof createMediaPipeTtsStreamSession>[0]
+    const session = createMediaPipeTtsStreamSession(engine)
+    const voices = await session.listVoices()
+    expect(voices).toMatchObject([{voiceId:'freya',locale:'en-US'}])
+    const chunks = []
+    for await (const pcm of session.stream('test', {voiceId:'freya'})) chunks.push(pcm)
+    expect(chunks).toHaveLength(1)
+    expect(chunks[0]).toMatchObject({kind:'audio',sampleRateHz:24000,chunkIndex:0,isFinal:true})
+    session.close()
+    expect(released).toBe(1)
+  })
+
   it('instantiates all three opt-in model tasks without network access', () => {
     const yamnet = new BrowserSubstrateRunner(createYamNetSubstrate())
     const parakeet = new BrowserSubstrateRunner(createParakeetSubstrate())

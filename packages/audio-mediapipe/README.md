@@ -59,6 +59,34 @@ const speech = await tts.synthesize('Hello there')
 tts.close()
 ```
 
+### Consumer speech streaming without owning playback
+
+The public `createMediaPipeTtsStreamSession(engine)` wraps a caller-loaded
+MediaPipe TTS engine with ordered, copied mono Float32 PCM chunks, native
+sample-rate and optional word timings, explicit one-stream-at-a-time
+admission, AbortSignal/`cancel()`, and one-time `close()`. A caller can
+convert samples to PCM16, play with Web Audio, mux with music, or route to
+a virtual audio device; the substrate does **none** of those automatically.
+
+```ts
+const engine = await createMediaPipeTtsEngine({ model: localLitertLmBundle })
+const session = createMediaPipeTtsStreamSession(engine)
+try {
+  for await (const pcm of session.stream('Hello.', { voiceId: 'freya' })) {
+    // pcm.samples is owned Float32 PCM (not a view on WASM memory)
+    // pcm.sampleRateHz, pcm.chunkIndex, pcm.isFinal, pcm.wordTimestamps
+    consumePcmInYourApp(pcm)
+  }
+} finally {
+  session.close() // also closes the supplied engine
+}
+```
+
+Only complete-text streaming is wrapped; incremental LLM delta input remains
+available on the lower-level MediaPipe SDK engine. Worker placement, playback,
+queue policy, PCM16 conversion and model selection belong to consumers.
+See `../../docs/verification/2026-11-06-mediapipe-tts-consumer-session.md`.
+
 The direct SDK engine factories are intentional for consumers that need
 native streaming methods. The `BrowserSubstrateRunner` wrappers are for
 simple one-shot inference with the standard Lil Local session lifecycle.
