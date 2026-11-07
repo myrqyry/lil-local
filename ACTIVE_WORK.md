@@ -1,6 +1,13 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-06 — Audio8 Realistic Air LiteRT candidate asset contract
+- Added `@lil-local/audio8-tts` as an **asset/provenance-only** package on `aster/audio8-litert-candidate`, from LiteRT-community revision `752cd650bf5f649f2c0139ea02ac5627e9e60a5a`. The publisher's Android LiteRT 2.2.0 route is *not* evidence of LiteRT.js browser inference.
+- Asset plans: synthesis (tokenizer, slow/fast AR, T128 codec, two bundled voice entries); extendedDecode (adds T192 codec); voiceRegistration (adds 10-second encoder only on explicit selection). Profiles pin byte sizes and SHA-256 for ten assets. Independently compared all ten digest strings against the pinned `SHA256SUMS` on the publisher; no model weight bytes were downloaded or hashed locally.
+- RED→GREEN: missing manifest failed import; 3 focused tests and package typecheck pass. Full `pnpm verify` **exit 0** after introducing the package and lockfile. These checks prove package hygiene and manifest behavior, not audio synthesis.
+- Still needed: LiteRT.js graph/signature/operator qualification, prompt/tokenizer port, DualAR host loop and cache lifecycle, codec parity, actual browser PCM output and memory/backends, plus opt-in UI only if successful. GGUF/audio.cpp remains a distinct unimplemented substrate.
+- Receipt: `docs/verification/2026-11-06-audio8-candidate.md`. No push, merge, release, model download, or downstream app integration.
+
 ## 2026-11-04 — Local MediaPipe language identification as an independent text substrate
 - Continued Google's official MediaPipe Web Samples investigation at pinned upstream `google-ai-edge/mediapipe-samples-web@6887f6399745dc549dadd0022c31fc9ab01f26d6`, inspecting the Language Detector task, worker and browser test. Lil Local previously supported text embedding/retrieval, ASR and TTS but had **no distinct lightweight language-ID task**; it can later support transcript labeling or voice-selection decisions without embedding those policies into the shared inference engine.
 - Added separate `@lil-local/text-mediapipe` package (not in Vision) with `createLanguageDetectorSubstrate()`, `mapLanguageDetectorResult()`, typed unchanged scores/codes, strict Unicode input and option validation, explicit lazy load/unload and full model-size+SHA-256 validation including user-provided official weights. Publisher model **315,294 bytes**, SHA-256 `7db4f23dfe1ad8966b050b419a865da451143fd43eb6b606a256aadeeb1e5417`. Pinned `@mediapipe/tasks-text@1.2.2`, same-version WASM; selected default SDK `GPU` means **MediaPipe WebGL not WebGPU**, optional explicit CPU, no hidden fallback. Real Chrome used SwiftShader, not a physical-GPU benchmark.
