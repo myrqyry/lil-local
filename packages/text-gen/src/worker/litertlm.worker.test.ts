@@ -112,6 +112,22 @@ describe('LiteRT-LM worker dispatch', () => {
     expect(messages).toContainEqual({ type: 'ready' })
   })
 
+  it('resolves WASM binary files relative to the explicitly hosted runtime directory', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, {
+      type: 'load', model: 'vision.litertlm',
+      options: { wasmBase: 'https://example.test/vendor/litertlm-core/', visionBackend: 'gpu' },
+    });
+    await flushWorker();
+    const module = (scope as FakeWorkerScope & {
+      Module?: { locateFile: (name: string) => string };
+    }).Module;
+    expect(module?.locateFile('litertlm_wasm_internal.wasm')).toBe(
+      'https://example.test/vendor/litertlm-core/litertlm_wasm_internal.wasm',
+    );
+    expect(messages).toContainEqual({ type: 'ready' });
+  });
+
   it('does not open a worker model after an incompatible WASM load', async () => {
     liteRt.wasmLoad.mockRejectedValueOnce(new Error('WASM version mismatch'))
     const { scope, messages } = await bootWorker()

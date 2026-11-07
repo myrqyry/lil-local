@@ -288,7 +288,18 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
   const module = (await import('@litert-lm/core')) as unknown as LiteRtLmModule;
   // Pin 0.19.0 WASM explicitly rather than relying on SDK defaults.
   // Explicit loading also detects conflicts with a previously loaded runtime.
-  await module.getOrLoadGlobalLiteRtLm(data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE);
+  const wasmBase = data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE;
+  // LiteRT-LM's Emscripten ModuleFactory resolves its .wasm name against
+  // self.location (the worker asset), not the URL passed to importScripts().
+  // Supply a trusted, absolute locateFile mapping before initializing Wasm.
+  const runtimeBase = new URL(
+    wasmBase.endsWith('/') ? wasmBase : wasmBase + '/',
+    (worker as WorkerScope & { location?: { href: string } }).location?.href ?? 'http://localhost/',
+  );
+  (worker as WorkerScope & { Module?: { locateFile: (file: string) => string } }).Module = {
+    locateFile: (file: string) => new URL(file, runtimeBase).href,
+  };
+  await module.getOrLoadGlobalLiteRtLm(wasmBase);
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
     ...(data.options?.visionBackend ? { visionBackend: data.options.visionBackend === 'gpu' ? 4 : 3 } : {}),
