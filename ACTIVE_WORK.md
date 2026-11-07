@@ -1,6 +1,12 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-06 — Narrow LiteRT-LM entrypoint for downstream Vite 6 consumers
+- PodQast migration surfaced an actual production-build failure: importing `@lil-local/text-gen` from Vite 6 workers causes the unrelated Transformers.js 4 pipeline to be resolved, leading to an ONNX import path error (`ort.all.min.mjs/webgpu`). Retain the full `.` API; expose additional `@lil-local/text-gen/litertlm` entrypoint re-exporting only LiteRT-LM types, engine and text model resolver, leaving Transformers pipeline out of the import graph.
+- Added external packed-consumer import/typecheck proof. RED: missing subpath caused TS2307; GREEN: package text-gen typecheck and entire 24-package external compatibility suite exit 0. Do not mistake this for a model-generation or podQast production browser pass.
+- Reason: consumer can keep its existing Transformers.js 3 Qwen/Janus path and use shared LiteRT-LM separately, without forcing Vite 6 to bundle Transformers 4. No new model download, cloud fallback, deployment or push.
+
+
 ## 2026-11-06 — Typed MediaPipe TTS consumer streaming boundary for podQast / Voxa
 - Implemented opt-in `createMediaPipeTtsStreamSession(engine)` in `@lil-local/audio-mediapipe` over the existing MediaPipe task: copied/validated PCM chunks, preserved source sample rate, ordered chunk indices, optional word timings, voice IDs, one active utterance, abort-safe result invalidation, early-reader-exit cleanup and explicit one-time native engine disposal. Playback, worker isolation, cloud behavior and model download remain outside the library.
 - Added RED-first tests for the missing API and a separate early-reader-exit regression; external packed consumer now imports the public API and tests a minimal session contract. Focused package tests **18/18**, package typecheck and full `pnpm verify` **exit 0** (including independently packed external consumer). Evidence and limits in `docs/verification/2026-11-06-mediapipe-tts-consumer-session.md`.

@@ -13,6 +13,7 @@ import {
   type LiteRtLmWorkerLoadOptions,
   type LiteRtLmWorkerPrompt,
 } from '@lil-local/text-gen'
+import { LiteRtLmTextPipeline as NarrowLiteRtLmTextPipeline, type LiteRtLmTextConfig as NarrowLiteRtLmTextConfig } from '@lil-local/text-gen/litertlm'
 import { createEmbeddingGemma2Substrate, formatEmbeddingGemma2Text } from '@lil-local/embedding-litertlm'
 import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,type LanguageDetectionResult} from '@lil-local/text-mediapipe'
 import { createUniversalRetrievalSubstrate, type UniversalRetrievalInput } from '@lil-local/retrieval-mediapipe'
@@ -94,6 +95,8 @@ export const packedTtsRunner = new BrowserSubstrateRunner(createMediaPipeTtsSubs
   model: new Blob(['placeholder model; never loaded during discovery']),
 }))
 export const packedYamNetSha256: string = YAMNET_MODEL.sha256
+export const packedNarrowLiteRtLmTextPipeline = NarrowLiteRtLmTextPipeline
+export type PackedNarrowLiteRtLmConfig = NarrowLiteRtLmTextConfig
 export type PackedAudioClip = AudioClip
 export type PackedMediaPipeTtsChunk = MediaPipeTtsStreamChunk
 export const packedMediaPipeTtsSessionFactory = createMediaPipeTtsStreamSession
