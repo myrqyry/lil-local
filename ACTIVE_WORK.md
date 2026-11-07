@@ -1,6 +1,27 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-07 — Qualify small quantized segmentation in Lil Local before Octobit integration
+- Added opt-in `SLIMSAM_MODEL` (q8 Xenova/slimsam-77-uniform, pinned revision,
+  **13,785,975 bytes** encoder + decoder) and `selectSlimSamPoint` public API to
+  `@lil-local/image-segmentation`, reusing existing mask decoding and sizing.
+  Existing SAM2 Tiny/Small and MagicTouch are unchanged. No app UI/Octobit
+  integration or dependency migration.
+- RED-first tests verified model/API addition and corrected discarded
+  `RawImage.resize()` result in the shared bounded-image path.
+- Real Chrome using the actual package returned three 512×256 masks on the
+  Octobit Chrono Trigger pendulum source, top predicted IoU ~0.937, no page
+  exceptions; first-run 13.85 seconds **including loading** on WASM. This is
+  **not** validated sprite segmentation or runtime FPS.
+- `@lil-local/image-segmentation` **19/19 tests**, whole-repo `pnpm verify`
+  **exit 0**, including independent packed consumer and runtime qualification. Repro via
+  `pnpm test:slimsam:browser <external.png> x y`; see
+  `docs/verification/2026-11-07-slimsam77-quantized-browser.md`.
+- Future: compare against actual in-game native sprite layers, benchmark
+  steady-state latency and mask stability, then decide whether/how Octobit
+  consumes pinned Lil Local packages without mixing Transformers.js majors.
+
+
 ## 2026-11-06 — Narrow LiteRT-LM entrypoint for downstream Vite 6 consumers
 - PodQast migration surfaced an actual production-build failure: importing `@lil-local/text-gen` from Vite 6 workers causes the unrelated Transformers.js 4 pipeline to be resolved, leading to an ONNX import path error (`ort.all.min.mjs/webgpu`). Retain the full `.` API; expose additional `@lil-local/text-gen/litertlm` entrypoint re-exporting only LiteRT-LM types, engine and text model resolver, leaving Transformers pipeline out of the import graph.
 - Added external packed-consumer import/typecheck proof. RED: missing subpath caused TS2307; GREEN: package text-gen typecheck and entire 24-package external compatibility suite exit 0. Do not mistake this for a model-generation or podQast production browser pass.

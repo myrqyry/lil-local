@@ -1,5 +1,5 @@
 export {
-  FACE_PARSING_MODEL, SAM2_MODEL_VARIANTS, getSam2ModelVariant,
+  FACE_PARSING_MODEL, SLIMSAM_MODEL, SAM2_MODEL_VARIANTS, getSam2ModelVariant,
 } from './models'
 export type { Sam2Variant } from './models'
 export {
@@ -8,7 +8,7 @@ export {
 } from './contracts'
 export type { Point, SegmentationRegion, ProgressCallback } from './contracts'
 export { decodeSamMaskCandidates } from './masks'
-export { suggestFaceRegions, selectSamPoint, selectSamPoints } from './runtime'
+export { suggestFaceRegions, selectSamPoint, selectSamPoints, selectSlimSamPoint } from './runtime'
 export { prepareSamPointPrompts, MAX_SAM_PROMPTS } from './prompts'
 export type { SamPointPrompt } from './prompts'
 export {

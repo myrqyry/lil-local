@@ -6,6 +6,16 @@ export const FACE_PARSING_MODEL = {
   device: 'wasm',
 } as const
 
+/** Smallest tested ONNX SAM variant: 8,882,165-byte encoder + 4,903,810-byte decoder. */
+export const SLIMSAM_MODEL = {
+  repo: 'Xenova/slimsam-77-uniform',
+  revision: '5850ab45f587c112167512ffef949107115e26a0',
+  dtype: 'q8',
+  device: 'wasm',
+  label: 'SlimSAM-77 · quantized',
+  quantizedWeightBytes: 13_785_975,
+} as const
+
 export const SAM2_MODEL_VARIANTS = {
   tiny: {
     repo: 'onnx-community/sam2.1-hiera-tiny-ONNX',

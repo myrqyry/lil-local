@@ -7,6 +7,7 @@ import {
   collectSuffixDraftCandidates,
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
+import { compactPointSegmentationModel, externalCompactPointSegmentation } from './index'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,mapLanguageDetectorResult,validateLanguageText} from '@lil-local/text-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, mapYamNetResults } from '@lil-local/audio-mediapipe'
@@ -229,5 +230,16 @@ describe('installed packed MediaPipe universal retrieval surface', () => {
     expect(runner.substrate.capabilities).toContain('semantic-retrieval')
     expect(runner.substrate.capabilities).toContain('image-embedding')
     expect(() => validateRetrievalRequest({kind:'search',query:'local photo',limit:5})).not.toThrow()
+  })
+})
+
+
+describe('packed compact image-segmentation consumer', () => {
+  it('imports the quantized SlimSAM public API without loading a model', async () => {
+    expect(compactPointSegmentationModel.repo).toBe('Xenova/slimsam-77-uniform')
+    expect(compactPointSegmentationModel.quantizedWeightBytes).toBe(13_785_975)
+    await expect(externalCompactPointSegmentation(
+      new Blob(['not an image'], { type: 'text/plain' }), { x: 1, y: 1 },
+    )).rejects.toThrow(/supported/i)
   })
 })

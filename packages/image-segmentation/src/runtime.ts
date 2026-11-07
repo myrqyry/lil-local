@@ -3,14 +3,15 @@
  * by Transformers.js only when an application calls one of these methods.
  * Host applications own cancellation via worker termination, UI and cutouts.
  */
-import { FACE_PARSING_MODEL, getSam2ModelVariant, type Sam2Variant } from './models'
+import { FACE_PARSING_MODEL, SLIMSAM_MODEL, getSam2ModelVariant, type Sam2Variant } from './models'
 import {
-  normalizeFaceMaskLabel, validateRegion,
+  normalizeFaceMaskLabel, validatePointInImage, validateRegion,
   validateSegmentationSource, validateSourceDimensions,
   type ProgressCallback, type Point, type SegmentationRegion,
 } from './contracts'
 import { decodeSamMaskCandidates } from './masks'
 import { prepareSamPointPrompts, type SamPointPrompt } from './prompts'
+import { boundInferenceImage } from './imageSizing'
 
 async function readBoundedImage(file: Blob) {
   validateSegmentationSource(file)
@@ -19,12 +20,7 @@ async function readBoundedImage(file: Blob) {
   const originalWidth = image.width
   const originalHeight = image.height
   validateSourceDimensions(originalWidth, originalHeight)
-  const ratio = Math.min(1, 512 / Math.max(originalWidth, originalHeight))
-  if (ratio < 1) {
-    await image.resize(Math.max(1, Math.round(originalWidth * ratio)),
-      Math.max(1, Math.round(originalHeight * ratio)))
-  }
-  return { image, originalWidth, originalHeight }
+  return { image: await boundInferenceImage(image), originalWidth, originalHeight }
 }
 
 export async function suggestFaceRegions(
@@ -113,6 +109,50 @@ export async function selectSamPoints(
   )
   if (!Array.isArray(masks) || masks.length !== 1) {
     throw new Error('SAM did not return a single-image mask result')
+  }
+  return decodeSamMaskCandidates(
+    new Uint8Array(masks[0].data),
+    masks[0].dims,
+    Float32Array.from(output.iou_scores.data, Number),
+  )
+}
+
+/** Opt-in small, quantized ONNX SAM on CPU/WASM; callers own worker lifecycle. */
+export async function selectSlimSamPoint(
+  file: Blob,
+  point: Point,
+  onProgress?: ProgressCallback,
+): Promise<SegmentationRegion[]> {
+  validateSegmentationSource(file)
+  onProgress?.('Loading SlimSAM-77 quantized model on CPU (first use downloads weights)…')
+  const { env, AutoProcessor, SamModel } = await import('@huggingface/transformers')
+  env.allowLocalModels = false
+  env.useBrowserCache = true
+  const { image, originalWidth, originalHeight } = await readBoundedImage(file)
+  validatePointInImage(point, originalWidth, originalHeight)
+  const { input_points } = prepareSamPointPrompts(
+    [{ ...point, label: 1 }], originalWidth, originalHeight, image.width, image.height,
+  )
+  const model = await SamModel.from_pretrained(SLIMSAM_MODEL.repo, {
+    device: SLIMSAM_MODEL.device,
+    dtype: SLIMSAM_MODEL.dtype,
+    revision: SLIMSAM_MODEL.revision,
+  })
+  const processor = await AutoProcessor.from_pretrained(SLIMSAM_MODEL.repo, {
+    revision: SLIMSAM_MODEL.revision,
+  })
+  if (!('post_process_masks' in processor) ||
+      typeof processor.post_process_masks !== 'function') {
+    throw new Error('Pinned SlimSAM checkpoint returned an incompatible processor')
+  }
+  onProgress?.('Selecting point-guided object masks locally…')
+  const inputs = await processor(image, { input_points })
+  const output = await model(inputs)
+  const masks = await processor.post_process_masks(
+    output.pred_masks, inputs.original_sizes, inputs.reshaped_input_sizes,
+  )
+  if (!Array.isArray(masks) || masks.length !== 1) {
+    throw new Error('SlimSAM did not return a single-image mask result')
   }
   return decodeSamMaskCandidates(
     new Uint8Array(masks[0].data),

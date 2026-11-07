@@ -46,8 +46,8 @@ import {
 } from '@lil-local/depth-estimation'
 
 import {
-  FACE_PARSING_MODEL, SAM2_MODEL_VARIANTS, suggestFaceRegions,
-  selectSamPoint, selectSamPoints, prepareSamPointPrompts, validateRegion,
+  FACE_PARSING_MODEL, SLIMSAM_MODEL, SAM2_MODEL_VARIANTS, suggestFaceRegions,
+  selectSamPoint, selectSamPoints, selectSlimSamPoint, prepareSamPointPrompts, validateRegion,
   SaliencySegmentationPipeline, u2NetSaliencyManifest, extractMaskLayer,
   type SegmentationRegion, type Sam2Variant, type SamPointPrompt, type ForegroundMask,
 } from '@lil-local/image-segmentation'
@@ -111,6 +111,8 @@ export type PackedUniversalRetrievalInput = UniversalRetrievalInput
 // Importing the public symbols cannot load model weights automatically.
 export const faceSegmentationModelId: string = FACE_PARSING_MODEL.id
 export const pointSegmentationVariants = SAM2_MODEL_VARIANTS
+export const compactPointSegmentationModel = SLIMSAM_MODEL
+export const externalCompactPointSegmentation = selectSlimSamPoint
 export const externalFaceSegmentation = suggestFaceRegions
 export const externalPointSegmentation = selectSamPoint
 export const externalSignedPointSegmentation = selectSamPoints
