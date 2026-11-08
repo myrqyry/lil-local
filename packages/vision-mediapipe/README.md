@@ -36,6 +36,10 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   optional quality scores; not a binary alpha mask and not SAM prompting.
   Native borrowed masks are copied *inside* the SDK callback, without
   retaining native GPU/memory-backed objects beyond the callback.
+- **Person Mask (Selfie Segmenter)**: tiny 249,537-byte float16 model returns
+  copied per-pixel foreground confidence floats, not DeepLab class IDs.
+  IMAGE and VIDEO inference use the existing MediaPipe CPU/WASM substrate.
+  The official weight is SHA-256 checked; a model is downloaded only on load.
 - **Interactive Segmenter (MagicTouch V2)**: unlike the seven independent
   frame tasks, a **stateful two-stage still-image session**. First
   `set-image` encodes one photo; subsequent `segment` requests apply
@@ -43,12 +47,12 @@ scheduling, UX, and any persistence. It does not access a camera itself.
   Outputs caller-owned float confidence masks, not category IDs or
   cutout compositing. Requires 30.5 MB official int8 model.
 
-All eight frame tasks and the separate MagicTouch session use pinned
+All nine frame tasks and the separate MagicTouch session use pinned
 official Google `.task` or `.tflite` weights and MediaPipe Tasks Vision WASM. Official model bytes are verified against **both length and SHA-256**
 before execution. Face ~3.76 MB; gesture ~8.37 MB; pose lite ~5.78 MB;
 EfficientDet-Lite0 ~13.84 MB; EfficientNet-Lite0 ~18.58 MB;
 holistic ~13.68 MB; DeepLab V3 ~2.78 MB; MagicTouch V2 ~30.53 MB;
-BlazeFace Short Range ~0.23 MB.
+BlazeFace Short Range ~0.23 MB; Selfie Segmenter ~0.25 MB.
 The matching WASM base is pinned to
 `@mediapipe/tasks-vision@1.2.2`; a consumer may override `wasmBase` with
 a self-hosted copy of those **same-version** files. A consumer can provide

@@ -1,4 +1,6 @@
 export { DepthEstimationPipeline } from './pipeline';
+export {DEPTH_ANYTHING_V2,createDepthAnythingV2Substrate,onnxRuntimeLocalPaths} from './depthAnythingV2';
+export type {DepthAnythingV2Frame,DepthAnythingV2Options,DepthAnythingV2Progress} from './depthAnythingV2';
 export {
   da3SmallPortraitManifest,
   da3SmallPortraitSpec,

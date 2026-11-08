@@ -1,6 +1,14 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-07 — ControlNet Live's missing models reuse Lil Local Live Vision
+- Existing camera, still-image, bounded inference and lifecycle remained in `MediaPipeVisionPanel`; added **only** the missing 249,537-byte SHA-verified MediaPipe Selfie Segmenter and pinned Q8 Depth Anything V2 Small (`4472b7362082ad9968fee890ca0f1e5aca36b93d`) as two opt-in choices. Pose and DeepLab were already supported; Sobel is CPU math, not a neural checkpoint.
+- Shared `@lil-local/vision-mediapipe` returns copied foreground confidences; `@lil-local/depth-estimation` returns normalized float `DepthFrame` through a lazy Transformers.js 4.3.2 ONNX substrate. The app serves matching ONNX runtime .mjs/WASM locally, offers Q8/WASM and explicit FP16/WebGPU selection, and renders grayscale only in the UI.
+- Real Chromium on the current desktop ran the SHA-pinned official human image through both models: 640×640 nonconstant, fully opaque masks; Depth Q8 WASM frame took **2636 ms** (not real-time). Selfie video inference using a fake camera started and stopped. Native GPU/Android speed, broad accuracy and FP16/WebGPU execution remain unverified.
+- Reproductions: `pnpm test:controlnet-models:browser`, `pnpm verify`; see `docs/verification/2026-11-07-controlnet-models.md`. Existing standalone ControlNet Live unchanged.
+- **Integration boundary:** branch `aster/slimsam77-browser-qualification` contains the live Vision app, inherited from earlier unmerged development. `master` does not yet contain that foundation. Removed the redundant new feature branch without deleting work. Local verified commit should preserve this checkpoint, but do **not** claim it is merged, deployed or available on master. No push/merge performed.
+
+
 ## 2026-11-07 — Qualify small quantized segmentation in Lil Local before Octobit integration
 - Added opt-in `SLIMSAM_MODEL` (q8 Xenova/slimsam-77-uniform, pinned revision,
   **13,785,975 bytes** encoder + decoder) and `selectSlimSamPoint` public API to

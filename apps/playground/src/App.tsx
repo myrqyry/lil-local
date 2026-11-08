@@ -136,10 +136,10 @@ const magicTouchEntry: ModelAdapter = {
 const mediaPipeVisionEntry: ModelAdapter = {
   modelId: 'mediapipe-vision-local',
   metadata: {
-    name: 'MediaPipe Vision · Eight Local Tasks',
-    description: 'Lightweight BlazeFace boxes plus face, gestures, pose, objects, classification, holistic and semantic pixel classes · verified models',
+    name: 'Live Vision · Ten Local Processors',
+    description: 'Camera and still-image inference · MediaPipe vision, selfie foreground mask and quantized Depth Anything V2 on-device',
     modelPath: '',
-    tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'classification', 'holistic', 'segmentation', 'mediapipe', 'wasm', 'pipeline'],
+    tags: ['vision', 'face', 'gesture', 'pose', 'object', 'detection', 'classification', 'holistic', 'segmentation', 'depth', 'mediapipe', 'onnx', 'webgpu', 'wasm', 'pipeline'],
   },
   inputSpecs: [], outputSpecs: [], isPipeline: true,
   prepareInputs: () => ({}), parseOutputs: async () => ({}),
@@ -191,7 +191,7 @@ export default function App() {
   if (selectedId === 'mediapipe-vision-local') {
     return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
       <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
-      <h1 className="text-2xl font-bold text-on-surface">MediaPipe Vision · Eight Local Inference Tasks</h1>
+      <h1 className="text-2xl font-bold text-on-surface">Live Vision · Local Inference</h1>
       <MediaPipeVisionPanel />
     </div></div>
   }

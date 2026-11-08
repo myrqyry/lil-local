@@ -271,6 +271,9 @@ importers:
       '@lil-local/decision-onnx':
         specifier: workspace:*
         version: link:../../packages/decision-onnx
+      '@lil-local/depth-estimation':
+        specifier: workspace:*
+        version: link:../../packages/depth-estimation
       '@lil-local/encoder':
         specifier: workspace:*
         version: link:../../packages/encoder
@@ -470,6 +473,10 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   packages/depth-estimation:
+    dependencies:
+      '@huggingface/transformers':
+        specifier: 4.3.2
+        version: 4.3.2(@types/node@26.1.1)
     devDependencies:
       '@lil-local/inference-core':
         specifier: workspace:*
@@ -1016,6 +1023,9 @@ packages:
 
   '@huggingface/transformers@4.3.1':
     resolution: {integrity: sha512-5+voSeUCFK6PCKlY15dPhNOKq3/zOTxDN7oC+Wy9dFb1QZ0TSQomZRRy7URRK8YRuUoE9fGMQTTPC5d/pWBJhA==}
+
+  '@huggingface/transformers@4.3.2':
+    resolution: {integrity: sha512-V3+dqf3iWlRYJ9I9GreM3zGQd0lAXnnoPeddmkOQYWAEE4l/+Fi6p7tx/qVUJlKQgLXGim2W76rTOzz+eC0i7g==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -2513,6 +2523,16 @@ snapshots:
       sharp: 0.34.5
 
   '@huggingface/transformers@4.3.1(@types/node@26.1.1)':
+    dependencies:
+      '@huggingface/jinja': 0.5.10
+      '@huggingface/tokenizers': 0.2.0
+      onnxruntime-node: 1.30.0
+      onnxruntime-web: 1.31.0-dev.20260914-8d85527a0
+      sharp: 0.35.5(@types/node@26.1.1)
+    transitivePeerDependencies:
+      - '@types/node'
+
+  '@huggingface/transformers@4.3.2(@types/node@26.1.1)':
     dependencies:
       '@huggingface/jinja': 0.5.10
       '@huggingface/tokenizers': 0.2.0

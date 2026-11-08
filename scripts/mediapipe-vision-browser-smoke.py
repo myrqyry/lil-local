@@ -145,10 +145,10 @@ def main():
         '''})
         browser.send('Page.navigate', {'url':URL})
         until(lambda: browser.eval(
-          '!!document.querySelector(\'button[aria-label="Open MediaPipe Vision · Eight Local Tasks"]\')'),
+          '!!document.querySelector(\'button[aria-label="Open Live Vision · Ten Local Processors"]\')'),
           'new Vision model card', 40)
         assert not any(name in u for u in browser.resources for name in ('face_landmarker.task', 'gesture_recognizer.task', 'pose_landmarker_lite.task', 'efficientdet_lite0.tflite', 'efficientnet_lite0.tflite', 'holistic_landmarker.task', 'deeplab_v3.tflite', 'blaze_face_short_range.tflite')), 'Early weights fetch'
-        assert browser.click('Open MediaPipe Vision · Eight Local Tasks')
+        assert browser.click('Open Live Vision · Ten Local Processors')
         until(lambda: browser.eval('!!document.querySelector(\'#vision-task\')'),
               'reusable playground panel')
         assert browser.status() == 'Camera off'

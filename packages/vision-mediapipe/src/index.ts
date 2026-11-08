@@ -41,6 +41,11 @@ export const MEDIAPIPE_VISION_MODELS = {
     bytes: 2_780_176,
     sha256: 'ff36e24d40547fe9e645e2f4e8745d1876d6e38b332d39a82f0bf0f5d1d561b3',
   },
+  person: {
+    url: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite',
+    bytes: 249_537,
+    sha256: '191ac9529ae506ee0beefa6b2c945a172dab9d07d1e802a290a4e4038226658b',
+  },
   interactive: {
     url: 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task',
     bytes: 30_525_312,
@@ -108,6 +113,14 @@ export interface ImageClassifierVisionResult {
       score: number
     }[]
   }[]
+}
+
+/** Foreground confidence, not multi-class labels. Each pixel is owned by the caller. */
+export interface PersonVisionResult {
+  kind: 'person-mask'
+  width: number
+  height: number
+  confidence: Float32Array
 }
 
 /** Pixel semantic classes, NOT an alpha/foreground mask. Class IDs may have
@@ -1038,6 +1051,87 @@ export function createSemanticSegmenterSubstrate(
               lastVideoTimestamp=frame.timestampMs!
             }else engine.segment(frame.image,capture)
             if(!mapped)throw new Error('Native MediaPipe did not deliver a category mask callback')
+            return mapped
+          },
+          async dispose(){engine.close()},
+        }
+      }finally{task?.close()}
+    },
+  }
+}
+
+/** A foreground probability map suitable for alpha compositing and conditioning. */
+export function copyPersonMask(input:{
+  width:number;height:number;values:Float32Array
+}):PersonVisionResult {
+  const {width,height,values}=input
+  if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||
+    width<1||height<1||width*height>4_194_304)
+    throw new Error('Person mask dimensions must be positive and within 4M pixels')
+  if(!(values instanceof Float32Array)||values.length!==width*height)
+    throw new Error('Person mask length must equal width × height')
+  if(values.some(x=>!Number.isFinite(x)||x<0||x>1))
+    throw new Error('Person mask probability must be finite and in [0,1]')
+  return {kind:'person-mask',width,height,confidence:Float32Array.from(values)}
+}
+
+/** MediaPipe's 249 KB selfie segmenter: foreground probability, not semantic categories. */
+export function createPersonSegmenterSubstrate(
+  options:VisionOptions={},
+):BrowserSubstrate<VisionFrame,PersonVisionResult,VisionProgress>{
+  return {
+    id:'mediapipe:selfie-segmenter-float16-1',
+    format:'tflite',
+    capabilities:['image-segmentation'],
+    requestedBackends:['wasm'],
+    async create(progress,signal){
+      const bytes=await modelBytes('person',options,progress,signal)
+      progress?.('wasm')
+      const {ImageSegmenter,FilesetResolver}=await import('@mediapipe/tasks-vision')
+      checkAbort(signal)
+      const fileset=await FilesetResolver.forVisionTasks(
+        options.wasmBase??MEDIAPIPE_VISION_WASM_BASE,
+      )
+      checkAbort(signal)
+      let task:ImageSegmenter|null=null
+      try{
+        task=await ImageSegmenter.createFromOptions(fileset,{
+          baseOptions:{modelAssetBuffer:bytes,delegate:'CPU'},
+          runningMode:'IMAGE',
+          outputCategoryMask:false,
+          outputConfidenceMasks:true,
+        })
+        checkAbort(signal)
+        const engine=task
+        task=null
+        let mode:'IMAGE'|'VIDEO'='IMAGE'
+        let lastVideoTimestamp=-Infinity
+        return {
+          async infer(frame){
+            const nextMode=validateVisionFrame(
+              frame,mode==='VIDEO'?lastVideoTimestamp:-Infinity,
+            )
+            if(nextMode!==mode){
+              await engine.setOptions({runningMode:nextMode})
+              mode=nextMode
+              if(mode==='IMAGE')lastVideoTimestamp=-Infinity
+            }
+            let mapped:PersonVisionResult|undefined
+            const capture=(native:import('@mediapipe/tasks-vision').ImageSegmenterResult)=>{
+              const channels=native.confidenceMasks
+              if(!channels?.length)throw new Error('Selfie segmenter returned no confidence masks')
+              // The official two-channel model has background first and person last.
+              const foreground=channels[channels.length-1]
+              mapped=copyPersonMask({
+                width:foreground.width,height:foreground.height,
+                values:foreground.getAsFloat32Array(),
+              })
+            }
+            if(nextMode==='VIDEO'){
+              engine.segmentForVideo(frame.image,frame.timestampMs!,capture)
+              lastVideoTimestamp=frame.timestampMs!
+            } else engine.segment(frame.image,capture)
+            if(!mapped)throw new Error('Selfie segmenter did not return a foreground confidence mask')
             return mapped
           },
           async dispose(){engine.close()},

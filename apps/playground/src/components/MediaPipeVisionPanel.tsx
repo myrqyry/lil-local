@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { BrowserSubstrateRunner, type BrowserSubstrate } from '@lil-local/inference-core'
+import { BrowserSubstrateRunner, type BrowserSubstrate, type DepthFrame } from '@lil-local/inference-core'
+import {createDepthAnythingV2Substrate} from '@lil-local/depth-estimation'
 import {
   createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate,
   createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate,
-  createSemanticSegmenterSubstrate, createFaceDetectorSubstrate,
+  createSemanticSegmenterSubstrate, createFaceDetectorSubstrate, createPersonSegmenterSubstrate,
   type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult,
-  type HolisticVisionResult, type SemanticVisionResult, type FaceDetectorVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
+  type HolisticVisionResult, type SemanticVisionResult, type FaceDetectorVisionResult, type PersonVisionResult, type VisionFrame, type VisionKind, type VisionProgress,
 } from '@lil-local/vision-mediapipe'
 
-type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult | SemanticVisionResult | FaceDetectorVisionResult
+type VisionOutput = FaceVisionResult | GestureVisionResult | PoseVisionResult | ObjectVisionResult | ImageClassifierVisionResult | HolisticVisionResult | SemanticVisionResult | FaceDetectorVisionResult | PersonVisionResult | DepthFrame
 type Runner = BrowserSubstrateRunner<VisionFrame, VisionOutput, VisionProgress>
 const FRAME_INTERVAL_MS = 120
 // Display-only skeleton connections. The inference package does not own rendering.
@@ -22,13 +23,15 @@ const POSE_EDGES: [number, number][] = [
 export function MediaPipeVisionPanel() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const maskCanvasRef = useRef<HTMLCanvasElement>(null)
+  const conditioningCanvasRef = useRef<HTMLCanvasElement>(null)
   const runnerRef = useRef<Runner | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const frameRef = useRef<number | null>(null)
   const serialRef = useRef(0)
   const mountedRef = useRef(true)
-  const [kind, setKind] = useState<VisionKind>('face')
+  const [kind, setKind] = useState<VisionKind|'depthV2'>('face')
+  const [depthBackend,setDepthBackend] = useState<'wasm'|'webgpu'>('wasm')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageDimensions, setImageDimensions] = useState<{width:number;height:number} | null>(null)
@@ -78,6 +81,25 @@ export function MediaPipeVisionPanel() {
     return () => URL.revokeObjectURL(url)
   }, [imageFile])
 
+  // Display-only grayscale. Keep native float probabilities/depth in the shared results.
+  useEffect(() => {
+    if (result?.kind !== 'person-mask' && result?.kind !== 'depth') return
+    const canvas = conditioningCanvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+    const {width,height} = result
+    const values = result.kind==='person-mask' ? result.confidence : result.data
+    canvas.width=width
+    canvas.height=height
+    const pixels=new Uint8ClampedArray(width*height*4)
+    for(let i=0;i<values.length;i++){
+      const value=Math.round(values[i]*255)
+      pixels[i*4]=pixels[i*4+1]=pixels[i*4+2]=value
+      pixels[i*4+3]=255
+    }
+    ctx.putImageData(new ImageData(pixels,width,height),0,0)
+  },[result])
+
   // A preview-only, deterministic palette. The package itself returns class IDs.
   // We never use this colorization in model output or inference contracts.
   useEffect(() => {
@@ -103,7 +125,9 @@ export function MediaPipeVisionPanel() {
   }, [result, imagePreview])
 
   const createSelectedSubstrate = (): BrowserSubstrate<VisionFrame, VisionOutput, VisionProgress> =>
-    kind === 'face'
+    kind === 'depthV2'
+      ? createDepthAnythingV2Substrate({wasmBase:'/ort/',backend:depthBackend})
+      : kind === 'face'
       ? createFaceLandmarkerSubstrate({ numFaces: 2 })
       : kind === 'gesture'
         ? createGestureRecognizerSubstrate({ numHands: 2 })
@@ -117,7 +141,9 @@ export function MediaPipeVisionPanel() {
                 ? createHolisticLandmarkerSubstrate()
                 : kind === 'semantic'
                   ? createSemanticSegmenterSubstrate()
-                  : createFaceDetectorSubstrate({delegate:'GPU',minDetectionConfidence:0.5})
+                  : kind === 'person'
+                    ? createPersonSegmenterSubstrate()
+                    : createFaceDetectorSubstrate({delegate:'GPU',minDetectionConfidence:0.5})
 
   /** Explicit still-image local inference. No webcam permission or uploads. */
   const analyzeImage = async () => {
@@ -336,7 +362,7 @@ export function MediaPipeVisionPanel() {
       <div className="rounded-xl border border-outline-variant p-3">
         <label htmlFor="vision-task" className="block text-sm font-semibold">Vision task</label>
         <select id="vision-task" value={kind} disabled={busy || running}
-          onChange={event => { setKind(event.target.value as VisionKind); setResult(null) }}
+          onChange={event => { setKind(event.target.value as VisionKind|'depthV2'); setResult(null) }}
           className="mt-2 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2">
           <option value="face">Face landmarks + blendshapes · 3.8 MB</option>
           <option value="gesture">Hand landmarks + gestures · 8.4 MB</option>
@@ -345,10 +371,21 @@ export function MediaPipeVisionPanel() {
           <option value="classifier">EfficientNet-Lite0 · Image classification · 18.6 MB</option>
           <option value="holistic">Holistic · Face + body + left/right hands · 13.7 MB</option>
           <option value="semantic">DeepLab V3 · Per-pixel semantic classes · 2.8 MB</option>
+          <option value="person">Selfie Segmenter · Foreground/person confidence · 249 KB</option>
+          <option value="depthV2">Depth Anything V2 Small · Quantized Q8 / FP16 · relative depth</option>
           <option value="blazeFace">BlazeFace · Lightweight face boxes · 230 KB</option>
         </select>
+        {kind==='depthV2' && <label className="mt-3 block text-sm">
+          Depth execution backend
+          <select aria-label="Depth execution backend" value={depthBackend}
+            disabled={busy || running} onChange={event=>setDepthBackend(event.target.value as 'wasm'|'webgpu')}
+            className="mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <option value="wasm">WASM / CPU · Q8 (smaller, slower)</option>
+            <option value="webgpu">WebGPU · FP16 (requires browser GPU support)</option>
+          </select>
+        </label>}
         <p className="mt-2 text-sm text-on-surface-variant">
-          This playground calls the shared @lil-local/vision-mediapipe package.
+          This playground reuses the shared MediaPipe Vision and Depth Estimation packages.
           Model loading is opt-in. Still-image analysis never requests camera access.
         </p>
       </div>
@@ -464,8 +501,16 @@ export function MediaPipeVisionPanel() {
       </div>
       <p role="status" className="text-sm text-on-surface-variant">{status}</p>
       {error && <p role="alert" className="text-sm text-error">{error}</p>}
+      {(result?.kind==='person-mask' || result?.kind==='depth') && <div className="space-y-2">
+        <p className="text-sm font-semibold">{result.kind==='person-mask'
+          ? 'Foreground confidence mask · brighter means more likely person'
+          : 'Relative depth map · per-frame normalized, not metric distance'}</p>
+        <canvas ref={conditioningCanvasRef} aria-label={result.kind==='person-mask'
+          ? 'Person foreground confidence mask' : 'Depth grayscale conditioning map'}
+          className="aspect-[4/3] w-full rounded-xl bg-black object-contain" />
+      </div>}
       <div aria-label="Vision detections" className="space-y-2">
-        <p className="text-sm font-semibold">{result ? summary.length + (result.kind === 'image-classifications' ? ' classification heads' : result.kind === 'semantic-segmentation' ? ' semantic classes' : ' detected') : 'No inference results'}</p>
+        <p className="text-sm font-semibold">{result ? result.kind === 'person-mask' ? result.width + ' × ' + result.height + ' foreground probabilities' : result.kind === 'depth' ? result.width + ' × ' + result.height + ' relative depth · ' + result.backend + ' · ' + Math.round(result.inferenceMs ?? 0) + ' ms' : summary.length + (result.kind === 'image-classifications' ? ' classification heads' : result.kind === 'semantic-segmentation' ? ' semantic classes' : ' detected') : 'No inference results'}</p>
         {summary.map(item => (
           <div key={item.key} className="rounded-lg border border-outline-variant p-3 text-sm">
             <strong>{item.title}</strong>
@@ -481,8 +526,10 @@ export function MediaPipeVisionPanel() {
         telemetry-free runtime. Model and WASM require an initial network fetch
         unless the calling app supplies verified local weights and self-hosted WASM.
         Camera permission and tracking are opt-in. BlazeFace requests MediaPipe's
-        WebGL GPU delegate (not WebGPU); other Vision tasks remain CPU/WASM.
-        Camera processing is capped at ≤8.3 FPS.
+        WebGL GPU delegate (not WebGPU); other MediaPipe tasks remain CPU/WASM.
+        Depth Anything V2 uses pinned ONNX weights (Q8 WASM or explicit FP16 WebGPU)
+        and self-hosted runtime assets; WASM depth is slower than real-time on the
+        tested desktop. Camera sampling is capped at ≤8.3 FPS, not guaranteed throughput.
       </p>
     </div>
   )

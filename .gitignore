@@ -1,4 +1,5 @@
 node_modules/
+apps/playground/public/ort/
 dist/
 public/models/*.tflite
 docs/superpowers/

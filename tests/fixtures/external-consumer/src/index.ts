@@ -33,9 +33,10 @@ import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, YAMNET_MODEL, type AudioClip, type MediaPipeTtsStreamChunk } from '@lil-local/audio-mediapipe'
-import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult, type InteractiveSelectionRequest, type InteractiveSelectionResult, type FaceDetectorVisionResult } from '@lil-local/vision-mediapipe'
+import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, createPersonSegmenterSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult, type InteractiveSelectionRequest, type InteractiveSelectionResult, type FaceDetectorVisionResult, type PersonVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
+  createDepthAnythingV2Substrate,
   da3SmallPortraitManifest,
   estimateMoGeGeometry,
   releaseMoGeModels,
@@ -73,6 +74,9 @@ export const packedObjectRunner = new BrowserSubstrateRunner(createObjectDetecto
 export const packedClassifierRunner = new BrowserSubstrateRunner(createImageClassifierSubstrate({maxResults:5}))
 export const packedHolisticRunner = new BrowserSubstrateRunner(createHolisticLandmarkerSubstrate())
 export const packedSemanticRunner = new BrowserSubstrateRunner(createSemanticSegmenterSubstrate())
+export const packedPersonMaskRunner = new BrowserSubstrateRunner(createPersonSegmenterSubstrate())
+export const packedDepthAnythingV2Runner = new BrowserSubstrateRunner(createDepthAnythingV2Substrate({wasmBase:'/ort/'}))
+export type PackedPersonVision = PersonVisionResult
 export const packedInteractiveRunner = new BrowserSubstrateRunner(createInteractiveSegmenterSubstrate())
 export const packedBlazeFaceRunner = new BrowserSubstrateRunner(createFaceDetectorSubstrate({delegate:'GPU'}))
 export type PackedFaceDetectorVision = FaceDetectorVisionResult
