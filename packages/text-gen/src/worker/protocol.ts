@@ -33,6 +33,8 @@ export interface LiteRtLmWorkerLoadOptions {
   wasmBase?: string;
   /** Opt-in LiteRT-LM 0.19 vision encoder; omitted means text-only. */
   visionBackend?: 'cpu' | 'gpu';
+  /** Maximum concurrently attached images, matching LiteRT-LM EngineSettings. */
+  maxNumImages?: number;
   mediaPipe?: LiteRtLmWorkerMediaPipeLoadOptions;
   /**
    * Optional caller-owned identity for Blob-backed models. Supply this when

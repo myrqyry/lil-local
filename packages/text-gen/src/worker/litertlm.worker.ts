@@ -27,7 +27,7 @@ interface LiteRtLmModule {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
       visionBackend?: number;
-      mainExecutorSettings?: { maxNumTokens?: number };
+      mainExecutorSettings?: { maxNumTokens?: number; maxNumImages?: number };
     }) => Promise<LiteRtLmEngine>;
   };
 }
@@ -300,10 +300,18 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
     locateFile: (file: string) => new URL(file, runtimeBase).href,
   };
   await module.getOrLoadGlobalLiteRtLm(wasmBase);
+  const maxNumImages = data.options?.maxNumImages;
+  if (maxNumImages !== undefined &&
+      (!Number.isSafeInteger(maxNumImages) || maxNumImages < 0 || maxNumImages > 8)) {
+    throw new Error('maxNumImages must be an integer from 0 through 8');
+  }
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
     ...(data.options?.visionBackend ? { visionBackend: data.options.visionBackend === 'gpu' ? 4 : 3 } : {}),
-    mainExecutorSettings: { maxNumTokens: 8192 },
+    mainExecutorSettings: {
+      maxNumTokens: 8192,
+      ...(maxNumImages !== undefined ? { maxNumImages } : {}),
+    },
   });
   liteRtLmVisionEnabled = Boolean(data.options?.visionBackend);
 }

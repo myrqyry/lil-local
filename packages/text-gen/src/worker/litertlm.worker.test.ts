@@ -149,6 +149,20 @@ describe('LiteRT-LM worker dispatch', () => {
     expect(messages).toContainEqual({ type: 'complete', id: 'image' });
   });
 
+  it('reserves image capacity in native engine settings when vision is enabled', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, {
+      type: 'load', model: 'full-gemma4.litertlm',
+      options: { visionBackend: 'gpu', maxNumImages: 8 },
+    });
+    await flushWorker();
+    expect(liteRt.createEngine).toHaveBeenCalledWith(expect.objectContaining({
+      visionBackend: 4,
+      mainExecutorSettings: { maxNumTokens: 8192, maxNumImages: 8 },
+    }));
+    expect(messages).toContainEqual({ type: 'ready' });
+  });
+
   it('rejects image messages when the LiteRT-LM engine was loaded text-only', async () => {
     const { scope, messages } = await bootWorker();
     send(scope, { type: 'load', model: 'text.litertlm' });
