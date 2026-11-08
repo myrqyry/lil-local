@@ -13,7 +13,9 @@ model, source, input, browser and device that were tested.
 | Supported public package APIs and single-revision Git pinning | [Package revision policy](package-revision-policy.md) |
 | Substrate architecture and backend qualification boundaries | [Web substrates](web-substrates.md) |
 | Historical consolidation, retained commits and unmerged branches | [Mainline reconciliation](verification/2026-11-07-mainline-reconciliation.md) |
-| Current tasks, locked decisions and unresolved implementation work | [Active work](../ACTIVE_WORK.md) |
+| Current work vs finished, archived or unqualified experiments | [Experiment dispositions](archive/2026-11-08-experiment-dispositions.md) |
+| Historical dated implementation notes (not an active task queue) | [Active work](../ACTIVE_WORK.md) |
+| Historical remote branch tips and ancestry | [Remote branch inventory](archive/2026-11-08-remote-branch-inventory.md) |
 | Developer conventions and test gates | [Repository AGENTS.md](../AGENTS.md) |
 | Per-model observations, inputs, metrics and reproducible evidence | [Verification records](verification/) |
 
@@ -91,7 +93,10 @@ records the verified **19-commit fast-forward** and safe removal of 15
 redundant local branch pointers. The three Gemma branches represent one
 separate five-commit development line for worker, vision and audio support.
 They passed focused tests but have **not** passed real Gemma multimodal
-inference acceptance, so they remain separate from mainline.
+inference acceptance. They are now **archived**, pinned by three annotated
+local Git tags and remote branches, and their separate temporary worktree
+has been retired. They were not merged into mainline. See the
+[2026-11-08 disposition ledger](archive/2026-11-08-experiment-dispositions.md).
 
 The audit's `origin/master` ahead/behind observations are a historical
 snapshot before publication. Use `git fetch origin` and

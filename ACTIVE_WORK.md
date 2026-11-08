@@ -1,6 +1,15 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+**Current disposition, 2026-11-08:** no Lil Local experiment is being run
+or automatically continued by this assistant. The Live Vision experiment
+workbench's first agreed slice is **complete and verified** (local `master`
+`30a94df`); the three unqualified Gemma development branches are **archived,
+not merged** and their disposable worktree has been retired. Unqualified
+backends and further workbench ideas are limits/candidates, **not active
+assignments**. See [archived/closed work](docs/archive/2026-11-08-experiment-dispositions.md).
+Sections below are historical records, not an in-progress task queue.
+
 ## 2026-11-08 — Live Vision still-image experiment workbench (first slice)
 - Added a four-run, session-only experiment record around Lil Local's existing still-image inference, inspired by the supplied `computer-vision-lab.zip` *interaction*, not by importing its runtime. Records actual model task, requested backend, source preview, load/inference times, kind/summary, and bounded sampled float output for person mask/depth. Camera streaming and native model contracts remain unchanged.
 - For identical input preview, visually split two saved raster results; for different sources compare side by side. Selfie confidence threshold re-decodes the retained sample without model inference. No persistent storage, camera frame recording, full tensor/preprocessing inspector, or general image-perturbation pipeline yet.

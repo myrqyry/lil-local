@@ -124,6 +124,9 @@ A/B image split; Selfie confidence cutoffs can be adjusted **without running
 the model again**. The source thumbnail is *not* the SDK's internal input
 tensor, sampled output floats are *not* the full raw tensor, and camera frames
 are never recorded. [Browser qualification and limits](docs/verification/2026-11-08-vision-experiment-workbench.md).
+The completed workbench's first slice and other parked candidate work are
+[explicitly classified as finished or archived](docs/archive/2026-11-08-experiment-dispositions.md),
+not silently left as active experiments.
 For the public APIs and reproducible tests see
 [Vision package usage](packages/vision-mediapipe/README.md),
 [depth implementation](packages/depth-estimation/src/depthAnythingV2.ts),

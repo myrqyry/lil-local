@@ -22,7 +22,7 @@ inference, then capture enough evidence to reuse that working path elsewhere.
 Coverage spans text generation, retrieval, speech, audio, vision, OCR, image
 embeddings, and video classification.
 
-## Current mainline and branch boundaries (2026-11-07)
+## Current mainline and branch boundaries (updated 2026-11-08)
 
 - Local `master` was **fast-forwarded** to the verified MediaPipe / Audio8
   candidate / SlimSAM / Live Vision development tip (`5ce3865`), preserving
@@ -36,9 +36,16 @@ embeddings, and video classification.
   Depth Anything V2 Small form the ten-option selector. Browser-qualified
   Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
   performance; no real-time claim is implied.
-- Gemma's separate five-commit development line has passed focused text-gen
-  typechecks and unit tests, **not** real Gemma vision/audio model inference.
-  It is not part of `master`; its worktree stays isolated.
+- **Current mainline:** local `master@30a94df` has the completed, verified
+  still-image experiment workbench; at this snapshot it is one commit ahead
+  of `origin/master`. The implementation is a finished first slice, not a
+  continuing autonomous experiment.
+- **Archived Gemma line:** the separate five-commit development line passed
+  focused text-gen checks but **not** real vision/audio generation. It is **not**
+  in `master`. Three exact commits are preserved by local annotated archive
+  tags and matching GitHub branch tips; the disposable separate worktree has
+  been retired. Disposition, reopen gates and branch inventory:
+  `docs/archive/2026-11-08-experiment-dispositions.md`.
 - GitHub synchronization status must be read from live refs; the reconciliation
   receipt records the local-only state **at the time of that audit**, not a
   permanent claim that published `origin/master` is behind.
@@ -158,6 +165,10 @@ has been shown to fail for the right reason.
   nested-agent routing. They currently agree, but have a synchronization
   maintenance cost. Choosing one authority is a separate decision; do not
   silently rewrite or remove either.
-- **Still open — experimental Gemma branch:** real vision/audio inference and
-  integration against the published mainline must be qualified before it can
-  be called production-ready or merged. See the branch ledger above.
+- **Archived — Gemma experiments, not active work:** real worker and
+  vision/audio inference has not been established. Their branches and
+  commits are preserved and separate. Reopen only for a concrete consumer
+  with repeatable real-browser qualification; see the dated archive ledger.
+- **Unqualified, not active work:** FP16/WebGPU and Android depth performance,
+  and the full tensor viewer/perturbation lab are not implicitly scheduled
+  merely because they are technically possible.
