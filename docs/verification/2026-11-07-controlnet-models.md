@@ -8,11 +8,14 @@ non-overlapping frame scheduling, output rendering, runner disposal and camera c
 MediaPipe Pose Lite and semantic DeepLab V3 were already present. Sobel is a
 non-neural image operation and no additional model is needed for it.
 
-This work builds on the current `aster/slimsam77-browser-qualification` development
-branch; it is **not** present on `master` until prior outstanding vision work is
-integrated. The redundant `aster/controlnet-live-models` branch was deleted after
-verifying it pointed to the same commit; no working files or commits were lost.
-Neither the original ControlNet Live app nor other projects were changed.
+This work was implemented and qualified on the
+`aster/slimsam77-browser-qualification` development line, then incorporated
+unaltered by **fast-forward** into local `master` at `5ce3865` on 2026-11-07.
+GitHub `origin/master` is still behind because nothing was pushed. The redundant
+`aster/controlnet-live-models` branch was deleted after verifying it pointed
+to the same commit; no working files or commits were lost. Neither the original
+ControlNet Live app nor other projects were changed. See the separate
+`docs/verification/2026-11-07-mainline-reconciliation.md` audit.
 
 ## Models and contracts
 
