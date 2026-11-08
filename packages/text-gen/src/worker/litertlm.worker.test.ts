@@ -163,6 +163,44 @@ describe('LiteRT-LM worker dispatch', () => {
     expect(messages).toContainEqual({ type: 'ready' });
   });
 
+  it('enables full-model GPU audio and forwards a WAV Blob as native LiteRT message data', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, {
+      type: 'load', model: 'full-gemma4.litertlm',
+      options: { visionBackend: 'gpu', audioBackend: 'gpu', maxNumImages: 8 },
+    });
+    await flushWorker();
+    const wav = new Blob([new Uint8Array([82, 73, 70, 70])], { type: 'audio/wav' });
+    send(scope, {
+      type: 'generate', id: 'audio',
+      prompt: [{ type: 'text', text: 'Transcribe:' }, { type: 'audio', data: wav }],
+    });
+    await flushWorker();
+    expect(liteRt.createEngine).toHaveBeenCalledWith(expect.objectContaining({
+      visionBackend: 4,
+      audioBackend: 4,
+    }));
+    expect(liteRt.sendMessageStreaming).toHaveBeenCalledWith({
+      role: 'user',
+      content: [{ type: 'text', text: 'Transcribe:' }, { type: 'audio', data: wav }],
+    });
+    expect(messages).toContainEqual({ type: 'complete', id: 'audio' });
+  });
+
+  it('rejects audio without explicitly enabling the LiteRT audio backend', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'text-only.litertlm' });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'audio-off',
+      prompt: [{ type: 'audio', data: new Blob(['wav'], { type: 'audio/wav' }) }],
+    });
+    await flushWorker();
+    expect(liteRt.sendMessageStreaming).not.toHaveBeenCalled();
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: 'error', id: 'audio-off', message: expect.stringContaining('audioBackend'),
+    }));
+  });
+
   it('rejects image messages when the LiteRT-LM engine was loaded text-only', async () => {
     const { scope, messages } = await bootWorker();
     send(scope, { type: 'load', model: 'text.litertlm' });

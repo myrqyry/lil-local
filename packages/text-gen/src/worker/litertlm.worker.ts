@@ -27,6 +27,7 @@ interface LiteRtLmModule {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
       visionBackend?: number;
+      audioBackend?: number;
       mainExecutorSettings?: { maxNumTokens?: number; maxNumImages?: number };
     }) => Promise<LiteRtLmEngine>;
   };
@@ -52,6 +53,7 @@ let liteRtLmEngine: LiteRtLmEngine | undefined;
 let mediaPipeEngine: MediaPipeMultimodalEngine | undefined;
 let activeEngine: LiteRtLmWorkerEngine = 'litert-lm';
 let liteRtLmVisionEnabled = false;
+let liteRtLmAudioEnabled = false;
 let dispatchQueue: Promise<void> = Promise.resolve();
 const activeConversations = new Map<string, Conversation>();
 const mediaPipeGenerationIds = new Set<string>();
@@ -143,16 +145,21 @@ async function disposeConversation(id: string, conversation: Conversation): Prom
 
 function toLiteRtLmContent(prompt: LiteRtLmWorkerPrompt): Message['content'] {
   if (typeof prompt === 'string') return prompt;
-  if (prompt.some((part) => part.type === 'audio')) {
-    throw new Error('LiteRT-LM PCM audio input is not implemented; use engine="mediapipe" for audio');
+  if (prompt.some((part) => part.type === 'audio') && !liteRtLmAudioEnabled) {
+    throw new Error('Audio input requires audioBackend when loading the LiteRT-LM engine');
+  }
+  if (prompt.some((part) => part.type === 'audio' && !('data' in part))) {
+    throw new Error('LiteRT-LM requires a decoded WAV audio Blob; PCM arrays belong to the MediaPipe backend');
   }
   if (prompt.some((part) => part.type === 'image') && !liteRtLmVisionEnabled) {
     throw new Error('Image input requires visionBackend when loading the LiteRT-LM engine');
   }
-  return prompt.filter((part): part is Extract<typeof part, { type: 'text' | 'image' }> => part.type !== 'audio')
-    .map((part) => part.type === 'text'
-      ? { type: 'text' as const, text: part.text }
-      : { type: 'image' as const, data: part.data });
+  return prompt.map((part) => {
+    if (part.type === 'text') return { type: 'text' as const, text: part.text };
+    if (part.type === 'image') return { type: 'image' as const, data: part.data };
+    if (!('data' in part)) throw new Error('LiteRT-LM requires WAV Blob audio');
+    return { type: 'audio' as const, data: part.data };
+  });
 }
 
 async function generateLiteRtLm(
@@ -277,6 +284,7 @@ async function disposeLoadedEngine(): Promise<void> {
 async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>): Promise<void> {
   await disposeLoadedEngine();
   liteRtLmVisionEnabled = false;
+  liteRtLmAudioEnabled = false;
 
   activeEngine = data.options?.engine ?? 'litert-lm';
   if (activeEngine === 'mediapipe') {
@@ -308,12 +316,14 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
     ...(data.options?.visionBackend ? { visionBackend: data.options.visionBackend === 'gpu' ? 4 : 3 } : {}),
+    ...(data.options?.audioBackend ? { audioBackend: data.options.audioBackend === 'gpu' ? 4 : 3 } : {}),
     mainExecutorSettings: {
       maxNumTokens: 8192,
       ...(maxNumImages !== undefined ? { maxNumImages } : {}),
     },
   });
   liteRtLmVisionEnabled = Boolean(data.options?.visionBackend);
+  liteRtLmAudioEnabled = Boolean(data.options?.audioBackend);
 }
 
 function hasGenerationConfig(config?: LiteRtLmWorkerGenerationConfig): boolean {

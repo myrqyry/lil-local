@@ -33,6 +33,8 @@ export interface LiteRtLmWorkerLoadOptions {
   wasmBase?: string;
   /** Opt-in LiteRT-LM 0.19 vision encoder; omitted means text-only. */
   visionBackend?: 'cpu' | 'gpu';
+  /** Enables the LiteRT-LM audio encoder for WAV/audio Blob input. */
+  audioBackend?: 'cpu' | 'gpu';
   /** Maximum concurrently attached images, matching LiteRT-LM EngineSettings. */
   maxNumImages?: number;
   mediaPipe?: LiteRtLmWorkerMediaPipeLoadOptions;
@@ -47,6 +49,8 @@ export interface LiteRtLmWorkerLoadOptions {
 export type LiteRtLmWorkerPromptPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data: Blob }
+  /** SDK-native audio Blob, matching the official LiteRT-LM browser demo. */
+  | { type: 'audio'; data: Blob }
   | {
       type: 'audio';
       /**

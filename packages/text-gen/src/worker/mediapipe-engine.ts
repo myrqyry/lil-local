@@ -164,6 +164,9 @@ export class MediaPipeMultimodalEngine {
           continue;
         }
 
+        if ('data' in part) {
+          throw new Error('MediaPipe audio input requires PCM samples and sample rate, not a Blob');
+        }
         query.push({
           audioSource: {
             audioSamples: part.audioSamples,
