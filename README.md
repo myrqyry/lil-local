@@ -37,12 +37,7 @@ models have passed real-device inference.
 | **Interactive masks** | MediaPipe MagicTouch V2 browser-qualified for still-image strokes; separate optional quantized SlimSAM-77 library path with real browser mask output. Neither is a verified real-time segmentation tracker. |
 | **Audio / text / retrieval** | Reusable MediaPipe, LiteRT, and ONNX packages with per-model qualification records; Audio8 remains a **candidate manifest**, not a ready TTS engine. |
 
-The three nested **Gemma 4 worker / vision / audio** development branches are
-preserved separately from `master`. Their focused TypeScript and unit checks
-passed, but actual Gemma vision/audio model inference is **not qualified**.
-See the [mainline and branch reconciliation](docs/verification/2026-11-07-mainline-reconciliation.md)
-for the history, evidence, and outstanding work; [docs navigation](docs/README.md)
-collects the current reference material.
+**One active branch: `master`.** The three unqualified Gemma 4 worker/vision/audio candidates and all historical topic branches are preserved by GitHub archive tags, not active branch pointers. They were **not merged or promoted to functioning inference**. Two superseded pull requests were closed because their functionality is already on `master`. See the [recovery ledger](docs/archive/2026-11-08-experiment-dispositions.md) and [docs navigation](docs/README.md).
 
 ### MediaPipe Universal Embedder + Semantic Retriever
 

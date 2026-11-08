@@ -24,30 +24,14 @@ embeddings, and video classification.
 
 ## Current mainline and branch boundaries (updated 2026-11-08)
 
-- Local `master` was **fast-forwarded** to the verified MediaPipe / Audio8
-  candidate / SlimSAM / Live Vision development tip (`5ce3865`), preserving
-  19 original commits; a later documentation-only checkpoint (`3a81dca`)
-  records the consolidation. The 15 redundant local feature refs were safely
-  retired after ancestry checks, leaving `master` plus the three distinct
-  Gemma worker/vision/audio branch pointers. The branch ledger is
-  `docs/verification/2026-11-07-mainline-reconciliation.md`.
+- The earlier MediaPipe / Audio8 candidate / SlimSAM / Live Vision line was integrated by verified fast-forward to `master`, retaining 19 commits. **As of 2026-11-08, only `master` exists as a local/GitHub branch**, with one worktree and no open Lil Local pull requests. Every former topic-branch tip was pinned under the independently verified published annotated `archive/lil-local/legacy-branch-snapshot-2026-11-08` tag before its branch pointer was retired. This is a metadata-only archive commit, **not a merge into mainline**. Full mapping and recovery instructions: `docs/archive/2026-11-08-remote-branch-inventory.md`.
 - Live Vision reuses its existing camera/still-image workbench. Nine opt-in
   MediaPipe frame tasks (including the Selfie foreground confidence model) and
   Depth Anything V2 Small form the ten-option selector. Browser-qualified
   Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
   performance; no real-time claim is implied.
-- **Current mainline:** `master@5b3e3f8` has the completed, verified
-  still-image experiment workbench at `30a94df`, plus its archival ledger.
-  GitHub `origin/master` was independently verified at `5b3e3f8` on
-  2026-11-08. The implementation is a finished first slice, not a
-  continuing autonomous experiment.
-- **Archived Gemma line:** the separate five-commit development line passed
-  focused text-gen checks but **not** real vision/audio generation. It is **not**
-  in `master`. Three exact commits are preserved by local annotated archive
-  tags and matching GitHub branch tips; the archive tags themselves have now
-  also been pushed and their target SHAs verified. The disposable separate
-  worktree has been retired. Disposition, reopen gates and branch inventory:
-  `docs/archive/2026-11-08-experiment-dispositions.md`.
+- **Mainline:** the completed, real-browser-tested Live Vision experiment workbench is on `master` at `30a94df`. Its first slice is finished, not an ongoing task.
+- **Archived Gemma line:** the worker/vision/audio development work passed focused checks, not real Gemma multimodal generation. Three individual published archive tags pin its exact commits. Its branch pointers and disposable worktree were retired after reachability verification. No unqualified code was merged. See `docs/archive/2026-11-08-experiment-dispositions.md`.
 - GitHub synchronization status must be read from live refs; the reconciliation
   receipt records the local-only state **at the time of that audit**, not a
   permanent claim that published `origin/master` is behind.

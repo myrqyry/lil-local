@@ -21,11 +21,7 @@ ongoing assignments. No task listed here is running automatically.
   inspector, image-perturbation batch lab, persistent export/history,
   model catalog, or shader chaining is **not** a silently active next step.
   Reopen only with a new concrete use case/acceptance test.
-- **Publication verified later on 2026-11-08:** the workbench commit
-  `30a94df` and archival ledger commit `5b3e3f8` were pushed normally;
-  GitHub `master` was independently confirmed at `5b3e3f8` and the primary
-  worktree synchronized. The remote CI run was still in progress at that check;
-  publication is not a claim of deployment or final CI success.
+- **Published and CI-verified:** the workbench and archival documentation are on GitHub `master`. The `Verify` CI run for the status-sync commit `06b7acb` completed successfully on 2026-11-08. CI is not a new backend/model-runtime qualification.
 
 ## Archived, preserved, not merged
 
@@ -41,19 +37,12 @@ were rechecked against local Git on 2026-11-08 before archiving.
 | Vision input capacity: `aster/gemma4-full-vision` | `18655676bfc83807ff9dc314ceec29b2db700e49` | `archive/lil-local/gemma4-vision-2026-11-08` | Configuration and tests do not establish actual image input, vision recognition, memory fit or backend |
 | Native audio Blob input: `aster/gemma4-audio-input` | `78d3839a1fe6a876cac1d2ca947f88933a0bdf68` | `archive/lil-local/gemma4-audio-2026-11-08` | No real model audio-input/inference proof or downstream integration |
 
-**Preservation performed:**
-- Three local annotated Git tags pin the exact commits and explain why
-  the experiments stopped.
-- Original local branches remain, and **all three branch commits are
-  preserved on GitHub** at the matching `origin/aster/gemma4-*` refs.
-  All three **annotated archive tags were subsequently pushed to GitHub on
-  2026-11-08** and verified independently using `git ls-remote --tags`.
-  Their peeled SHAs match the preserved commits above.
-- The tracked-clean, temporary `/tmp/lil-local-gemma-bridge-20261107`
-  worktree was retired with Git after verifying the only ignored contents
-  were rebuildable `node_modules` directories. Original Git objects,
-  branches, and remote refs were **not deleted**.
-- The primary `master` working tree remains the only active worktree.
+**Preservation and clean branch unification:**
+- Three individually published annotated Gemma archive tags pin the exact worker, vision and audio commits. Each peeled GitHub SHA was checked.
+- One additional published annotated tag, `archive/lil-local/legacy-branch-snapshot-2026-11-08`, points to the metadata-only archival commit `7606a25f6782e574526de5a001c961844156bb70`. Its tree equals the then-current `master` tree; its 27 parents (mainline plus 26 former branch-tip commits) preserve the old histories **without merging code into `master`**.
+- The published archive was independently verified to reach **all 26 GitHub topic tips before deletion**. The two open pull requests (#16 and #17) were closed as superseded after confirming their implementations and tests were already on mainline (19 image-segmentation tests and 15 moderation tests passed).
+- All 26 historical GitHub topic branches were retired after this check. The three local Gemma branch pointers were also retired after verifying their archive tags pointed to the exact tips. `git fetch --prune` left only `master` and `origin/master` as branch refs.
+- The tracked-clean temporary Gemma `/tmp` worktree was retired earlier; only rebuildable `node_modules` were removed. There is **one worktree and one active branch**, with recoverable source history and no forced reset or forced push.
 
 **Reopen criteria (not an open task):** a concrete consuming use case and
 real accessible Gemma model, followed by independently observed browser
@@ -68,9 +57,10 @@ To inspect without modifying `master`:
 git show archive/lil-local/gemma4-worker-2026-11-08
 git show archive/lil-local/gemma4-vision-2026-11-08
 git show archive/lil-local/gemma4-audio-2026-11-08
-git log --oneline master..aster/gemma4-audio-input
-# If explicitly reopening, create a NEW isolated worktree, not a blind merge:
-# git worktree add /tmp/lil-local-gemma-recheck aster/gemma4-audio-input
+git log --oneline master..archive/lil-local/gemma4-audio-2026-11-08
+# To reopen only for an explicit, qualifying experiment:
+# git worktree add -b review/gemma4-audio /tmp/lil-local-gemma-recheck \
+#   archive/lil-local/gemma4-audio-2026-11-08^{}
 ```
 
 ## Not active; qualification boundaries, not hidden tasks
@@ -93,16 +83,14 @@ archive**, not ongoing assistant research:
 
 ## Other historical remote branch refs
 
-There are older `origin/aster/*`, `origin/fix/*`, `origin/feat/*`,
-and `origin/backup/*` refs predating this reconciliation. Their mere
-presence does **not** mean they're active work, nor does it establish
-their code is merged. For exact historical tip SHAs and independent
-commit counts at the time of this audit, see
-[remote branch inventory](2026-11-08-remote-branch-inventory.md).
+The former `origin/aster/*`, `origin/fix/*`, `origin/feat/*` and `origin/backup/*` branch names and exact tip SHAs are preserved in the [historical remote branch inventory](2026-11-08-remote-branch-inventory.md). They are no longer visible branches. All 26 tips remain reachable through the published `archive/lil-local/legacy-branch-snapshot-2026-11-08` tag. Recover a pointer only if subsequent source review warrants it:
 
-**Disposition:** preserve the remote pointers without cherry-picking,
-merging, renaming, or deleting. Old divergent changes need an explicit
-comparison against current source before any claim they're useful or ready.
+```bash
+git merge-base --is-ancestor <original-sha> archive/lil-local/legacy-branch-snapshot-2026-11-08^{}
+git branch review/recovered <original-sha>
+```
+
+The archive **does not imply** that old divergent code was integrated, verified, or currently usable. It is recoverable history, not a hidden work queue.
 
 ## Operational rule for continuation
 

@@ -1,17 +1,7 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
-**Current disposition, 2026-11-08:** no Lil Local experiment is being run
-or automatically continued by this assistant. The Live Vision experiment
-workbench's first agreed slice is **complete and verified** (commit
-`30a94df`, published within GitHub `master@5b3e3f8`); the three unqualified
-Gemma development branches are **archived,
-not merged** and their disposable worktree has been retired. Unqualified
-backends and further workbench ideas are limits/candidates, **not active
-assignments**. See [archived/closed work](docs/archive/2026-11-08-experiment-dispositions.md).
-The three annotated Gemma archive tags are also published and their GitHub
-SHA targets checked. Sections below are historical records, not an
-in-progress task queue.
+**Current disposition, 2026-11-08:** the verified Live Vision workbench's first agreed slice is on `master` at `30a94df`. There is **one local/GitHub branch**, **one worktree** and **no open pull requests**. Every former remote topic commit is reachable via one published archive root, with three individual Gemma archive tags. Unqualified Gemma code was *not merged*; its branch pointers and temporary worktree were retired. Unverified backends and future ideas are not silently active assignments. See the [archive, proof and recovery ledger](docs/archive/2026-11-08-experiment-dispositions.md). Older dated sections below are historical evidence, **not** a task queue.
 
 ## 2026-11-08 — Live Vision still-image experiment workbench (first slice)
 - Added a four-run, session-only experiment record around Lil Local's existing still-image inference, inspired by the supplied `computer-vision-lab.zip` *interaction*, not by importing its runtime. Records actual model task, requested backend, source preview, load/inference times, kind/summary, and bounded sampled float output for person mask/depth. Camera streaming and native model contracts remain unchanged.

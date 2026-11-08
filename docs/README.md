@@ -88,15 +88,7 @@ an initial network download is not equivalent to remote inference.
 
 ## Branches and historical evidence
 
-The [2026-11-07 mainline audit](verification/2026-11-07-mainline-reconciliation.md)
-records the verified **19-commit fast-forward** and safe removal of 15
-redundant local branch pointers. The three Gemma branches represent one
-separate five-commit development line for worker, vision and audio support.
-They passed focused tests but have **not** passed real Gemma multimodal
-inference acceptance. They are now **archived**, pinned by three annotated
-local Git tags and remote branches, and their separate temporary worktree
-has been retired. They were not merged into mainline. See the
-[2026-11-08 disposition ledger](archive/2026-11-08-experiment-dispositions.md).
+The [2026-11-07 mainline audit](verification/2026-11-07-mainline-reconciliation.md) records the original 19-commit fast-forward. **The active Lil Local branch list now contains only `master`**, locally and on GitHub, with one worktree. All 26 retired topic-branch tips are reachable via one published annotated archive tag. The three unqualified Gemma stage commits also have their own archive tags. No unverified work was merged. The [disposition and recovery ledger](archive/2026-11-08-experiment-dispositions.md) and [former branch inventory](archive/2026-11-08-remote-branch-inventory.md) preserve what was actually done.
 
 The audit's `origin/master` ahead/behind observations are a historical
 snapshot before publication. Use `git fetch origin` and
