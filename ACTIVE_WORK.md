@@ -3,18 +3,21 @@
 
 **Current disposition, 2026-11-08:** no Lil Local experiment is being run
 or automatically continued by this assistant. The Live Vision experiment
-workbench's first agreed slice is **complete and verified** (local `master`
-`30a94df`); the three unqualified Gemma development branches are **archived,
+workbench's first agreed slice is **complete and verified** (commit
+`30a94df`, published within GitHub `master@5b3e3f8`); the three unqualified
+Gemma development branches are **archived,
 not merged** and their disposable worktree has been retired. Unqualified
 backends and further workbench ideas are limits/candidates, **not active
 assignments**. See [archived/closed work](docs/archive/2026-11-08-experiment-dispositions.md).
-Sections below are historical records, not an in-progress task queue.
+The three annotated Gemma archive tags are also published and their GitHub
+SHA targets checked. Sections below are historical records, not an
+in-progress task queue.
 
 ## 2026-11-08 — Live Vision still-image experiment workbench (first slice)
 - Added a four-run, session-only experiment record around Lil Local's existing still-image inference, inspired by the supplied `computer-vision-lab.zip` *interaction*, not by importing its runtime. Records actual model task, requested backend, source preview, load/inference times, kind/summary, and bounded sampled float output for person mask/depth. Camera streaming and native model contracts remain unchanged.
 - For identical input preview, visually split two saved raster results; for different sources compare side by side. Selfie confidence threshold re-decodes the retained sample without model inference. No persistent storage, camera frame recording, full tensor/preprocessing inspector, or general image-perturbation pipeline yet.
 - RED→GREEN tests cover bounded sampled float ownership and results; production-browser Chromium ran the official Selfie and Depth Anything V2 models through the real panel, captured #1/#2, and changed the binary mask from 65,536 to 4,248 white pixels on the saved 256² field by moving cutoff 0.00→1.00. Model weights loaded only on explicit action; synthetic VIDEO camera cleanup still passed. Full `pnpm verify` **exit 0** (208 playground tests and packed external consumers), plus `pnpm test:vision:browser` **exit 0** (all eight preexisting real-image and video paths). Receipt: `docs/verification/2026-11-08-vision-experiment-workbench.md`.
-- Prior branch/repo status statements below are dated historical snapshots. `master` was later pushed and synchronized at `d46eca4` before this session; inspect current `git status -sb` rather than assuming origin remains behind. This new experiment work is a local unpushed checkpoint unless explicitly synchronized.
+- Prior branch/repo status statements below are dated historical snapshots. `master` was later pushed and synchronized at `d46eca4` before this session; inspect current `git status -sb` rather than assuming origin remains behind. This experiment work and the subsequent archival record were explicitly synchronized to GitHub on 2026-11-08.
 
 ## 2026-11-07 — ControlNet Live's missing models reuse Lil Local Live Vision
 - Existing camera, still-image, bounded inference and lifecycle remained in `MediaPipeVisionPanel`; added **only** the missing 249,537-byte SHA-verified MediaPipe Selfie Segmenter and pinned Q8 Depth Anything V2 Small (`4472b7362082ad9968fee890ca0f1e5aca36b93d`) as two opt-in choices. Pose and DeepLab were already supported; Sobel is CPU math, not a neural checkpoint.

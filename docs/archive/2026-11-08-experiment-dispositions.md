@@ -21,9 +21,11 @@ ongoing assignments. No task listed here is running automatically.
   inspector, image-perturbation batch lab, persistent export/history,
   model catalog, or shader chaining is **not** a silently active next step.
   Reopen only with a new concrete use case/acceptance test.
-- At archival time `master` is **one commit ahead of `origin/master`**;
-  local commit is verified, but no push, deployment, or remote CI result is
-  claimed for that commit.
+- **Publication verified later on 2026-11-08:** the workbench commit
+  `30a94df` and archival ledger commit `5b3e3f8` were pushed normally;
+  GitHub `master` was independently confirmed at `5b3e3f8` and the primary
+  worktree synchronized. The remote CI run was still in progress at that check;
+  publication is not a claim of deployment or final CI success.
 
 ## Archived, preserved, not merged
 
@@ -44,7 +46,9 @@ were rechecked against local Git on 2026-11-08 before archiving.
   the experiments stopped.
 - Original local branches remain, and **all three branch commits are
   preserved on GitHub** at the matching `origin/aster/gemma4-*` refs.
-  The archive tags themselves are **local only**; do not assume they were pushed.
+  All three **annotated archive tags were subsequently pushed to GitHub on
+  2026-11-08** and verified independently using `git ls-remote --tags`.
+  Their peeled SHAs match the preserved commits above.
 - The tracked-clean, temporary `/tmp/lil-local-gemma-bridge-20261107`
   worktree was retired with Git after verifying the only ignored contents
   were rebuildable `node_modules` directories. Original Git objects,

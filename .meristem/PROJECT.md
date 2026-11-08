@@ -36,15 +36,17 @@ embeddings, and video classification.
   Depth Anything V2 Small form the ten-option selector. Browser-qualified
   Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
   performance; no real-time claim is implied.
-- **Current mainline:** local `master@30a94df` has the completed, verified
-  still-image experiment workbench; at this snapshot it is one commit ahead
-  of `origin/master`. The implementation is a finished first slice, not a
+- **Current mainline:** `master@5b3e3f8` has the completed, verified
+  still-image experiment workbench at `30a94df`, plus its archival ledger.
+  GitHub `origin/master` was independently verified at `5b3e3f8` on
+  2026-11-08. The implementation is a finished first slice, not a
   continuing autonomous experiment.
 - **Archived Gemma line:** the separate five-commit development line passed
   focused text-gen checks but **not** real vision/audio generation. It is **not**
   in `master`. Three exact commits are preserved by local annotated archive
-  tags and matching GitHub branch tips; the disposable separate worktree has
-  been retired. Disposition, reopen gates and branch inventory:
+  tags and matching GitHub branch tips; the archive tags themselves have now
+  also been pushed and their target SHAs verified. The disposable separate
+  worktree has been retired. Disposition, reopen gates and branch inventory:
   `docs/archive/2026-11-08-experiment-dispositions.md`.
 - GitHub synchronization status must be read from live refs; the reconciliation
   receipt records the local-only state **at the time of that audit**, not a
