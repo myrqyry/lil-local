@@ -22,6 +22,27 @@ inference, then capture enough evidence to reuse that working path elsewhere.
 Coverage spans text generation, retrieval, speech, audio, vision, OCR, image
 embeddings, and video classification.
 
+## Current mainline and branch boundaries (2026-11-07)
+
+- Local `master` was **fast-forwarded** to the verified MediaPipe / Audio8
+  candidate / SlimSAM / Live Vision development tip (`5ce3865`), preserving
+  19 original commits; a later documentation-only checkpoint (`3a81dca`)
+  records the consolidation. The 15 redundant local feature refs were safely
+  retired after ancestry checks, leaving `master` plus the three distinct
+  Gemma worker/vision/audio branch pointers. The branch ledger is
+  `docs/verification/2026-11-07-mainline-reconciliation.md`.
+- Live Vision reuses its existing camera/still-image workbench. Nine opt-in
+  MediaPipe frame tasks (including the Selfie foreground confidence model) and
+  Depth Anything V2 Small form the ten-option selector. Browser-qualified
+  Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
+  performance; no real-time claim is implied.
+- Gemma's separate five-commit development line has passed focused text-gen
+  typechecks and unit tests, **not** real Gemma vision/audio model inference.
+  It is not part of `master`; its worktree stays isolated.
+- GitHub synchronization status must be read from live refs; the reconciliation
+  receipt records the local-only state **at the time of that audit**, not a
+  permanent claim that published `origin/master` is behind.
+
 ## Invariants
 
 - `pnpm verify` is the authoritative pre-merge gate. Boundary and qualification
@@ -52,9 +73,14 @@ Dependency flow: `inference-core → runtime-litert → model packages → playg
 - `packages/runtime-litert` — managed LiteRT runtime, backend selection, caching,
   preflight, telemetry.
 - Model packages — `text-gen`, `retrieval`, `encoder`, `image-embedding`,
-  `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`, `image-segmentation`,
-  the opt-in `vision-mediapipe` BlazeFace/face/gesture/pose/object detection/image classification/holistic/semantic/MagicTouch interactive segmentation,
-  `text-mediapipe` local language detection (MediaPipe Tasks Text 1.2.2), `audio-mediapipe` sound/ASR/TTS,
+  `kokoro`, `qwen3-tts`, `video-classification`, `depth-estimation`
+  (including pinned Depth Anything V2 q8/WASM and unqualified FP16/WebGPU),
+  `image-segmentation` (including optional SlimSAM-77 q8 point selection),
+  the opt-in `vision-mediapipe` nine MediaPipe frame tasks (including Selfie
+  foreground confidence, BlazeFace/face/gesture/pose/object/classifier/holistic/
+  semantic) plus separate MagicTouch still-image selection,
+  `text-mediapipe` local language detection (MediaPipe Tasks Text 1.2.2),
+  `audio-mediapipe` sound/ASR/TTS,
   and `retrieval-mediapipe` universal embedding/index substrates,
   and the custom-WebGPU `pix2pix-webgpu` image-translation candidate.
 - `packages/browser-cache` — browser-side model/tensor cache.
@@ -83,6 +109,9 @@ Where authority lives (do not duplicate these):
 | `pnpm test:compatibility` | Pack and consume the supported external surface |
 | `pnpm test:conversion-assets` | Validate pinned conversion recipes and candidate-evidence boundaries |
 | `pnpm test:qualification` | Runtime qualification suite (separate vitest config, Node env) |
+| `pnpm test:vision:browser` | Real-browser regression for eight preexisting MediaPipe frame tasks and camera lifecycle |
+| `pnpm test:controlnet-models:browser` | Real Chromium Selfie and Depth Anything V2 Q8 inference through Live Vision |
+| `pnpm test:slimsam:browser <image> <x> <y>` | Opt-in real SlimSAM point-mask browser probe |
 | `pnpm --filter <pkg> test` / `typecheck` | Single-package work |
 | `pnpm dev` | Playground dev server |
 
@@ -117,22 +146,18 @@ Browser observations are a separate, recorded evidence class. They live in
 `pnpm qualify -- --case <id>`. A new browser case is only worth trusting once it
 has been shown to fail for the right reason.
 
-## Open structural uncertainty
+## Resolved boundaries and open maintenance risk
 
-- The supported packed surface in `docs/package-revision-policy.md` enumerates
-  packages, not subpath entrypoints. `packages/retrieval` now also publishes a
-  `./scoring` subpath, and it is unclear whether a subpath export counts as
-  supported surface that the compatibility harness must cover, or whether
-  subpaths are deliberately out of scope for the supported-surface list. Nothing
-  in the policy document answers this yet. See `ACTIVE_WORK.md`.
-- Duplication risk between `AGENTS.md` and `docs/package-revision-policy.md`:
-  both carry conventions, workflow rules, and the nested-agent-file list. They
-  currently agree, but they are two places to update. Writing the new retrieval
-  `./scoring` rule into the policy document made that cost concrete. Not
-  resolved here because choosing a single authority is a project decision, not
-  an initialization default.
-
-Resolved during this branch: whether subpath exports count as supported surface.
-The policy document now states that subpaths are supported on the same terms as
-`.` — that is, only when `pnpm test:compatibility` resolves them through the
-packed tarball — and lists `@lil-local/retrieval/scoring`.
+- **Resolved — package subpaths:** `docs/package-revision-policy.md` explicitly
+  treats exported subpaths as supported on the same terms as `.` **only when**
+  `pnpm test:compatibility` resolves them through packed tarballs. The supported
+  `@lil-local/retrieval/scoring` subpath is included. Do not reopen this as an
+  unresolved package policy question.
+- **Still open — duplicated guidance:** `AGENTS.md` and
+  `docs/package-revision-policy.md` both contain workflow conventions and
+  nested-agent routing. They currently agree, but have a synchronization
+  maintenance cost. Choosing one authority is a separate decision; do not
+  silently rewrite or remove either.
+- **Still open — experimental Gemma branch:** real vision/audio inference and
+  integration against the published mainline must be qualified before it can
+  be called production-ready or merged. See the branch ledger above.

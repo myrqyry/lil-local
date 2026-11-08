@@ -22,6 +22,28 @@ Lil Local is built around a deliberately boring workflow:
 The workspace covers text, retrieval, speech, audio, vision, OCR, image
 embeddings, video classification, and related local inference workloads.
 
+## What is on `master`
+
+The current mainline includes the previously scattered MediaPipe, Audio8
+candidate, SlimSAM-77 and Live Vision model work. Those features were
+consolidated by **fast-forward**, preserving their original Git commits and
+verification records. This is source integration, **not** a claim that all
+models have passed real-device inference.
+
+| Workspace / capability | Current evidence |
+| --- | --- |
+| **Live Vision** | Existing opt-in webcam / still-image UI with nine MediaPipe frame processors (including the Selfie Segmenter) and Depth Anything V2 Small as a tenth option. Real Chromium output verified for the two new models. |
+| **Depth Anything V2 Small** | Pinned ONNX, Q8/WASM: real browser depth output. One observed CPU frame took **2,636 ms**; FP16/WebGPU is selectable but **not yet qualified**. |
+| **Interactive masks** | MediaPipe MagicTouch V2 browser-qualified for still-image strokes; separate optional quantized SlimSAM-77 library path with real browser mask output. Neither is a verified real-time segmentation tracker. |
+| **Audio / text / retrieval** | Reusable MediaPipe, LiteRT, and ONNX packages with per-model qualification records; Audio8 remains a **candidate manifest**, not a ready TTS engine. |
+
+The three nested **Gemma 4 worker / vision / audio** development branches are
+preserved separately from `master`. Their focused TypeScript and unit checks
+passed, but actual Gemma vision/audio model inference is **not qualified**.
+See the [mainline and branch reconciliation](docs/verification/2026-11-07-mainline-reconciliation.md)
+for the history, evidence, and outstanding work; [docs navigation](docs/README.md)
+collects the current reference material.
+
 ### MediaPipe Universal Embedder + Semantic Retriever
 
 The opt-in `@lil-local/retrieval-mediapipe` package turns the
@@ -67,30 +89,38 @@ See [package usage](packages/text-mediapipe/README.md) and
 [actual model/browser qualification](
 docs/verification/2026-11-04-mediapipe-language-detection.md).
 
-### MediaPipe Vision as a reusable substrate
+### Live Vision — reusable browser conditioning models
 
-The opt-in `@lil-local/vision-mediapipe` package provides verified, locally
-executed face landmarks/blendshapes, hand gesture recognition, and full-body
-pose/world-landmark detection, **EfficientDet-Lite0 object detection**
-with scored labels and pixel-space bounding boxes, and **EfficientNet-Lite0
-whole-image classification** with scored ImageNet categories. The same
-package now includes **Holistic Landmarker**, one shared face/body/hands
-model session with world landmarks and native left/right hands, plus
-**DeepLab V3 semantic segmentation** with true per-pixel class IDs, not
-a prompt-conditioned SAM mask. It also includes **BlazeFace Short Range**
-for inexpensive face bounding boxes and six keypoints without full face
-mesh inference; its optional GPU delegate uses MediaPipe WebGL, not WebGPU. The playground has a **MediaPipe Vision** test
-entry with opt-in still-image analysis and webcam tracking; external applications
-consume the same typed package rather than rebuilding MediaPipe lifecycle
-code. No model downloads or webcam access happen until explicit activation.
-See [package usage](packages/vision-mediapipe/README.md) and
-[the original browser verification](docs/verification/2026-11-04-mediapipe-vision-substrate.md),
-[pose qualification](docs/verification/2026-11-04-mediapipe-pose-substrate.md), and
-[object detection qualification](docs/verification/2026-11-04-mediapipe-object-detection.md),
-[image classification qualification](docs/verification/2026-11-04-mediapipe-image-classification.md),
-[holistic qualification](docs/verification/2026-11-04-mediapipe-holistic-landmarker.md),
-[semantic class-mask qualification](docs/verification/2026-11-04-mediapipe-semantic-segmentation.md),
-and [lightweight face detection qualification](docs/verification/2026-11-04-mediapipe-blazeface-detector.md).
+The **Live Vision** playground reuses Lil Local's existing opt-in webcam,
+still-image input, model selection, bounded frame scheduling, and cleanup.
+It was not replaced by a copied ControlNet Live app.
+
+`@lil-local/vision-mediapipe` supplies **nine MediaPipe frame processors**:
+face landmarks/blendshapes, hand gestures, body pose/world landmarks,
+EfficientDet-Lite0 objects, EfficientNet-Lite0 classification, holistic
+face/body/hands, DeepLab V3 semantic *class IDs*, lightweight BlazeFace
+face boxes/keypoints, and the **249,537-byte, SHA-256-verified Selfie Segmenter**.
+Selfie Segmenter returns caller-owned float foreground confidence, **not**
+DeepLab category IDs or instance masks. MediaPipe's optional GPU delegate is
+**WebGL**, not WebGPU.
+
+The **tenth Live Vision option** uses `@lil-local/depth-estimation` and pinned
+**Depth Anything V2 Small** ONNX. It returns a reusable normalized `DepthFrame`,
+not measured distance; the grayscale canvas is only a preview. **Q8/WASM**
+produced real 640×640 depth output in Chromium, but the recorded CPU frame
+took **2,636 ms**. Explicit **FP16/WebGPU** selection is available but
+remains unqualified. Matching ONNX Runtime JavaScript/WASM is copied from the
+installed dependency and self-hosted by the playground build. Model weights
+still require an opt-in download, with no hidden cloud inference fallback.
+
+The existing camera sampler has an **8.3 FPS ceiling**, not a guaranteed
+processing rate. Neither model is claimed to be real-time on Android.
+For the public APIs and reproducible tests see
+[Vision package usage](packages/vision-mediapipe/README.md),
+[depth implementation](packages/depth-estimation/src/depthAnythingV2.ts),
+[ControlNet model browser evidence](docs/verification/2026-11-07-controlnet-models.md),
+[original Vision qualification](docs/verification/2026-11-04-mediapipe-vision-substrate.md),
+and the [Vision and depth reference](docs/README.md).
 
 ### MagicTouch V2 — stateful interactive selection
 
@@ -109,6 +139,18 @@ hidden model downloads or GPU performance claims.
 See [usage](packages/vision-mediapipe/README.md) and
 [qualified model/real browser receipt](
 docs/verification/2026-11-04-mediapipe-interactive-segmentation.md).
+
+### Small quantized segmentation candidate: SlimSAM-77
+
+`@lil-local/image-segmentation` also exports `selectSlimSamPoint` using
+pinned `Xenova/slimsam-77-uniform` Q8 ONNX weights (about **13.15 MiB**
+for encoder and decoder combined). Real Chromium returned masks through
+the shared package on a game-intro image. That does **not** establish
+accurate native SNES sprite extraction, low-latency video segmentation,
+or a finished Octobit integration. It remains an opt-in library capability,
+not a new Live Vision selector entry.
+
+See the [actual SlimSAM browser qualification](docs/verification/2026-11-07-slimsam77-quantized-browser.md).
 
 ## What it provides
 
@@ -212,6 +254,9 @@ flowchart TD
     retrieval["@lil-local/retrieval\nColBERT · reranking"]
     kokoro["@lil-local/kokoro\nverified browser TTS"]
     qwen["@lil-local/qwen3-tts\nphased LiteRT TTS"]
+    vision["@lil-local/vision-mediapipe\nMediaPipe frame processors"]
+    depth["@lil-local/depth-estimation\nONNX depth + DepthFrame"]
+    masks["@lil-local/image-segmentation\nSlimSAM / SAM / foreground masks"]
     playground["Lil Local\napps/playground"]
     consumers["external consumers\nPodQast · Live Streamer · future apps"]
 
@@ -222,8 +267,14 @@ flowchart TD
     core --> retrieval
     core --> kokoro
     core --> qwen
+    core --> vision
+    core --> depth
+    core --> masks
     runtime --> qwen
 
+    vision --> playground
+    depth --> playground
+    masks --> playground
     runtime --> playground
     cache --> playground
     text --> playground
@@ -261,14 +312,14 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/encoder` | `@lil-local/encoder` | Text embeddings and token-classification pipelines |
 | `packages/image-embedding` | `@lil-local/image-embedding` | Reusable image-embedding package |
 | `packages/video-classification` | `@lil-local/video-classification` | Browser video-classification support and runtime checks |
-| `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame` contract and reusable monocular-depth pipeline |
-| `packages/image-segmentation` | `@lil-local/image-segmentation` | On-demand face parsing, SAM 2.1 point-prompted masks, and an opt-in U²-Net foreground-matte candidate |
+| `packages/depth-estimation` | `@lil-local/depth-estimation` | Canonical `DepthFrame`; existing depth pipelines plus pinned Depth Anything V2 Q8/WASM and experimental FP16/WebGPU |
+| `packages/image-segmentation` | `@lil-local/image-segmentation` | Face parsing, SAM 2.1, opt-in quantized SlimSAM-77 point selection and U²-Net foreground-matte candidate |
 | `packages/decision-onnx` | `@lil-local/decision-onnx` | Opt-in D1 Omni ONNX WebGPU text-decision slice |
 | `packages/pix2pix-webgpu` | `@lil-local/pix2pix-webgpu` | Opt-in Rust/Wasm custom WebGPU Pix2Pix U-Net 256 image translation |
 | `packages/embedding-litertlm` | `@lil-local/embedding-litertlm` | Opt-in LiteRT-LM EmbeddingGemma 2 WebGPU text embeddings |
 | `packages/react-litert` | `@lil-local/react-litert` | React bindings for the managed LiteRT runtime |
 | `packages/moderation` | `@lil-local/moderation` | Opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX, WebGPU/WASM) |
-| `packages/vision-mediapipe` | `@lil-local/vision-mediapipe` | Optional MediaPipe Vision browser substrate (face, gesture, pose, object, classifier, holistic, semantic, interactive segmentation) |
+| `packages/vision-mediapipe` | `@lil-local/vision-mediapipe` | Nine opt-in frame processors including Selfie person confidence mask, plus separate MagicTouch interactive segmentation |
 | `packages/audio-mediapipe` | `@lil-local/audio-mediapipe` | Optional MediaPipe Audio substrate (sound classification, ASR, TTS) |
 | `packages/retrieval-mediapipe` | `@lil-local/retrieval-mediapipe` | Optional MediaPipe shared universal embeddings and semantic retrieval |
 | `packages/audio8-tts` | `@lil-local/audio8-tts` | Pinned Audio8 Realistic Air asset/provenance profiles; not inference-ready |
@@ -342,6 +393,11 @@ qualification is a separate evidence-producing step; see [Verification philosoph
 | `pnpm preview` | Preview the playground production build |
 | `pnpm test` | Run tests in all workspace projects |
 | `pnpm test:boundaries` | Verify package dependency and architecture boundaries |
+| `pnpm test:vision:browser` | Real Chromium regression for the eight existing MediaPipe Vision tasks and camera cleanup |
+| `pnpm test:controlnet-models:browser` | Production-build Chromium smoke of Selfie Segmenter and pinned Depth Anything V2 Q8 through Live Vision |
+| `pnpm test:interactive:browser` | Real-browser MediaPipe MagicTouch interactive segmentation qualification |
+| `pnpm test:slimsam:browser <image> <x> <y>` | Opt-in real-browser SlimSAM point-mask probe on caller-supplied image |
+| `pnpm test:audio:browser` | MediaPipe YAMNet browser inference smoke |
 | `pnpm test:compatibility` | Pack and consume the supported external package surface |
 | `pnpm test:conversion-assets` | Validate pinned conversion recipes and candidate-evidence boundaries |
 | `pnpm test:qualification` | Run deterministic runtime-qualification contract tests |
@@ -471,7 +527,9 @@ workflow) for browser-observed qualification cases, and only promote an adapter'
 verification level when the corresponding evidence exists.
 
 Real-model and audio findings are kept under `docs/verification/`. No capability
-should be promoted to “working” from build output alone.
+should be promoted to “working” from build output alone. The browser scripts
+above are **separate** from `pnpm verify`: a green deterministic gate alone
+is not a GPU placement, live-camera throughput, or model-quality claim.
 
 ## Package boundaries
 

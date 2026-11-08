@@ -9,8 +9,10 @@ Lil Local is a local-first **web inference qualification lab**, not a promise th
 | LiteRT.js | Existing managed model packages, WebGPU/WebNN/WASM selection, caching, preflight, scheduler, telemetry | Existing dedicated runtime remains unchanged, not migrated |
 | ONNX Runtime Web | Pinned D1 Omni 600M Q8 text-only decision path, explicitly WebGPU-requested | **Yes**, via `d1OnnxSubstrate` in the playground |
 | ONNX Runtime Web / Apple SHARP | Opt-in raw-predictor single-image → 3D Gaussian PLY. Model weights not bundled; hardware execution unqualified. | **Yes**, via public `@lil-local/sharp-onnx` / `createSharpSubstrate` |
+| Transformers.js / ONNX Depth Anything V2 Small | Revision-pinned Q8/WASM depth with actual Chromium inference and a normalized `DepthFrame`; FP16/WebGPU selection exists but is not yet runtime-qualified. | **Yes**, via public `@lil-local/depth-estimation` / `createDepthAnythingV2Substrate` |
+| MediaPipe Tasks Vision | Nine opt-in frame processors including SHA-verified Selfie foreground mask; independent still-image MagicTouch session. | **Yes**, via public `@lil-local/vision-mediapipe` |
 | LiteRT-LM Web | Opt-in text-only EmbeddingGemma 2 via `embedding-litertlm` (browser model execution not yet qualified) | **Yes**, as an external reusable package |
-| Transformers.js and other pipeline-owned engines | Existing task-specific packages | Not migrated |
+| Other Transformers.js and pipeline-owned engines | Existing task-specific packages without a shared browser substrate wrapper | Not generally migrated |
 | GGUF/WebGPU (`paulrobello/webllm`) | Reviewed candidate, not downloaded or qualified | Not implemented |
 | Other browser engines and custom WGSL | Future candidates | Not implemented |
 
@@ -42,22 +44,35 @@ The runner does not guarantee interruption of a loader that ignores `AbortSignal
 
 ## LiteRT-LM JS / WASM compatibility
 
-LiteRT-LM JavaScript `@litert-lm/core@0.18.1` ships with an upstream
-`LiteRtLm.DEFAULT_WASM_PATH` still pointing at `@0.12.1/wasm`.
-The text-generation pipeline, its worker, and the EmbeddingGemma 2 substrate
-now explicitly call `getOrLoadGlobalLiteRtLm()` with matching `0.18.1`
-assets **before** native engine construction. This guards against silent
-version drift, including an already loaded incompatible module. The caller
-may select an independently served `wasmBase` for offline deployment;
-the omitted default uses version-pinned jsDelivr assets. Custom hosting
-must provide the complete WASM/JS variant set from the same npm version.
-SDK upgrade and WASM URL changes must be made together. Dedicated
-cross-package tests enforce this.
+The **current** `@lil-local/text-gen` and EmbeddingGemma 2 paths pin
+`@litert-lm/core@0.19.0`. The text pipeline, its worker, and the
+embedding substrate explicitly call `getOrLoadGlobalLiteRtLm()` with
+matching **0.19.0** WASM assets before constructing a native engine.
+Consumers may supply their own `wasmBase` for an offline/CSP-controlled
+origin; the default is the version-pinned jsDelivr path. Custom hosting
+must include the complete same-version WASM/JS variant set. A source-level
+pin and successful typecheck are **not** proof of model generation on a
+specific browser/device.
 
-A fresh headless Chromium smoke loaded the **real 0.18.1 WASM module**
-using the explicit CDN path with zero page errors; no model weights were
-downloaded, and the outcome is **not** text or embedding inference proof.
-See `docs/verification/2026-10-18-litertlm-wasm-alignment.md`.
+Historical context: the earlier `0.18.1` integration had to override an
+upstream default pointing at `@0.12.1/wasm`. A Chromium smoke subsequently
+loaded the **real 0.18.1 WASM module** but no model weights or generated text;
+that remains an asset-alignment receipt, not model inference. See
+`docs/verification/2026-10-18-litertlm-wasm-alignment.md`. The current
+runtime version is `0.19.0`, not `0.18.1`.
+
+## Recent shared model wrappers
+
+The [Live Vision model receipt](verification/2026-11-07-controlnet-models.md)
+qualifies a *real inference path* for the SHA-pinned Selfie Segmenter and
+Depth Anything V2 Q8/WASM in Chromium, using the existing playground's
+camera/preview lifecycle. Depth Anything V2's ONNX Runtime `.mjs` and
+`.wasm` are copied from the installed dependency and self-hosted from
+`/ort/`; pinned model weights are still fetched opt-in. A recorded **2,636 ms**
+CPU depth frame and unqualified FP16/WebGPU path do not support a real-time
+claim. The package exposes normalized relative depth; the browser UI creates
+its own grayscale conditioning preview. See
+[depth package usage](../packages/depth-estimation/README.md).
 
 ## Adding a new runtime
 

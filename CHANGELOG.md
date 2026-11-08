@@ -91,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Correct the `pipeline-load-cancellation` probe to call production `resolve()` with progress-triggered abort; its prior browser observation covered only the unused `stream()` entrypoint. Add real HTTP positive/negative checks and startup/cleanup regressions. Generate the fixture and open its server lazily, handle missing/read-failed assets, and check the actual Git ignore rule. Browser evidence for the corrected probe remains pending; see `docs/verification/2026-09-28-model-load-cancellation.md`
 
 ### Docs
+- Restore a coherent **local `master`** by fast-forwarding the 19 verified development-line commits without rewriting history. Retire 15 ancestor-only local feature branch refs, preserve three nested Gemma branches and historical remote refs, and record the exact ancestry, runtime evidence, and open qualification boundaries in `docs/verification/2026-11-07-mainline-reconciliation.md`.
+- Refresh README capabilities, test commands, package inventory and navigation for the existing Live Vision workbench, Selfie Segmenter, Depth Anything V2, SlimSAM-77 and unqualified Gemma experiments. Add a topical docs index and resolve outdated Meristem project-index claims.
 - Canonical Git dependency examples now use the renamed `myrqyry/lil-local` repository while preserving the stable `@lil-local/*` package namespace.
 - `docs`: add root `AGENTS.md` and nested package guidance
 
