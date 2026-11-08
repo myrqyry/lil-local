@@ -268,6 +268,13 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/embedding-litertlm` | `@lil-local/embedding-litertlm` | Opt-in LiteRT-LM EmbeddingGemma 2 WebGPU text embeddings |
 | `packages/react-litert` | `@lil-local/react-litert` | React bindings for the managed LiteRT runtime |
 | `packages/moderation` | `@lil-local/moderation` | Opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX, WebGPU/WASM) |
+| `packages/vision-mediapipe` | `@lil-local/vision-mediapipe` | Optional MediaPipe Vision browser substrate (face, gesture, pose, object, classifier, holistic, semantic, interactive segmentation) |
+| `packages/audio-mediapipe` | `@lil-local/audio-mediapipe` | Optional MediaPipe Audio substrate (sound classification, ASR, TTS) |
+| `packages/retrieval-mediapipe` | `@lil-local/retrieval-mediapipe` | Optional MediaPipe shared universal embeddings and semantic retrieval |
+| `packages/audio8-tts` | `@lil-local/audio8-tts` | Pinned Audio8 Realistic Air asset/provenance profiles; not inference-ready |
+| `packages/phonon` | `@lil-local/phonon` | Browser-first ONNX Phonon TTS adapter synthesizing 24 kHz PCM |
+| `packages/privacy-filter` | `@lil-local/privacy-filter` | Opt-in browser-local PII detector (OpenAI Privacy Filter, ONNX) |
+| `packages/sharp-onnx` | `@lil-local/sharp-onnx` | Experimental browser-only ONNX/WebGPU SHARP 3D Gaussian splat adapter |
 | `examples/minimal-kokoro` | `@lil-local/example-kokoro` | Minimal standalone Kokoro browser example |
 | `examples/minimal-qwen3-tts` | `@lil-local/example-qwen3-tts` | Minimal Qwen3-TTS example and compatibility harness |
 
