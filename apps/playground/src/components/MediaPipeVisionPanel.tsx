@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { VisionExperimentWorkbench } from './VisionExperimentWorkbench'
+import {appendExperiment, createVisionExperiment, type VisionExperiment} from './visionExperiments'
 import { BrowserSubstrateRunner, type BrowserSubstrate, type DepthFrame } from '@lil-local/inference-core'
 import {createDepthAnythingV2Substrate} from '@lil-local/depth-estimation'
 import {
@@ -29,6 +31,7 @@ export function MediaPipeVisionPanel() {
   const streamRef = useRef<MediaStream | null>(null)
   const frameRef = useRef<number | null>(null)
   const serialRef = useRef(0)
+  const experimentIdRef = useRef(0)
   const mountedRef = useRef(true)
   const [kind, setKind] = useState<VisionKind|'depthV2'>('face')
   const [depthBackend,setDepthBackend] = useState<'wasm'|'webgpu'>('wasm')
@@ -40,6 +43,8 @@ export function MediaPipeVisionPanel() {
   const [status, setStatus] = useState('Camera off')
   const [error, setError] = useState('')
   const [result, setResult] = useState<VisionOutput | null>(null)
+  const [experiments, setExperiments] = useState<VisionExperiment[]>([])
+  const [experimentWarning, setExperimentWarning] = useState('')
 
   const stop = (update = true) => {
     serialRef.current++
@@ -153,6 +158,7 @@ export function MediaPipeVisionPanel() {
     const isCurrent = () => mountedRef.current && serial === serialRef.current
     setBusy(true)
     setError('')
+    setExperimentWarning('')
     setStatus('Loading model for local image analysis…')
     const abort = new AbortController()
     abortRef.current = abort
@@ -161,6 +167,7 @@ export function MediaPipeVisionPanel() {
     let bitmap: ImageBitmap | null = null
     try {
       if (!imageFile.type.startsWith('image/')) throw new Error('Choose an image file')
+      const loadStarted = performance.now()
       await runner.load(stage => {
         if (isCurrent()) setStatus({
           model: 'Downloading pinned model…',
@@ -168,15 +175,47 @@ export function MediaPipeVisionPanel() {
           wasm: 'Initializing local MediaPipe WASM…',
         }[stage])
       }, abort.signal)
+      const loadMs = performance.now() - loadStarted
       if (!isCurrent()) return
       setStatus('Decoding and analyzing image locally…')
       bitmap = await createImageBitmap(imageFile)
       if (!isCurrent()) return
+      const inferenceStarted = performance.now()
       const output = await runner.run({ image: bitmap })
+      const inferenceMs = performance.now() - inferenceStarted
       if (!isCurrent()) return
       setImageDimensions({width: bitmap.width, height: bitmap.height})
       setResult(output)
       setStatus('Image analyzed locally')
+      // The record is separate from model success: inability to capture a
+      // thumbnail never turns completed inference into a failed inference.
+      try {
+        const maxSide = 256
+        const ratio = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+        const width = Math.max(1, Math.round(bitmap.width * ratio))
+        const height = Math.max(1, Math.round(bitmap.height * ratio))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) throw new Error('2D preview context unavailable')
+        ctx.drawImage(bitmap, 0, 0, width, height)
+        const image = {
+          name: imageFile.name, width: bitmap.width, height: bitmap.height,
+          preview: canvas.toDataURL('image/png'),
+        }
+        const entry = createVisionExperiment({
+          id: ++experimentIdRef.current,
+          task: kind,
+          requestedBackend: kind === 'depthV2' ? depthBackend
+            : kind === 'blazeFace' ? 'MediaPipe WebGL' : 'MediaPipe CPU/WASM',
+          image, capturedAt: Date.now(), loadMs, inferenceMs, output,
+        })
+        if (isCurrent()) setExperiments(previous => appendExperiment(previous, entry))
+      } catch (captureError) {
+        if (isCurrent()) setExperimentWarning('Inference succeeded, but this run could not be recorded: '
+          + (captureError instanceof Error ? captureError.message : String(captureError)))
+      }
     } catch (issue) {
       if (isCurrent() && !(issue instanceof DOMException && issue.name === 'AbortError')) {
         setError(issue instanceof Error ? issue.message : String(issue))
@@ -501,6 +540,7 @@ export function MediaPipeVisionPanel() {
       </div>
       <p role="status" className="text-sm text-on-surface-variant">{status}</p>
       {error && <p role="alert" className="text-sm text-error">{error}</p>}
+      {experimentWarning && <p role="note" className="text-sm text-on-surface-variant">{experimentWarning}</p>}
       {(result?.kind==='person-mask' || result?.kind==='depth') && <div className="space-y-2">
         <p className="text-sm font-semibold">{result.kind==='person-mask'
           ? 'Foreground confidence mask · brighter means more likely person'
@@ -520,6 +560,7 @@ export function MediaPipeVisionPanel() {
           </div>
         ))}
       </div>
+      <VisionExperimentWorkbench entries={experiments} onClear={() => setExperiments([])}/>
       <p className="text-xs text-on-surface-variant">
         Frames are processed in this browser, not uploaded by this integration.
         Google MediaPipe may send usage/performance metrics; do not treat this as a

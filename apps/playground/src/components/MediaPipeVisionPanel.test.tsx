@@ -10,5 +10,7 @@ describe('existing live vision workbench exposes conditioning models',()=>{
   expect(html).toContain('Depth Anything V2')
   expect(html).toContain('Start local vision')
   expect(html).toContain('Image for local vision analysis')
+  expect(html).toContain('Still-image experiment workbench')
+  expect(html).toContain('session memory only')
  })
 })

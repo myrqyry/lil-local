@@ -115,6 +115,15 @@ still require an opt-in download, with no hidden cloud inference fallback.
 
 The existing camera sampler has an **8.3 FPS ceiling**, not a guaranteed
 processing rate. Neither model is claimed to be real-time on Android.
+
+**Still-image experiment workbench:** Every successful opt-in still-image run
+can now leave an in-session record (last four runs) with actual load/inference
+timing, task/backend, a bounded source thumbnail and result summary. Selfie
+and depth outputs retain sampled float values for grayscale previews and an
+A/B image split; Selfie confidence cutoffs can be adjusted **without running
+the model again**. The source thumbnail is *not* the SDK's internal input
+tensor, sampled output floats are *not* the full raw tensor, and camera frames
+are never recorded. [Browser qualification and limits](docs/verification/2026-11-08-vision-experiment-workbench.md).
 For the public APIs and reproducible tests see
 [Vision package usage](packages/vision-mediapipe/README.md),
 [depth implementation](packages/depth-estimation/src/depthAnythingV2.ts),

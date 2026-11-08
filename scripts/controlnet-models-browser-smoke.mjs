@@ -92,6 +92,39 @@ try {
   throw new Error('Depth path fetched runtime script from CDN')
  console.log('DEPTH_Q8',depth,await page.locator('[aria-label="Vision detections"]').textContent())
 
+ // Actual still-image runs must reach the bounded session ledger and split view.
+ const ledger=page.locator('[aria-label="Experiment run ledger"]')
+ await page.waitForFunction(() => {
+   const content=document.querySelector('[aria-label="Experiment run ledger"]')?.textContent || ''
+   return content.includes('#1') && content.includes('#2')
+ },null,{timeout:20000})
+ const ledgerText=await ledger.textContent()
+ if(!ledgerText.includes('person')||!ledgerText.includes('depthV2'))
+   throw new Error('Missing real model evidence from experiment ledger: '+ledgerText)
+ await page.locator('[aria-label="A/B comparison split"]').waitFor({timeout:10000})
+ if(!await page.locator('canvas[aria-label="Output of run 1"]').count())
+   throw new Error('Stored model output not painted in comparison stage')
+ const brightness=async()=>await page.evaluate(()=>{
+   const canvas=document.querySelector('canvas[aria-label="Output of run 1"]')
+   if(!(canvas instanceof HTMLCanvasElement))throw new Error('Run A output canvas unavailable')
+   const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data
+   let white=0
+   for(let i=0;i<data.length;i+=4)if(data[i]>128)white++
+   return {white,total:canvas.width*canvas.height,width:canvas.width,height:canvas.height}
+ })
+ await page.locator('[aria-label="Foreground display mode"]').selectOption('cutoff')
+ const cutoff=page.locator('[aria-label="Foreground confidence threshold"]')
+ await cutoff.focus()
+ await cutoff.press('Home')
+ await page.waitForFunction(()=>document.body.textContent.includes('Confidence ≥ 0.00'),null,{timeout:10000})
+ const allWhite=await brightness()
+ await cutoff.press('End')
+ await page.waitForFunction(()=>document.body.textContent.includes('Confidence ≥ 1.00'),null,{timeout:10000})
+ const strict=await brightness()
+ if(allWhite.white!==allWhite.total || strict.white>=allWhite.white)
+   throw new Error('Stored float confidence threshold failed to alter mask without model inference: '+JSON.stringify({allWhite,strict}))
+ console.log('EXPERIMENT', {ledger:ledgerText.slice(0,180),allWhite,strict})
+
  // Same existing camera lifecycle: real MediaPipe person-mask VIDEO inference, mocked camera device.
  await page.locator('#vision-task').selectOption('person')
  await page.getByRole('button',{name:'Start local vision'}).click()
