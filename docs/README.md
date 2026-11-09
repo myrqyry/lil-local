@@ -12,7 +12,7 @@ model, source, input, browser and device that were tested.
 | Overview, setup, package inventory and everyday commands | [Project README](../README.md) |
 | Supported public package APIs and single-revision Git pinning | [Package revision policy](package-revision-policy.md) |
 | Substrate architecture and backend qualification boundaries | [Web substrates](web-substrates.md) |
-| **Real Gemma 4 E2B/E4B WebGPU text inference and image/audio negative results** | [Gemma 4 browser qualification](verification/2026-11-08-gemma4-browser-integration.md) |
+| **Real full Gemma E2B image/audio WebGPU browser inference; optimized web export limits** | [Gemma 4 browser qualification](verification/2026-11-08-gemma4-browser-integration.md) |
 | Historical consolidation, retained commits and unmerged branches | [Mainline reconciliation](verification/2026-11-07-mainline-reconciliation.md) |
 | Current work vs finished, archived or unqualified experiments | [Experiment dispositions](archive/2026-11-08-experiment-dispositions.md) |
 | Historical dated implementation notes (not an active task queue) | [Active work](../ACTIVE_WORK.md) |
@@ -22,7 +22,7 @@ model, source, input, browser and device that were tested.
 
 ## Gemma 4 browser integration
 
-The normal model list now includes **Gemma 4 · Browser Inference** for E2B/E4B text generation through the existing LiteRT-LM worker, with locally hosted exact-version WASM and optional official SHA-pinned WebGPU model files. Both models completed actual text inference in Chromium. The native image/audio configuration options were recovered into the worker API, but the web E2B checkpoint failed real image and WAV execution, so the browser UI deliberately remains text-only. [Read the exact model/backend evidence and reproduction commands](verification/2026-11-08-gemma4-browser-integration.md).
+The normal model list now includes **Gemma 4 · Browser Inference** for full E2B multimodal and optimized E2B/E4B text through the existing LiteRT-LM worker, with locally hosted exact-version WASM and optional official SHA-pinned WebGPU model files. Both models completed actual text inference in Chromium. The later full E2B model (2.59 GB) also passed native image recognition and WAV transcription through Lil Local's actual Chromium UI, configured with GPU vision and CPU audio. The older failure belonged to smaller optimized text-only checkpoint files, not the full model. The Gemma panel now offers full E2B image/WAV controls alongside the smaller text-only options. [Read the exact model/backend evidence and reproduction commands](verification/2026-11-08-gemma4-browser-integration.md).
 
 ## Live Vision and segmentation
 

@@ -23,7 +23,9 @@ ongoing assignments. No task listed here is running automatically.
   Reopen only with a new concrete use case/acceptance test.
 - **Published and CI-verified:** the workbench and archival documentation are on GitHub `master`. The `Verify` CI run for the status-sync commit `06b7acb` completed successfully on 2026-11-08. CI is not a new backend/model-runtime qualification.
 
-## Gemma: archived source recovered into master (later on 2026-11-08)
+## Gemma: archived worker recovered; complete E2B multimodal now verified in browser
+
+**Latest correction:** The full 2.59 GB E2B file already passed actual browser image and WAV recognition through PodQast -> Lil Local on November 7. The older text-only conclusion came from testing smaller optimized exports instead. The existing Lil Local playground now uses the full checkpoint for real text, PNG vision (Yellow), and CPU-encoder WAV speech (banana), with a clean production Chromium result. Optimized E2B/E4B files remain text-only. See the [current full-model verification](../verification/2026-11-08-gemma4-browser-integration.md). The historical archive records below describe past branch states, not unfinished native multimodal inference.
 
 The archive below describes the three original branch **tips at the time they
 were archived**, not a current claim that their usable code is absent from
@@ -63,10 +65,7 @@ were rechecked against local Git on 2026-11-08 before archiving.
 **Current reactivation boundary (not an open task):** Gemma 4 *browser
 text* has now been demonstrated using official E2B and E4B web models on
 mainline. Do not reopen or merge the old branch merely to regain this
-functionality. Browser image/audio remain unsupported by the tested model
-and SDK: any new compatible runtime or native Android consumer must establish
-a real image/audio output, native backend, cleanup, resource usage, and
-packed compatibility before such a modality is enabled. A different model
+functionality. Browser image/audio failed only on the smaller optimized model files, while the full E2B successfully provided both through the existing runtime. Future model revisions or Android consumers still need independent backend, resource, and packed-compatibility verification. A different model
 revision requires independent provenance and runtime evidence.
 
 To inspect without modifying `master`:

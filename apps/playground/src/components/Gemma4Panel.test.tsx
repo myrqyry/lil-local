@@ -3,8 +3,9 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import {Gemma4Panel} from './Gemma4Panel'
 
 describe('Gemma 4 browser experience', () => {
-  it('offers pinned E2B and E4B text inference without exposing broken native modalities', () => {
+  it('offers proven full E2B multimodal inference as well as smaller text-only web options', () => {
     const html = renderToStaticMarkup(<Gemma4Panel />)
+    expect(html).toContain('value="full"')
     expect(html).toContain('value="e2b"')
     expect(html).toContain('value="e4b"')
     expect(html).toContain('Gemma prompt')
@@ -13,10 +14,11 @@ describe('Gemma 4 browser experience', () => {
     expect(html).toContain('Chat stays in memory')
     expect(html).toContain('Gemma chat history')
     expect(html).toContain('Load Gemma locally')
-    expect(html).toContain('2.01 GB')
+    expect(html).toContain('2.59 GB')
+    expect(html).toContain('Full E2B')
     expect(html).toContain('text-only')
-    expect(html).not.toContain('Gemma image input')
-    expect(html).not.toContain('Gemma WAV audio input')
+    expect(html).toContain('Gemma image input')
+    expect(html).toContain('Gemma WAV audio input')
     expect(html).not.toContain('Gemma input mode')
   })
 })

@@ -31,7 +31,7 @@ embeddings, and video classification.
   Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
   performance; no real-time claim is implied.
 - **Mainline:** the completed, real-browser-tested Live Vision experiment workbench is on `master` at `30a94df`. Its first slice is finished, not an ongoing task.
-- **Recovered Gemma worker and qualified browser text:** the archived LiteRT-LM WASM/worker, vision capacity, and WAV Blob changes were applied directly to `master` with RED→GREEN worker tests. The browser card uses separate pinned E2B/E4B web-model manifests and local 0.19.0 WASM. **Both models generated correct text and recalled an earlier user code across native conversation turns in real Chromium** and their exact downloaded files passed SHA-256 verification; Optional E2B thinking produced a correct answer and a reasoning channel in real Chromium. The UI offers New chat, native session token counts, and hides unmeasured throughput when SDK speeds are zero; cancellation/errors prevent reuse of incomplete chat KV state. Image/WAV inputs failed real web SDK execution and remain hidden from the text-only browser UI. Evidence: `docs/verification/2026-11-08-gemma4-browser-integration.md`. Original archive tags remain provenance; no new topic branches or worktrees.
+- **Recovered Gemma worker and qualified browser text:** the archived LiteRT-LM WASM/worker, vision capacity, and WAV Blob changes were applied directly to `master` with RED→GREEN worker tests. The browser card uses separate pinned E2B/E4B web-model manifests and local 0.19.0 WASM. **Both models generated correct text and recalled an earlier user code across native conversation turns in real Chromium** and their exact downloaded files passed SHA-256 verification; Optional E2B thinking produced a correct answer and a reasoning channel in real Chromium. The UI offers New chat, native session token counts, and hides unmeasured throughput when SDK speeds are zero; cancellation/errors prevent reuse of incomplete chat KV state. Those negative image/WAV results concern the smaller optimized -web export only. Real browser PNG recognition and CPU-encoded WAV speech transcription had already passed through PodQast -> Lil Local using the complete 2.59 GB E2B file, and both now pass directly through the Lil Local playground. Full E2B image/audio controls are available; optimized web models remain text-only. Evidence: `docs/verification/2026-11-08-gemma4-browser-integration.md`. Original archive tags remain provenance; no new topic branches or worktrees.
 - GitHub synchronization status must be read from live refs; the reconciliation
   receipt records the local-only state **at the time of that audit**, not a
   permanent claim that published `origin/master` is behind.
@@ -151,11 +151,13 @@ has been shown to fail for the right reason.
   nested-agent routing. They currently agree, but have a synchronization
   maintenance cost. Choosing one authority is a separate decision; do not
   silently rewrite or remove either.
-- **Gemma 4 browser text proven, multimodal web executor unavailable:**
+- **Gemma 4 full E2B text/image/audio browser inference proven; optimized files text-only:**
   actual pinned E2B/E4B WebGPU text responses are qualified on one Linux
-  Chromium environment through the recovered mainline worker. Image and
-  WAV audio inputs failed against the web model/SDK, so do not expose them as
-  successful or scheduled features; native consumer validation remains separate.
+  Chromium environment through the recovered mainline worker. The full
+  E2B file independently passed image (Yellow PNG) and canonical WAV speech
+  recognition (banana) directly through the Lil Local browser UI, with
+  GPU vision and CPU audio. The negative tests applied only to optimized
+  web exports without encoder submodels. Android remains separately unverified.
   The historical three branch tips are archived as annotated Git tags, not
   active worktrees. See the dated browser qualification record.
 - **Unqualified, not active work:** FP16/WebGPU and Android depth performance,

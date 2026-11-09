@@ -151,9 +151,28 @@ export const lfm2_5ThinkingInt8Manifest = manifest(
   LFM25_THINKING_INT8,
 );
 
-export const gemma4E2bManifest = manifest(
-  'gemma-4-e2b-it', 'Gemma 4 E2B Instruct (LiteRT-LM)', '4.0.0', ['text-generation'], GEMMA4_E2B,
-);
+// Official complete 2.59 GB E2B artifact: real browser text + image + WAV
+// all passed through the shared worker on Chromium / LiteRT-LM 0.19.0.
+// This qualification is limited to one desktop runtime and canonical WAV.
+// The smaller -web and -gpu exports do not contain the required encoders.
+export const gemma4E2bManifest: ModelManifest = {
+  ...manifest(
+    'gemma-4-e2b-it', 'Gemma 4 E2B Instruct (Full Multimodal)', '4.0.0',
+    ['text-generation', 'image-text-to-text', 'speech-to-text'], GEMMA4_E2B,
+  ),
+  verification: {
+    assets: 'pass', compile: 'pass', inference: 'pass', output: 'pass',
+    qualification: 'limited', upstreamRevision: GEMMA4_E2B.revision,
+    environment: 'Linux Chromium WebGPU, vision GPU + audio CPU, LiteRT-LM 0.19.0',
+    environments: [{ browser: 'Chromium Linux headless', backend: 'webgpu',
+      runtime: '@litert-lm/core@0.19.0 (CPU audio encoder)' }],
+    expectedOutput: { behavior: [
+      'Browser native multi-turn chat returned previous user code',
+      'Full E2B recognized actual 64x64 yellow PNG as Yellow',
+      'Full E2B transcribed actual canonical 16 kHz mono WAV containing banana',
+    ] },
+  },
+};
 
 export const gemma4E4bManifest = manifest(
   'gemma-4-e4b-it', 'Gemma 4 E4B Instruct (LiteRT-LM)', '4.0.0', ['text-generation'], GEMMA4_E4B,

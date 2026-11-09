@@ -1,15 +1,20 @@
 import {useEffect, useRef, useState} from 'react'
 import {
   createClassicLiteRtLmWorkerClient,
+  gemma4E2bManifest,
   gemma4E2bWebManifest,
   gemma4E4bWebManifest,
   getPinnedGemma4WebSource,
+  getPinnedGemma4FullSource,
+  type LiteRtLmWorkerPrompt,
   type LiteRtLmWorkerClient,
 } from '@lil-local/text-gen/litertlm'
+import {canonicalWavBlob} from './gemma-audio'
 
 const MODELS = [
-  {id: 'e2b', label: 'Gemma 4 E2B · WebGPU', manifest: gemma4E2bWebManifest},
-  {id: 'e4b', label: 'Gemma 4 E4B · WebGPU', manifest: gemma4E4bWebManifest},
+  {id: 'full', label: 'Full E2B · Text, image and audio', manifest: gemma4E2bManifest, multimodal: true},
+  {id: 'e2b', label: 'Optimized E2B · Text only', manifest: gemma4E2bWebManifest, multimodal: false},
+  {id: 'e4b', label: 'Optimized E4B · Text only', manifest: gemma4E4bWebManifest, multimodal: false},
 ] as const
 
 type Stage = 'idle' | 'loading' | 'ready' | 'generating' | 'error'
@@ -17,13 +22,17 @@ type ChatTurn = {role: 'user' | 'assistant'; text: string}
 type ChatStats = {tokenCount: number; prefillTokensPerSecond: number; decodeTokensPerSecond: number}
 
 /**
- * Explicit browser-local Gemma 4 text inference through the real LiteRT-LM
- * worker. Native Gemma multimodal features are not advertised as web support:
- * on the pinned web E2B checkpoint, actual vision/audio inference failed.
+ * Browser-local Gemma 4 native inference through the shared LiteRT-LM
+ * worker. The complete E2B model supports real image and WAV audio input
+ * with GPU vision + CPU audio (proven in PodQast's Chromium browser run);
+ * optimized web exports remain text-only.
  */
 export function Gemma4Panel() {
-  const [modelId, setModelId] = useState<'e2b'|'e4b'>('e2b')
+  const [modelId, setModelId] = useState<'full'|'e2b'|'e4b'>('full')
   const [modelFile, setModelFile] = useState<File | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [attachmentEpoch, setAttachmentEpoch] = useState(0)
   const [prompt, setPrompt] = useState('What is one interesting fact about the night sky?')
   const [maxTokens, setMaxTokens] = useState(128)
   const [stage, setStage] = useState<Stage>('idle')
@@ -56,6 +65,9 @@ export function Gemma4Panel() {
     setTurns([])
     setActiveQuestion(null)
     setStats(null)
+    setImageFile(null)
+    setAudioFile(null)
+    setAttachmentEpoch(value => value + 1)
     setStage('idle')
   }
 
@@ -97,9 +109,16 @@ export function Gemma4Panel() {
       }
       const client = createClassicLiteRtLmWorkerClient()
       clientRef.current = client
-      await client.load(modelFile ?? getPinnedGemma4WebSource(model.manifest), {
+      await client.load(modelFile ?? (model.multimodal
+        ? getPinnedGemma4FullSource(model.manifest)
+        : getPinnedGemma4WebSource(model.manifest)), {
         engine: 'litert-lm',
         wasmBase: new URL('/vendor/litert-lm-0.19.0/', window.location.href).href,
+        ...(model.multimodal ? {
+          visionBackend: 'gpu' as const,
+          audioBackend: 'cpu' as const,
+          maxNumImages: 8,
+        } : {}),
       })
       if (generation !== generationRef.current) return
       setStage('ready')
@@ -119,10 +138,20 @@ export function Gemma4Panel() {
       setError('Enter a text prompt.')
       return
     }
+    if (!model.multimodal && (imageFile || audioFile)) {
+      setError('Choose the full E2B model for image/audio input.')
+      return
+    }
+    if (imageFile && (!['image/png','image/jpeg','image/webp'].includes(imageFile.type) || imageFile.size > 8_000_000)) {
+      setError('Image must be PNG, JPEG or WebP (up to 8 MB).')
+      return
+    }
     const controller = new AbortController()
     controllerRef.current = controller
     const generation = generationRef.current
     const question = prompt.trim()
+    const submittedImage = model.multimodal ? imageFile : null
+    const submittedAudio = model.multimodal ? audioFile : null
     const sessionId = 'gemma-chat-' + sessionCounterRef.current
     setStage('generating')
     setActiveQuestion(question)
@@ -131,8 +160,15 @@ export function Gemma4Panel() {
     setReasoning('')
     setStats(null)
     try {
+      const content: LiteRtLmWorkerPrompt = !submittedImage && !submittedAudio
+        ? question
+        : [
+          {type: 'text', text: question},
+          ...(submittedImage ? [{type: 'image' as const, data: submittedImage}] : []),
+          ...(submittedAudio ? [{type: 'audio' as const, data: await canonicalWavBlob(submittedAudio)}] : []),
+        ]
       const result = await client.generate(
-        question,
+        content,
         text => { if (generation === generationRef.current) setOutput(previous => previous + text) },
         controller.signal,
         {
@@ -154,6 +190,9 @@ export function Gemma4Panel() {
         setTurns(previous => [...previous, {role: 'user', text: question}, {role: 'assistant', text: result}])
         setActiveQuestion(null)
         setPrompt('')
+        setImageFile(null)
+        setAudioFile(null)
+        setAttachmentEpoch(value => value + 1)
         setStage('ready')
       }
     } catch (reason) {
@@ -177,16 +216,16 @@ export function Gemma4Panel() {
 
   return <section className="space-y-4" aria-label="Gemma 4 browser inference">
     <p className="text-sm text-on-surface-variant">
-      On-device Gemma 4 text-only inference through the LiteRT-LM 0.19.0
-      browser worker. No model initializes until you choose Load; prompts
-      remain on this device. Chat stays in memory while this model is loaded.
+      On-device Gemma 4 through the LiteRT-LM 0.19.0 browser worker.
+      Full E2B accepts text, images and canonical WAV audio; optimized E2B/E4B
+      variants are text-only. Nothing loads until you choose Load, and Chat stays in memory on this device.
     </p>
     <label className="block text-xs text-on-surface-variant">
       Model
       <select aria-label="Gemma model" value={modelId}
         onChange={event => {
           unload()
-          setModelId(event.target.value as 'e2b'|'e4b')
+          setModelId(event.target.value as 'full'|'e2b'|'e4b')
           setModelFile(null)
           setError('')
         }}
@@ -195,7 +234,7 @@ export function Gemma4Panel() {
       </select>
     </label>
     <label className="block text-xs text-on-surface-variant">
-      Optional local WebGPU model file (otherwise use the pinned official model)
+      Optional local LiteRT-LM model file (otherwise use the pinned official model)
       <input key={modelId} type="file" accept=".litertlm" aria-label="Gemma local model file"
         onChange={event => {
           unload()
@@ -250,6 +289,24 @@ export function Gemma4Panel() {
         <span className="font-semibold">You:</span> {activeQuestion}
       </div>}
     </div>
+    {model.multimodal && <div className="grid gap-3 sm:grid-cols-2">
+      <label className="block text-xs text-on-surface-variant">
+        Image (PNG, JPEG, WebP, up to 8 MB)
+        <input key={'image-'+attachmentEpoch} aria-label="Gemma image input"
+          disabled={stage === 'generating'} type="file" accept="image/png,image/jpeg,image/webp"
+          onChange={event => setImageFile(event.target.files?.[0] ?? null)}
+          className="mt-1 block w-full text-xs text-on-surface"/>
+        {imageFile && <span>Selected: {imageFile.name}</span>}
+      </label>
+      <label className="block text-xs text-on-surface-variant">
+        Audio (16 kHz mono, 16-bit PCM WAV, up to 8 MB)
+        <input key={'audio-'+attachmentEpoch} aria-label="Gemma WAV audio input"
+          disabled={stage === 'generating'} type="file" accept=".wav,audio/wav"
+          onChange={event => setAudioFile(event.target.files?.[0] ?? null)}
+          className="mt-1 block w-full text-xs text-on-surface"/>
+        {audioFile && <span>Selected: {audioFile.name}</span>}
+      </label>
+    </div>}
     <label className="block text-xs text-on-surface-variant">Prompt
       <textarea aria-label="Gemma prompt" rows={3} value={prompt}
         onChange={event => setPrompt(event.target.value)}
@@ -286,10 +343,11 @@ export function Gemma4Panel() {
       Native session: {stats.tokenCount.toLocaleString()} tokens · prefill {stats.prefillTokensPerSecond > 0 ? stats.prefillTokensPerSecond.toFixed(1) + ' tok/s' : 'unavailable'} · decode {stats.decodeTokensPerSecond > 0 ? stats.decodeTokensPerSecond.toFixed(1) + ' tok/s' : 'unavailable'}
     </p>}
     <p className="text-xs text-on-surface-variant">
-      Native Gemma 4 supports multimodal use, but the current web checkpoint
-      failed real image/audio inference. Those modes are deliberately not
-      exposed here: browser text is the verified capability. Unload releases
-      the worker; model files are not bundled into the application.
+      Full E2B has a verified browser vision path (GPU) and native WAV path
+      (CPU audio encoder). Smaller optimized web exports lack those encoders
+      and remain text-only. Audio must be a decoded canonical 16 kHz mono PCM
+      WAV; this screen does not yet convert MP3 or WebM. Unload releases the
+      worker. Model weights are not bundled into the application.
     </p>
   </section>
 }

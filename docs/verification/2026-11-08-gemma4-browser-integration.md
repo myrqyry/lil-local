@@ -1,16 +1,34 @@
 # Gemma 4 E2B/E4B browser integration — 2026-11-08
 
+## Correction: full E2B browser image and audio are verified
+
+The November 7 PodQast real-browser tests had **already established** that the complete Gemma 4 E2B checkpoint, `gemma-4-E2B-it.litertlm` (2,588,147,712 bytes), performs browser image inference with GPU vision and WAV speech recognition with the CPU audio encoder through Lil Local's shared LiteRT-LM 0.19 worker. The smaller `-web` and `-gpu` exports are text-only because they lack these encoder submodels. Treating their failures and older documentation as proof of a browser API limitation was incorrect.
+
+**Independent full-model acceptance in Lil Local's own screen:** using the complete checkpoint at revision `b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1` (SHA-256 `181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c`), production-built Chromium loaded the shared worker with `visionBackend: gpu`, `audioBackend: cpu`, `maxNumImages: 8`. Actual text answer: **Paris**; native second-turn memory: **turquoise railway mushroom**; real PNG image answer: **Yellow**; spoken 16 kHz mono 16-bit PCM WAV answer: **A secret word is banana.** New chat and unload passed. Full CLI exit status: **0**. No weights were bundled, and no cloud inference was invoked.
+
+The normal Gemma screen now offers **Full E2B (text, image, WAV audio)** and retains **optimized E2B/E4B (text only)**. Audio is currently limited to canonical WAV (up to 8 MB); MP3/WebM resampling and microphone recording are not part of this browser UI. Model file selection checks name/size; the real-model verification harness also checks full SHA-256. This is evidence for Chromium on Linux, not an Android or universal-device qualification.
+
+Reproduce with the locally cached complete model:
+
+```bash
+LIL_LOCAL_GEMMA_VARIANT=full \
+LIL_LOCAL_GEMMA_WEB_MODEL=/path/to/gemma-4-E2B-it.litertlm \
+  pnpm test:gemma4:browser
+```
+
+The older negative findings below refer **only to the smaller optimized web checkpoints** and must not be used to discredit the successful full E2B browser result.
+
 ## Outcome
 
 The five archived Gemma worker/vision/audio development commits have been recovered into Lil Local's existing master checkout, without creating another worktree or active branch. The existing @lil-local/text-gen LiteRT-LM 0.19.0 worker owns loading, streaming, cancellation, and cleanup. A dedicated **Gemma 4 · Browser Inference** card is available in the normal playground model list.
 
-**Both Gemma 4 E2B and E4B have passed real WebGPU browser text inference using the pinned official web-compatible files.** The general native Android model files are distinct and have not been promoted to browser support.
+**Both Gemma 4 E2B and E4B have passed real WebGPU browser text inference using the pinned official web-compatible files.** The complete full E2B LiteRT-LM file is **also browser-compatible**, as independently established by the real image/audio proof above; the optimized web exports remain distinct text-only artifacts.
 
 To use: run pnpm --filter playground dev, open the Gemma 4 card, select E2B/E4B, select a matching -web.litertlm file or explicitly request the pinned Hugging Face download, click Load, enter a text prompt, Generate, and Unload/stop.
 
 The model files are never bundled into the repo or automatically fetched. The real tests used an existing AI-Storage drive rather than the nearly full Linux system partition. The UI checks a local file's name and size, but does not cryptographically hash a selected 2–3 GB file; the reproducible browser smoke does hash the full file.
 
-## Actual model execution
+## Historical optimized -web model text execution
 
 | Evidence | E2B WebGPU | E4B WebGPU |
 | --- | --- | --- |
@@ -77,7 +95,7 @@ These remain SDK capabilities, not claimed user-facing clone/history-export
 features; the conversation is memory-only and does not persist on reload.
 The image/audio failures below remain unaffected.
 
-## Real negative image/audio results
+## Historical optimized -web export image/audio failures (not full E2B)
 
 Actual E2B WebGPU model probes (not mocked tests) also attempted:
 - **Image:** loaded with visionBackend=gpu and maxNumImages=1, then supplied a generated 192x192 red PNG. The native SDK failed: **Vision executor should not be null, please TryLoadingVisionExecutor() first.**
@@ -113,4 +131,4 @@ Source:
 - scripts/prepare-litertlm-wasm.mjs — reproducible local 0.19.0 runtime assets.
 - scripts/gemma4-browser-smoke.mjs — real E2B/E4B browser qualification.
 
-Image/audio are **explicit negative qualification findings**, not active phantom features or proven web inference. A future real browser SDK executor or native consumer must be tested with a real model response before either is enabled.
+Only the smaller optimized -web model file has negative image/audio findings. The **complete E2B model has positively qualified browser image/audio inference** as documented above. A future real browser SDK executor or native consumer must be tested with a real model response before either is enabled.

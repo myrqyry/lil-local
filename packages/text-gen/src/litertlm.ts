@@ -9,8 +9,8 @@ export type {
   LiteRtLmToolCall,
 } from './litertlm-pipeline'
 export type { TextMessage, TextGenerationConfig, TextGenerationInput } from './types'
-export { gemma4E2bWebManifest, gemma4E4bWebManifest } from './manifest'
-export { getPinnedGemma4WebSource } from './gemma4-web'
+export { gemma4E2bManifest, gemma4E2bWebManifest, gemma4E4bWebManifest } from './manifest'
+export { getPinnedGemma4WebSource, getPinnedGemma4FullSource } from './gemma4-web'
 
 // Narrow worker client entry for browser LiteRT-LM consumers. Excludes the
 // Transformers.js 4 pipeline in the broad package barrel.

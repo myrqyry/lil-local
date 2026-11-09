@@ -1,9 +1,9 @@
 import {describe, expect, it} from 'vitest'
-import {gemma4E2bWebManifest, gemma4E4bWebManifest} from './manifest'
-import {getPinnedGemma4WebSource} from './gemma4-web'
+import {gemma4E2bManifest, gemma4E2bWebManifest, gemma4E4bWebManifest} from './manifest'
+import {getPinnedGemma4WebSource, getPinnedGemma4FullSource} from './gemma4-web'
 
 describe('Official Gemma 4 browser artifacts', () => {
-  it('selects the explicitly pinned E2B WebGPU artifact, not the native mobile model', () => {
+  it('selects the pinned optimized text-only E2B artifact, not the full multimodal model', () => {
     const manifest = gemma4E2bWebManifest
     expect(manifest.assets[0]).toMatchObject({
       bytes: 2_008_432_640,
@@ -19,6 +19,25 @@ describe('Official Gemma 4 browser artifacts', () => {
       'hf://litert-community/gemma-4-E2B-it-litert-lm@b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1/gemma-4-E2B-it-web.litertlm'
     )
   })
+  it('selects the full E2B multimodal browser-compatible model established by PodQast real inference', () => {
+    expect(gemma4E2bManifest.assets[0]).toMatchObject({
+      bytes: 2_588_147_712,
+      sha256: '181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c',
+    })
+    expect(gemma4E2bManifest.capabilities).toEqual(expect.arrayContaining([
+      'text-generation', 'image-text-to-text', 'speech-to-text',
+    ]))
+    expect(gemma4E2bManifest.verification).toMatchObject({
+      inference: 'pass', output: 'pass', qualification: 'limited',
+      upstreamRevision: 'b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1',
+      environments: [expect.objectContaining({backend: 'webgpu', browser: expect.stringContaining('Chromium')})],
+    })
+    expect(getPinnedGemma4FullSource(gemma4E2bManifest)).toBe(
+      'hf://litert-community/gemma-4-E2B-it-litert-lm@b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1/gemma-4-E2B-it.litertlm'
+    )
+    expect(() => getPinnedGemma4FullSource(gemma4E2bWebManifest)).toThrow(/full|multimodal|model/)
+  })
+
   it('pins the WebGPU E4B artifact independently of its general native model', () => {
     expect(gemma4E4bWebManifest.assets[0]).toMatchObject({
       bytes: 2_969_059_328,

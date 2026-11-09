@@ -55,7 +55,7 @@ const gemmaEntry: ModelAdapter = {
   modelId: 'gemma-4-webgpu',
   metadata: {
     name: 'Gemma 4 · Browser Inference',
-    description: 'Opt-in local WebGPU E2B/E4B text generation, with explicitly configured image/WAV input; use a pinned web model or choose a matching local file.',
+    description: 'Local Gemma 4 through one LiteRT-LM worker: full E2B text/image/WAV audio (GPU vision, CPU audio), plus smaller optimized E2B/E4B text-only variants.',
     modelPath: '', tags: ['gemma', 'llm', 'webgpu', 'vision', 'audio', 'local', 'pipeline'],
   },
   inputSpecs: [], outputSpecs: [], isPipeline: true,

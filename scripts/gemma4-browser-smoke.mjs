@@ -3,11 +3,12 @@
  * Explicit local SHA-pinned model required; never downloads weights implicitly.
  * Set LIL_LOCAL_GEMMA_WEB_MODEL or LIL_LOCAL_GEMMA_PROBE_ONLY=1.
  */
-import {spawn} from 'node:child_process'
+import {spawn, spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
-import {createReadStream, existsSync, statSync} from 'node:fs'
+import {createReadStream, existsSync, statSync, mkdtempSync, readFileSync, rmSync} from 'node:fs'
 import {createServer} from 'node:net'
-import {resolve, basename} from 'node:path'
+import {resolve, basename, join} from 'node:path'
+import {tmpdir} from 'node:os'
 import {fileURLToPath} from 'node:url'
 import {setTimeout as delay} from 'node:timers/promises'
 import {chromium} from 'playwright'
@@ -17,6 +18,11 @@ const model = process.env.LIL_LOCAL_GEMMA_WEB_MODEL
 const probeOnly = process.env.LIL_LOCAL_GEMMA_PROBE_ONLY === '1'
 const variant = (process.env.LIL_LOCAL_GEMMA_VARIANT || 'e2b').toLowerCase()
 const checks = {
+  full: {
+    name: 'gemma-4-E2B-it.litertlm',
+    bytes: 2_588_147_712,
+    sha256: '181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c',
+  },
   e2b: {
     name: 'gemma-4-E2B-it-web.litertlm',
     bytes: 2_008_432_640,
@@ -28,7 +34,7 @@ const checks = {
     sha256: '3904d826d5dddd25ea173e85204caec09e68ba038116e9b992b69cbdc94f57a0',
   },
 }
-if (!(variant in checks)) throw new Error('LIL_LOCAL_GEMMA_VARIANT must be e2b or e4b')
+if (!(variant in checks)) throw new Error('LIL_LOCAL_GEMMA_VARIANT must be full, e2b or e4b')
 const expectedName = checks[variant].name
 const expectedBytes = checks[variant].bytes
 const expectedDigest = checks[variant].sha256
@@ -162,6 +168,76 @@ try {
       throw new Error('New chat left prior messages visible')
     }
     console.log('NEW_CHAT_CLEARED')
+    if(variant === 'full'){
+      // Exercise the same full checkpoint and engine settings that previously
+      // worked through PodQast, but now via Lil Local's own public UI.
+      const png = await page.evaluate(()=>{
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 64
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = '#ffff00'
+        ctx.fillRect(0,0,64,64)
+        return canvas.toDataURL('image/png').split(',')[1]
+      })
+      await page.locator('[aria-label="Gemma image input"]').setInputFiles({
+        name:'yellow-square.png',mimeType:'image/png',buffer:Buffer.from(png,'base64'),
+      })
+      await page.locator('textarea[aria-label="Gemma prompt"]').fill(
+        'What color is the filled square in the image? Answer one color word.'
+      )
+      await page.locator('button[aria-label="Generate with Gemma locally"]').click()
+      await page.waitForFunction(()=>{
+        const status = document.querySelector('[role="status"]')?.textContent || ''
+        return status.includes('Gemma status: ready') &&
+          Boolean((document.querySelector('[aria-label="Gemma model output"]')?.textContent || '').trim())
+      },null,{timeout:240000})
+      const imageAnswer = await page.locator('[aria-label="Gemma model output"]').textContent()
+      const imageErrors = await page.locator('[role="alert"]').allTextContents()
+      if(imageErrors.length || !imageAnswer?.toLowerCase().includes('yellow')){
+        throw new Error('Full E2B real image input failed: '+JSON.stringify({imageAnswer,imageErrors}))
+      }
+      console.log('REAL_GEMMA_IMAGE',JSON.stringify(imageAnswer))
+      await page.locator('button[aria-label="New Gemma chat"]').click()
+      // Produce actual uncompressed 16k mono PCM16 WAV, exactly as the
+      // previously qualified PodQast fixture (no STT or intermediary model).
+      const voice = spawnSync('espeak-ng',['-v','en-us','-s','133','--stdout','The secret word is banana.'],{
+        maxBuffer:8_000_000,
+      })
+      if(voice.status!==0)throw new Error('espeak-ng fixture failed: '+voice.stderr?.toString())
+      const wavDir = mkdtempSync(join(tmpdir(),'lil-local-gemma-audio-'))
+      try {
+        const wavPath=join(wavDir,'banana.wav')
+        // Real-file FFmpeg output has finalized RIFF/data lengths; pipe:1
+        // writes 0xffffffff placeholders and is not a canonical WAV file.
+        const wav=spawnSync('ffmpeg',[
+          '-nostdin','-hide_banner','-loglevel','error','-y','-i','pipe:0',
+          '-ar','16000','-ac','1','-c:a','pcm_s16le',wavPath,
+        ],{input:voice.stdout,maxBuffer:8_000_000})
+        if(wav.status!==0)throw new Error('ffmpeg fixture failed: '+wav.stderr?.toString())
+        await page.locator('[aria-label="Gemma WAV audio input"]').setInputFiles({
+          name:'banana.wav',mimeType:'audio/wav',buffer:readFileSync(wavPath),
+        })
+      } finally {
+        rmSync(wavDir,{recursive:true,force:true})
+      }
+      await page.locator('textarea[aria-label="Gemma prompt"]').fill(
+        'Listen to the attached audio. Transcribe exactly what words were spoken.'
+      )
+      await page.locator('button[aria-label="Generate with Gemma locally"]').click()
+      await page.waitForFunction(()=>{
+        const status = document.querySelector('[role="status"]')?.textContent || ''
+        const alert = document.querySelector('[role="alert"]')?.textContent || ''
+        return Boolean(alert.trim()) || (status.includes('Gemma status: ready') &&
+          Boolean((document.querySelector('[aria-label="Gemma model output"]')?.textContent || '').trim()))
+      },null,{timeout:240000})
+      const audioAnswer = await page.locator('[aria-label="Gemma model output"]').textContent()
+      const audioErrors = await page.locator('[role="alert"]').allTextContents()
+      if(audioErrors.length || !audioAnswer?.toLowerCase().includes('banana')){
+        throw new Error('Full E2B real audio input failed: '+JSON.stringify({audioAnswer,audioErrors}))
+      }
+      console.log('REAL_GEMMA_AUDIO',JSON.stringify(audioAnswer))
+      await page.locator('button[aria-label="New Gemma chat"]').click()
+    }
     if(process.env.LIL_LOCAL_GEMMA_THINKING_PROBE==='1'){
       await page.locator('[aria-label="Enable thinking"]').check()
       await page.locator('input[aria-label="Gemma max output tokens"]').fill('256')
