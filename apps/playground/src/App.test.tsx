@@ -7,11 +7,14 @@ vi.mock('./components/ModelRunner', () => ({
   default: ({ adapters }: { adapters: ModelAdapter[] }) => {
     const bonsai = adapters.find(a => a.modelId === 'bonsai2-2b-onnx-webgpu-candidate')
     const pix2pix = adapters.find(a => a.modelId === 'pix2pix-edges2shoes-webgpu')
+    const gemma = adapters.find(a => a.modelId === 'gemma-4-webgpu')
     return <section
       data-model-id={bonsai?.modelId}
       data-disabled={String(bonsai?.disabled)}
       data-pix2pix={pix2pix?.modelId}
       data-pix2pix-pipeline={String(pix2pix?.isPipeline)}
+      data-gemma={gemma?.modelId}
+      data-gemma-pipeline={String(gemma?.isPipeline)}
     >
       {bonsai?.metadata.name}
       {pix2pix?.metadata.name}
@@ -24,6 +27,12 @@ describe('catalog special workspaces', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('Bonsai 2')
     expect(html).toContain('data-disabled="true"')
+  })
+
+  it('exposes Gemma 4 as one explicit local worker workspace rather than hiding it in an LFM-only panel', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('data-gemma="gemma-4-webgpu"')
+    expect(html).toContain('data-gemma-pipeline="true"')
   })
 
   it('exposes Pix2Pix as an explicit pipeline workspace rather than a LiteRT model', () => {

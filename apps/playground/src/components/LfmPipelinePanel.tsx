@@ -13,8 +13,6 @@ import {
   LiteRtLmTextPipeline,
   lfm2_5InstructManifest,
   lfm2_5ThinkingManifest,
-  gemma4E2bManifest,
-  gemma4E4bManifest,
   type TextGenerationInput,
 } from '@lil-local/text-gen'
 import { ColBertPipeline, colbertManifest, rankColBert, type ColBertConfig } from '@lil-local/retrieval'
@@ -35,8 +33,6 @@ interface LfmModelEntry {
 }
 
 const MODELS: LfmModelEntry[] = [
-  { id: 'gemma-4-e2b-it', label: 'Gemma 4 E2B Instruct', manifest: gemma4E2bManifest, kind: 'text' },
-  { id: 'gemma-4-e4b-it', label: 'Gemma 4 E4B Instruct', manifest: gemma4E4bManifest, kind: 'text' },
   { id: 'lfm2.5-1.2b-instruct', label: 'LFM2.5 1.2B Instruct', manifest: lfm2_5InstructManifest, kind: 'text' },
   { id: 'lfm2.5-1.2b-thinking', label: 'LFM2.5 1.2B Thinking', manifest: lfm2_5ThinkingManifest, kind: 'text' },
   { id: 'lfm2.5-colbert-350m', label: 'LFM2.5 ColBERT-350M', manifest: colbertManifest, kind: 'colbert' },

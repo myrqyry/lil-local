@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ModelRunner from './components/ModelRunner'
 import { Qwen3TtsPanel } from './components/Qwen3TtsPanel'
 import { LfmPipelinePanel } from './components/LfmPipelinePanel'
+import { Gemma4Panel } from './components/Gemma4Panel'
 import { D1DecisionPanel } from './components/D1DecisionPanel'
 import { Pix2PixPanel } from './components/Pix2PixPanel'
 import { NemotronAsrPanel } from './components/NemotronAsrPanel'
@@ -50,9 +51,20 @@ const ttsEntry: ModelAdapter = {
   parseOutputs: async () => ({}),
 }
 
+const gemmaEntry: ModelAdapter = {
+  modelId: 'gemma-4-webgpu',
+  metadata: {
+    name: 'Gemma 4 · Browser Inference',
+    description: 'Opt-in local WebGPU E2B/E4B text generation, with explicitly configured image/WAV input; use a pinned web model or choose a matching local file.',
+    modelPath: '', tags: ['gemma', 'llm', 'webgpu', 'vision', 'audio', 'local', 'pipeline'],
+  },
+  inputSpecs: [], outputSpecs: [], isPipeline: true,
+  prepareInputs: () => ({}), parseOutputs: async () => ({}),
+}
+
 const lfmEntry: ModelAdapter = {
   modelId: 'lfm2.5-pipelines',
-  metadata: { name: 'Gemma 4 + LFM2.5 Pipelines', description: 'Gemma 4 and LFM2.5 text-gen, ColBERT retrieval, and encoders via shared pipelines', modelPath: '', tags: ['llm', 'retrieval', 'encoder', 'pipeline'] },
+  metadata: { name: 'LFM2.5 Pipelines', description: 'LFM2.5 text generation, ColBERT retrieval, and encoders via shared pipelines', modelPath: '', tags: ['llm', 'retrieval', 'encoder', 'pipeline'] },
   inputSpecs: [],
   outputSpecs: [],
   isPipeline: true,
@@ -267,6 +279,14 @@ export default function App() {
     )
   }
 
+  if (selectedId === 'gemma-4-webgpu') {
+    return <div className="min-h-screen bg-surface-dim"><div className="mx-auto max-w-2xl space-y-4 p-4">
+      <button className="text-sm text-secondary" onClick={() => setSelectedId(null)}>← Back to model list</button>
+      <h1 className="text-2xl font-bold text-on-surface">Gemma 4 · Local WebGPU</h1>
+      <Gemma4Panel />
+    </div></div>
+  }
+
   if (selectedId === 'lfm2.5-pipelines') {
     return (
       <div className="min-h-screen bg-surface-dim">
@@ -277,7 +297,7 @@ export default function App() {
           >
             ← Back to model list
           </button>
-          <h1 className="mb-4 text-2xl font-bold text-on-surface">Gemma 4 + LFM2.5 Pipelines</h1>
+          <h1 className="mb-4 text-2xl font-bold text-on-surface">LFM2.5 Pipelines</h1>
           <LfmPipelinePanel />
         </div>
       </div>
@@ -286,7 +306,7 @@ export default function App() {
 
   return (
     <ModelRunner
-      adapters={[...registeredAdapters, ttsEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, magicTouchEntry, languageDetectionEntry, bonsaiCandidate]}
+      adapters={[...registeredAdapters, ttsEntry, gemmaEntry, lfmEntry, d1Entry, pix2pixEntry, nemotronAsrEntry, parakeetAsrEntry, yamNetEntry, universalRetrieverEntry, mediaPipeVisionEntry, magicTouchEntry, languageDetectionEntry, bonsaiCandidate]}
       selectedId={selectedId}
       onSelect={setSelectedId}
     />

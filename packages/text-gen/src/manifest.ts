@@ -1,4 +1,4 @@
-import { type ModelAsset, type ModelManifest } from '@lil-local/inference-core';
+import { type ModelAsset, type ModelManifest, type ModelVerification } from '@lil-local/inference-core';
 
 interface PinnedLiteRtLmArtifact {
   repository: string;
@@ -54,6 +54,22 @@ const GEMMA4_E2B: PinnedLiteRtLmArtifact = {
   file: 'gemma-4-E2B-it.litertlm',
   bytes: 2_588_147_712,
   sha256: '181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c',
+};
+
+const GEMMA4_E2B_WEB: PinnedLiteRtLmArtifact = {
+  repository: 'litert-community/gemma-4-E2B-it-litert-lm',
+  revision: 'b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1',
+  file: 'gemma-4-E2B-it-web.litertlm',
+  bytes: 2_008_432_640,
+  sha256: '3a08e8d94e23b814ae5414469c370c503813949acb8ceaa17e4ebf8a35af35b5',
+};
+
+const GEMMA4_E4B_WEB: PinnedLiteRtLmArtifact = {
+  repository: 'litert-community/gemma-4-E4B-it-litert-lm',
+  revision: '2eee7ac325f20eb8c9ac1d0e972f7c84663062da',
+  file: 'gemma-4-E4B-it-web.litertlm',
+  bytes: 2_969_059_328,
+  sha256: '3904d826d5dddd25ea173e85204caec09e68ba038116e9b992b69cbdc94f57a0',
 };
 
 const GEMMA4_E4B: PinnedLiteRtLmArtifact = {
@@ -142,6 +158,41 @@ export const gemma4E2bManifest = manifest(
 export const gemma4E4bManifest = manifest(
   'gemma-4-e4b-it', 'Gemma 4 E4B Instruct (LiteRT-LM)', '4.0.0', ['text-generation'], GEMMA4_E4B,
 );
+
+/** Actual 2026-11-08 Linux Chromium run: local SHA-verified 2-3 GB web file,
+ * LiteRT-LM 0.19.0 classic worker, browser WebGPU model load, streaming
+ * generation with the correct Paris answer, then worker release.
+ * Narrow to this browser text path; image and WAV failed at runtime.
+ */
+function verifiedBrowserText(artifact: PinnedLiteRtLmArtifact): ModelVerification {
+  return {
+    assets: 'pass', compile: 'pass', inference: 'pass', output: 'pass',
+    qualification: 'limited', upstreamRevision: artifact.revision,
+    environment: 'Chromium headless on Linux, LiteRT-LM 0.19.0 worker, text-only',
+    environments: [{
+      browser: 'Chromium headless Linux',
+      backend: 'webgpu',
+      runtime: '@litert-lm/core@0.19.0',
+    }],
+    expectedOutput: { behavior: ['English question answering, nonempty native generation',
+      'Browser image/audio not verified and currently fail real inference'] },
+  };
+}
+
+/** Browser-only artifacts; native Android uses gemma4E2bManifest/gemma4E4bManifest. */
+export const gemma4E2bWebManifest: ModelManifest = {
+  ...manifest('gemma-4-e2b-it-web', 'Gemma 4 E2B Instruct (WebGPU)', '4.0.0',
+    ['text-generation'], GEMMA4_E2B_WEB),
+  backends: {webgpu: true},
+  verification: verifiedBrowserText(GEMMA4_E2B_WEB),
+};
+
+export const gemma4E4bWebManifest: ModelManifest = {
+  ...manifest('gemma-4-e4b-it-web', 'Gemma 4 E4B Instruct (WebGPU)', '4.0.0',
+    ['text-generation'], GEMMA4_E4B_WEB),
+  backends: {webgpu: true},
+  verification: verifiedBrowserText(GEMMA4_E4B_WEB),
+};
 
 export type TextGenCapability = 'text-generation' | 'reasoning';
 export type TextGenPreference = 'low_latency' | 'deep';

@@ -8,6 +8,8 @@ export {
   lfm2_5ThinkingManifest,
   lfm2_5ThinkingInt8Manifest,
   gemma4E2bManifest,
+  gemma4E2bWebManifest,
+  gemma4E4bWebManifest,
   gemma4E4bManifest,
   selectTextGenerationManifest,
 } from './manifest'

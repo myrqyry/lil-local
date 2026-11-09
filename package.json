@@ -13,6 +13,7 @@
     "test:compatibility": "node scripts/package-compatibility.mjs",
     "test:vision:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-vision-browser-smoke.py",
     "test:controlnet-models:browser": "pnpm --filter playground build && node scripts/controlnet-models-browser-smoke.mjs",
+    "test:gemma4:browser": "pnpm --filter playground build && node scripts/gemma4-browser-smoke.mjs",
     "test:interactive:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-interactive-browser-smoke.py",
     "test:slimsam:browser": "node scripts/slimsam-browser-smoke.mjs",
     "test:language:browser": "pnpm --filter playground build && PYTHONDONTWRITEBYTECODE=1 python3 scripts/mediapipe-language-browser-smoke.py",

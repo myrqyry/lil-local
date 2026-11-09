@@ -31,7 +31,7 @@ embeddings, and video classification.
   Selfie and Q8/WASM depth are separate from unverified FP16/WebGPU or Android
   performance; no real-time claim is implied.
 - **Mainline:** the completed, real-browser-tested Live Vision experiment workbench is on `master` at `30a94df`. Its first slice is finished, not an ongoing task.
-- **Archived Gemma line:** the worker/vision/audio development work passed focused checks, not real Gemma multimodal generation. Three individual published archive tags pin its exact commits. Its branch pointers and disposable worktree were retired after reachability verification. No unqualified code was merged. See `docs/archive/2026-11-08-experiment-dispositions.md`.
+- **Recovered Gemma worker and qualified browser text:** the archived LiteRT-LM WASM/worker, vision capacity, and WAV Blob changes were applied directly to `master` with RED→GREEN worker tests. The browser card uses separate pinned E2B/E4B web-model manifests and local 0.19.0 WASM. **Both models generated correct text in real Chromium** and their exact downloaded files passed SHA-256 verification; image/WAV inputs failed real web SDK execution and remain hidden from the text-only browser UI. Evidence: `docs/verification/2026-11-08-gemma4-browser-integration.md`. Original archive tags remain provenance; no new topic branches or worktrees.
 - GitHub synchronization status must be read from live refs; the reconciliation
   receipt records the local-only state **at the time of that audit**, not a
   permanent claim that published `origin/master` is behind.
@@ -151,10 +151,13 @@ has been shown to fail for the right reason.
   nested-agent routing. They currently agree, but have a synchronization
   maintenance cost. Choosing one authority is a separate decision; do not
   silently rewrite or remove either.
-- **Archived — Gemma experiments, not active work:** real worker and
-  vision/audio inference has not been established. Their branches and
-  commits are preserved and separate. Reopen only for a concrete consumer
-  with repeatable real-browser qualification; see the dated archive ledger.
+- **Gemma 4 browser text proven, multimodal web executor unavailable:**
+  actual pinned E2B/E4B WebGPU text responses are qualified on one Linux
+  Chromium environment through the recovered mainline worker. Image and
+  WAV audio inputs failed against the web model/SDK, so do not expose them as
+  successful or scheduled features; native consumer validation remains separate.
+  The historical three branch tips are archived as annotated Git tags, not
+  active worktrees. See the dated browser qualification record.
 - **Unqualified, not active work:** FP16/WebGPU and Android depth performance,
   and the full tensor viewer/perturbation lab are not implicitly scheduled
   merely because they are technically possible.

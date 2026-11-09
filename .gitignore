@@ -1,5 +1,6 @@
 node_modules/
 apps/playground/public/ort/
+apps/playground/public/vendor/litert-lm-*/
 dist/
 public/models/*.tflite
 docs/superpowers/

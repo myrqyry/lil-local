@@ -27,7 +27,8 @@ interface LiteRtLmModule {
     create: (settings: {
       model: string | Blob | ReadableStream<Uint8Array>;
       visionBackend?: number;
-      mainExecutorSettings?: { maxNumTokens?: number };
+      audioBackend?: number;
+      mainExecutorSettings?: { maxNumTokens?: number; maxNumImages?: number };
     }) => Promise<LiteRtLmEngine>;
   };
 }
@@ -52,6 +53,7 @@ let liteRtLmEngine: LiteRtLmEngine | undefined;
 let mediaPipeEngine: MediaPipeMultimodalEngine | undefined;
 let activeEngine: LiteRtLmWorkerEngine = 'litert-lm';
 let liteRtLmVisionEnabled = false;
+let liteRtLmAudioEnabled = false;
 let dispatchQueue: Promise<void> = Promise.resolve();
 const activeConversations = new Map<string, Conversation>();
 const mediaPipeGenerationIds = new Set<string>();
@@ -143,16 +145,21 @@ async function disposeConversation(id: string, conversation: Conversation): Prom
 
 function toLiteRtLmContent(prompt: LiteRtLmWorkerPrompt): Message['content'] {
   if (typeof prompt === 'string') return prompt;
-  if (prompt.some((part) => part.type === 'audio')) {
-    throw new Error('LiteRT-LM PCM audio input is not implemented; use engine="mediapipe" for audio');
+  if (prompt.some((part) => part.type === 'audio') && !liteRtLmAudioEnabled) {
+    throw new Error('Audio input requires audioBackend when loading the LiteRT-LM engine');
+  }
+  if (prompt.some((part) => part.type === 'audio' && !('data' in part))) {
+    throw new Error('LiteRT-LM requires a decoded WAV audio Blob; PCM arrays belong to the MediaPipe backend');
   }
   if (prompt.some((part) => part.type === 'image') && !liteRtLmVisionEnabled) {
     throw new Error('Image input requires visionBackend when loading the LiteRT-LM engine');
   }
-  return prompt.filter((part): part is Extract<typeof part, { type: 'text' | 'image' }> => part.type !== 'audio')
-    .map((part) => part.type === 'text'
-      ? { type: 'text' as const, text: part.text }
-      : { type: 'image' as const, data: part.data });
+  return prompt.map((part) => {
+    if (part.type === 'text') return { type: 'text' as const, text: part.text };
+    if (part.type === 'image') return { type: 'image' as const, data: part.data };
+    if (!('data' in part)) throw new Error('LiteRT-LM requires WAV Blob audio');
+    return { type: 'audio' as const, data: part.data };
+  });
 }
 
 async function generateLiteRtLm(
@@ -275,8 +282,22 @@ async function disposeLoadedEngine(): Promise<void> {
 }
 
 async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>): Promise<void> {
+  // Real Chromium tests with the official E2B web file returned a null
+  // vision executor and a WASM abort for audio. Reject those exact
+  // browser checkpoint variants before initializing any native engine.
+  // Other (native) model files retain their explicit multimodal path.
+  const selectedModel = typeof data.model === 'string'
+    ? data.model
+    : (data.model as Blob & { name?: string }).name;
+  if ((data.options?.engine ?? 'litert-lm') === 'litert-lm' &&
+      (data.options?.visionBackend || data.options?.audioBackend) &&
+      typeof selectedModel === 'string' &&
+      /(?:^|\/)gemma-4-E(?:2|4)B-it-web\.litertlm(?:$|[?#])/i.test(selectedModel)) {
+    throw new Error('Gemma 4 web checkpoints are text-only in LiteRT-LM JS 0.19.0; real browser image/audio executors failed. Use a compatible native runtime for multimodal input.');
+  }
   await disposeLoadedEngine();
   liteRtLmVisionEnabled = false;
+  liteRtLmAudioEnabled = false;
 
   activeEngine = data.options?.engine ?? 'litert-lm';
   if (activeEngine === 'mediapipe') {
@@ -288,13 +309,34 @@ async function loadEngine(data: Extract<LiteRtLmWorkerRequest, { type: 'load' }>
   const module = (await import('@litert-lm/core')) as unknown as LiteRtLmModule;
   // Pin 0.19.0 WASM explicitly rather than relying on SDK defaults.
   // Explicit loading also detects conflicts with a previously loaded runtime.
-  await module.getOrLoadGlobalLiteRtLm(data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE);
+  const wasmBase = data.options?.wasmBase ?? LITERT_LM_0190_WASM_BASE;
+  // LiteRT-LM's Emscripten ModuleFactory resolves its .wasm name against
+  // self.location (the worker asset), not the URL passed to importScripts().
+  // Supply a trusted, absolute locateFile mapping before initializing Wasm.
+  const runtimeBase = new URL(
+    wasmBase.endsWith('/') ? wasmBase : wasmBase + '/',
+    (worker as WorkerScope & { location?: { href: string } }).location?.href ?? 'http://localhost/',
+  );
+  (worker as WorkerScope & { Module?: { locateFile: (file: string) => string } }).Module = {
+    locateFile: (file: string) => new URL(file, runtimeBase).href,
+  };
+  await module.getOrLoadGlobalLiteRtLm(wasmBase);
+  const maxNumImages = data.options?.maxNumImages;
+  if (maxNumImages !== undefined &&
+      (!Number.isSafeInteger(maxNumImages) || maxNumImages < 0 || maxNumImages > 8)) {
+    throw new Error('maxNumImages must be an integer from 0 through 8');
+  }
   liteRtLmEngine = await module.Engine.create({
     model: data.model,
     ...(data.options?.visionBackend ? { visionBackend: data.options.visionBackend === 'gpu' ? 4 : 3 } : {}),
-    mainExecutorSettings: { maxNumTokens: 8192 },
+    ...(data.options?.audioBackend ? { audioBackend: data.options.audioBackend === 'gpu' ? 4 : 3 } : {}),
+    mainExecutorSettings: {
+      maxNumTokens: 8192,
+      ...(maxNumImages !== undefined ? { maxNumImages } : {}),
+    },
   });
   liteRtLmVisionEnabled = Boolean(data.options?.visionBackend);
+  liteRtLmAudioEnabled = Boolean(data.options?.audioBackend);
 }
 
 function hasGenerationConfig(config?: LiteRtLmWorkerGenerationConfig): boolean {

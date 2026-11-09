@@ -37,7 +37,7 @@ models have passed real-device inference.
 | **Interactive masks** | MediaPipe MagicTouch V2 browser-qualified for still-image strokes; separate optional quantized SlimSAM-77 library path with real browser mask output. Neither is a verified real-time segmentation tracker. |
 | **Audio / text / retrieval** | Reusable MediaPipe, LiteRT, and ONNX packages with per-model qualification records; Audio8 remains a **candidate manifest**, not a ready TTS engine. |
 
-**One active branch: `master`.** The three unqualified Gemma 4 worker/vision/audio candidates and all historical topic branches are preserved by GitHub archive tags, not active branch pointers. They were **not merged or promoted to functioning inference**. Two superseded pull requests were closed because their functionality is already on `master`. See the [recovery ledger](docs/archive/2026-11-08-experiment-dispositions.md) and [docs navigation](docs/README.md).
+**Gemma 4 E2B/E4B is integrated into the existing browser playground** with a dedicated local WebGPU text-generation card, exact official web-model manifests, a classic LiteRT-LM 0.19 worker, and self-hosted matching WASM. **Both E2B and E4B generated correct text through real Chromium inference**, using locally SHA-256-verified model files (2.01 GB/2.97 GB). The underlying Gemma image/audio worker options were recovered, but **real web image and WAV inference failed inside the SDK**, so those choices are not advertised as working. [Real model evidence, limitations, and reproduction](docs/verification/2026-11-08-gemma4-browser-integration.md). Historical branch tips remain recoverable as archive tags; only `master` is active. [Archive and history](docs/archive/2026-11-08-experiment-dispositions.md).
 
 ### MediaPipe Universal Embedder + Semantic Retriever
 
@@ -175,7 +175,7 @@ The playground is a model launcher rather than a click-to-download catalog.
 - model cards expose a plain-language description before the technical details
 - model-family color and icons provide quick visual orientation without replacing the model name
 
-Special multi-graph experiences such as Qwen3-TTS and the Gemma/LFM pipeline page
+Special multi-graph experiences such as Qwen3-TTS, the Gemma 4 browser text workspace, and the LFM pipeline page
 also require an explicit load/prepare action instead of doing heavy runtime work just
 because the page was opened.
 

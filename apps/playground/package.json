@@ -5,9 +5,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "predev": "node ../../scripts/prepare-depth-ort.mjs",
+    "predev": "node ../../scripts/prepare-depth-ort.mjs && node ../../scripts/prepare-litertlm-wasm.mjs",
     "dev": "vite",
-    "prebuild": "node ../../scripts/prepare-depth-ort.mjs",
+    "prebuild": "node ../../scripts/prepare-depth-ort.mjs && node ../../scripts/prepare-litertlm-wasm.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

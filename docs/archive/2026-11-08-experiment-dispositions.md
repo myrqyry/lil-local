@@ -23,7 +23,23 @@ ongoing assignments. No task listed here is running automatically.
   Reopen only with a new concrete use case/acceptance test.
 - **Published and CI-verified:** the workbench and archival documentation are on GitHub `master`. The `Verify` CI run for the status-sync commit `06b7acb` completed successfully on 2026-11-08. CI is not a new backend/model-runtime qualification.
 
-## Archived, preserved, not merged
+## Gemma: archived source recovered into master (later on 2026-11-08)
+
+The archive below describes the three original branch **tips at the time they
+were archived**, not a current claim that their usable code is absent from
+mainline. Later the archived **worker, vision capacity and audio Blob source
+patches were recovered directly onto `master`** (no new worktree or topic
+branch). Real SHA-verified **E2B and E4B web-model text generation passed in
+Chromium**. This closes the original missing worker/text inference path.
+
+**Browser image and audio execution did not pass**: the actual web model
+returned a missing vision executor error and the WAV input aborted within
+WASM. Broken modality controls were removed; these are explicit negative
+qualification results, not unfinished branches or silent fallbacks. Exact
+model assets, commands and outputs:
+[Gemma 4 browser integration](../verification/2026-11-08-gemma4-browser-integration.md).
+
+## Historical Gemma branch tips and initial archival state
 
 The following is one **five-commit experimental Gemma line**, with three
 progressive branch tips. Focused TypeScript/unit tests were the highest
@@ -44,12 +60,14 @@ were rechecked against local Git on 2026-11-08 before archiving.
 - All 26 historical GitHub topic branches were retired after this check. The three local Gemma branch pointers were also retired after verifying their archive tags pointed to the exact tips. `git fetch --prune` left only `master` and `origin/master` as branch refs.
 - The tracked-clean temporary Gemma `/tmp` worktree was retired earlier; only rebuildable `node_modules` were removed. There is **one worktree and one active branch**, with recoverable source history and no forced reset or forced push.
 
-**Reopen criteria (not an open task):** a concrete consuming use case and
-real accessible Gemma model, followed by independently observed browser
-generation for worker, actual image-to-text for vision or real audio-input
-inference for audio; confirm backend, cleanup, resource usage, and downstream
-packed compatibility before evaluating any merge. A new model revision
-requires its own evidence.
+**Current reactivation boundary (not an open task):** Gemma 4 *browser
+text* has now been demonstrated using official E2B and E4B web models on
+mainline. Do not reopen or merge the old branch merely to regain this
+functionality. Browser image/audio remain unsupported by the tested model
+and SDK: any new compatible runtime or native Android consumer must establish
+a real image/audio output, native backend, cleanup, resource usage, and
+packed compatibility before such a modality is enabled. A different model
+revision requires independent provenance and runtime evidence.
 
 To inspect without modifying `master`:
 

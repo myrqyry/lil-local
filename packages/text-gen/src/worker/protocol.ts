@@ -31,8 +31,12 @@ export interface LiteRtLmWorkerLoadOptions {
   engine?: LiteRtLmWorkerEngine;
   /** Self-hosted JS/WASM base for LiteRT-LM; defaults to a version-matched CDN. */
   wasmBase?: string;
-  /** Opt-in LiteRT-LM 0.19 vision encoder; omitted means text-only. */
+  /** Opt-in for a compatible native vision model; the official -web Gemma 4 checkpoints have no functioning vision executor in JS 0.19.0. */
   visionBackend?: 'cpu' | 'gpu';
+  /** Only a compatible native audio model; the known Gemma 4 -web checkpoints abort on WAV in JS 0.19.0. */
+  audioBackend?: 'cpu' | 'gpu';
+  /** Maximum concurrently attached images, matching LiteRT-LM EngineSettings. */
+  maxNumImages?: number;
   mediaPipe?: LiteRtLmWorkerMediaPipeLoadOptions;
   /**
    * Optional caller-owned identity for Blob-backed models. Supply this when
@@ -45,6 +49,8 @@ export interface LiteRtLmWorkerLoadOptions {
 export type LiteRtLmWorkerPromptPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data: Blob }
+  /** SDK-native audio Blob, matching the official LiteRT-LM browser demo. */
+  | { type: 'audio'; data: Blob }
   | {
       type: 'audio';
       /**
