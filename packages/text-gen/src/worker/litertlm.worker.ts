@@ -43,6 +43,11 @@ interface LiteRtLmConversation {
   sendMessageStreaming(message: Message): ReadableStream<Message>;
   cancel(): void;
   delete(): Promise<void>;
+  getTokenCount?(): Promise<number>;
+  getBenchmarkInfo?(): Promise<{
+    lastPrefillTokensPerSecond: number;
+    lastDecodeTokensPerSecond: number;
+  }>;
 }
 
 type Conversation = Awaited<ReturnType<LiteRtLmEngine['createConversation']>>;
@@ -56,6 +61,9 @@ let liteRtLmVisionEnabled = false;
 let liteRtLmAudioEnabled = false;
 let dispatchQueue: Promise<void> = Promise.resolve();
 const activeConversations = new Map<string, Conversation>();
+// At most one native chat stays alive per worker. Unlike request IDs, its
+// identity spans multiple turns without replaying/prefilling past messages.
+let retainedChat: { sessionId: string; configKey: string; conversation: Conversation; invalid: boolean } | undefined;
 const mediaPipeGenerationIds = new Set<string>();
 const knownGenerationIds = new Set<string>();
 const cancelledGenerations = new Set<string>();
@@ -101,6 +109,10 @@ function buildConversationConfig(config?: LiteRtLmWorkerGenerationConfig): Conve
   }
   if (config?.systemPrompt?.trim()) {
     conversationConfig.preface = { messages: [{ role: 'system', content: config.systemPrompt }] };
+  }
+  if (config?.enableThinking !== undefined) {
+    conversationConfig.preface ??= {};
+    conversationConfig.preface.extra_context = {enable_thinking: config.enableThinking};
   }
   return Object.keys(conversationConfig).length > 0 ? conversationConfig : undefined;
 }
@@ -169,12 +181,32 @@ async function generateLiteRtLm(
 ): Promise<void> {
   if (cancelledGenerations.has(id)) return;
   if (!liteRtLmEngine) throw new Error('LiteRT-LM is not loaded');
-  const conversation = await liteRtLmEngine.createConversation(buildConversationConfig(config));
+  const sessionId = config?.sessionId;
+  if (sessionId !== undefined && (!/^[a-zA-Z0-9_-]{1,100}$/.test(sessionId))) {
+    throw new Error('sessionId must be 1–100 letters, digits, underscores or hyphens');
+  }
+  if (sessionId && config?.history?.length) {
+    throw new Error('Native chat sessions cannot also replay history');
+  }
+  const {sessionId: _sessionId, history: _history, ...sessionOptions} = config ?? {};
+  const configKey = JSON.stringify(sessionOptions);
+  if (retainedChat && (!sessionId || retainedChat.sessionId !== sessionId || retainedChat.invalid)) {
+    await retainedChat.conversation.delete();
+    retainedChat = undefined;
+  }
+  if (retainedChat && retainedChat.configKey !== configKey) {
+    throw new Error('Native chat settings changed; start a new chat session');
+  }
+  const conversation = retainedChat?.conversation
+    ?? await liteRtLmEngine.createConversation(buildConversationConfig(config));
   if (cancelledGenerations.has(id)) {
-    await conversation.delete();
+    if (retainedChat?.conversation === conversation) retainedChat.invalid = true;
+    else await conversation.delete();
     return;
   }
-
+  if (sessionId && !retainedChat) {
+    retainedChat = {sessionId, configKey, conversation, invalid: false};
+  }
   activeConversations.set(id, conversation);
   let generationFailed = false;
   let generationError: unknown;
@@ -189,13 +221,48 @@ async function generateLiteRtLm(
         if (text) emit({ type: 'token', id, text });
       },
     );
+    // Native performance data is advisory; a failed stats query must never
+    // erase an otherwise successful generation. Only multi-turn sessions
+    // expose this telemetry to the playground.
+    if (sessionId && !cancelledGenerations.has(id)) {
+      try {
+        const tokens = await conversation.getTokenCount?.();
+        const benchmark = await conversation.getBenchmarkInfo?.();
+        if (typeof tokens === 'number' && Number.isFinite(tokens) &&
+            benchmark && Number.isFinite(benchmark.lastPrefillTokensPerSecond) &&
+            Number.isFinite(benchmark.lastDecodeTokensPerSecond)) {
+          emit({
+            type: 'stats', id,
+            data: {
+              tokenCount: tokens,
+              prefillTokensPerSecond: benchmark.lastPrefillTokensPerSecond,
+              decodeTokensPerSecond: benchmark.lastDecodeTokensPerSecond,
+            },
+          });
+        }
+      } catch (error) {
+        console.warn('[text-gen worker] Native conversation stats unavailable', error);
+      }
+    }
   } catch (error) {
     generationFailed = true;
     generationError = error;
   }
 
+  // Successful native chat turns keep their KV cache, but failures and
+  // cancellation invalidate the session, so a future prompt cannot inherit
+  // a half-written state.
+  const keepConversation = Boolean(sessionId && !generationFailed && !cancelledGenerations.has(id));
+  if (!keepConversation && retainedChat?.conversation === conversation) {
+    retainedChat.invalid = true;
+  }
   try {
-    await disposeConversation(id, conversation);
+    if (keepConversation) {
+      activeConversations.delete(id);
+    } else {
+      await disposeConversation(id, conversation);
+      if (retainedChat?.conversation === conversation) retainedChat = undefined;
+    }
   } catch (cleanupError) {
     let attachedToPrimary = false;
     if (generationFailed && generationError !== null) {
@@ -260,10 +327,18 @@ async function generateMediaPipe(id: string, prompt: LiteRtLmWorkerPrompt): Prom
 }
 
 async function disposeAllConversations(): Promise<void> {
+  const disposed = new Set<Conversation>();
   for (const [id, conversation] of activeConversations) {
     conversation.cancel();
-    await conversation.delete();
+    if (!disposed.has(conversation)) {
+      await conversation.delete();
+      disposed.add(conversation);
+    }
     activeConversations.delete(id);
+  }
+  if (retainedChat) {
+    if (!disposed.has(retainedChat.conversation)) await retainedChat.conversation.delete();
+    retainedChat = undefined;
   }
 }
 

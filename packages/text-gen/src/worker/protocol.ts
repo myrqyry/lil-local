@@ -12,6 +12,10 @@ export interface LiteRtLmWorkerGenerationConfig {
   maxContextTokens?: number;
   history?: LiteRtLmWorkerMessage[];
   systemPrompt?: string;
+  /** Optional native multi-turn chat identity. Omit for the existing one-shot behavior. */
+  sessionId?: string;
+  /** LiteRT-LM thinking mode is configured when the native conversation is created. */
+  enableThinking?: boolean;
 }
 
 export type LiteRtLmWorkerEngine = 'litert-lm' | 'mediapipe';
@@ -75,10 +79,17 @@ export type LiteRtLmWorkerRequest =
   | { type: 'cancel'; id: string }
   | { type: 'dispose' };
 
+export interface LiteRtLmWorkerStats {
+  tokenCount: number;
+  prefillTokensPerSecond: number;
+  decodeTokensPerSecond: number;
+}
+
 export type LiteRtLmWorkerResponse =
   | { type: 'ready' }
   | { type: 'token'; id: string; text: string }
   | { type: 'reasoning'; id: string; text: string }
+  | { type: 'stats'; id: string; data: LiteRtLmWorkerStats }
   | { type: 'complete'; id: string }
   | { type: 'cancelled'; id: string }
   | { type: 'error'; id?: string; message: string }

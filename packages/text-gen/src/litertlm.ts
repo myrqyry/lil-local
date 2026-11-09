@@ -21,6 +21,7 @@ export type {
   LiteRtLmWorkerGenerationConfig,
   LiteRtLmWorkerPrompt,
   LiteRtLmWorkerPromptPart,
+  LiteRtLmWorkerStats,
 } from './worker/protocol'
 
 /**

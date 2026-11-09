@@ -39,6 +39,7 @@ export type {
   LiteRtLmWorkerMediaPipeLoadOptions,
   LiteRtLmWorkerPrompt,
   LiteRtLmWorkerPromptPart,
+  LiteRtLmWorkerStats,
 } from './worker/protocol'
 export type {
   TextGenerationInput,

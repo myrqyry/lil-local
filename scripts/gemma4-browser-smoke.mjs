@@ -117,8 +117,10 @@ try {
     const loadStatus=await page.locator('[role="status"]').textContent()
     if(!loadStatus.includes('ready'))throw new Error('Real Gemma model load failed: '+loadStatus+' / '+(await page.locator('[role="alert"]').allTextContents()).join(' | '))
     console.log('GEMMA_LOADED',Date.now()-began,'ms',variant)
-    await page.locator('textarea[aria-label="Gemma prompt"]').fill('In one short sentence, what is the capital of France?')
-    await page.locator('input[aria-label="Gemma max output tokens"]').fill('32')
+    await page.locator('textarea[aria-label="Gemma prompt"]').fill(
+      'Remember this exact three-word code: turquoise railway mushroom. What is the capital of France? Answer only the capital.'
+    )
+    await page.locator('input[aria-label="Gemma max output tokens"]').fill('96')
     await page.locator('button[aria-label="Generate with Gemma locally"]').click()
     await page.waitForFunction(
       ()=>{
@@ -132,9 +134,56 @@ try {
       throw new Error('Real Gemma '+variant+' text generation incomplete: '+JSON.stringify({output,alerts}))
     }
     console.log('REAL_GEMMA_OUTPUT',JSON.stringify(output))
+    const initialStats=await page.locator('[aria-label="Gemma inference stats"]').allTextContents()
+    console.log('NATIVE_CHAT_STATS_FIRST',JSON.stringify(initialStats))
+    // The second prompt deliberately lacks the code, so it cannot pass
+    // unless the native conversation retains the first user's message.
+    await page.locator('textarea[aria-label="Gemma prompt"]').fill(
+      'What exact three-word code did I ask you to remember in my previous message? Answer only the code.'
+    )
+    await page.locator('button[aria-label="Generate with Gemma locally"]').click()
+    await page.waitForFunction(()=>{
+      const status=document.querySelector('[role="status"]')?.textContent||''
+      const history=document.querySelector('[aria-label="Gemma chat history"]')?.textContent||''
+      return status.includes('Gemma status: ready') &&
+        history.includes('What exact three-word code') &&
+        (document.querySelector('[aria-label="Gemma model output"]')?.textContent||'').length>0
+    },null,{timeout:240000})
+    const remembered=await page.locator('[aria-label="Gemma model output"]').textContent()
+    const newAlerts=await page.locator('[role="alert"]').allTextContents()
+    if(newAlerts.length || !remembered?.toLowerCase().includes('turquoise railway mushroom')){
+      throw new Error('Native chat did not remember the previous prompt: '+JSON.stringify({remembered,newAlerts}))
+    }
+    console.log('REAL_GEMMA_FOLLOWUP',JSON.stringify(remembered))
+    const followupStats=await page.locator('[aria-label="Gemma inference stats"]').allTextContents()
+    console.log('NATIVE_CHAT_STATS_FOLLOWUP',JSON.stringify(followupStats))
+    await page.locator('button[aria-label="New Gemma chat"]').click()
+    if((await page.locator('[aria-label="Gemma chat history"]').textContent())?.trim()){
+      throw new Error('New chat left prior messages visible')
+    }
+    console.log('NEW_CHAT_CLEARED')
+    if(process.env.LIL_LOCAL_GEMMA_THINKING_PROBE==='1'){
+      await page.locator('[aria-label="Enable thinking"]').check()
+      await page.locator('input[aria-label="Gemma max output tokens"]').fill('256')
+      await page.locator('textarea[aria-label="Gemma prompt"]').fill('What is two plus two? Reply with the number only.')
+      await page.locator('button[aria-label="Generate with Gemma locally"]').click()
+      await page.waitForFunction(()=>{
+        const status=document.querySelector('[role="status"]')?.textContent||''
+        const history=document.querySelector('[aria-label="Gemma chat history"]')?.textContent||''
+        return status.includes('Gemma status: ready') && history.includes('What is two plus two?') &&
+          (document.querySelector('[aria-label="Gemma model output"]')?.textContent||'').length>0
+      },null,{timeout:240000})
+      const thinkingOutput=await page.locator('[aria-label="Gemma model output"]').textContent()
+      const thinkingErrors=await page.locator('[role="alert"]').allTextContents()
+      const reasoning=await page.getByText('Reasoning channel',{exact:true}).allTextContents()
+      if(thinkingErrors.length || !thinkingOutput?.includes('4')){
+        throw new Error('Native thinking-mode generation failed: '+JSON.stringify({thinkingOutput,thinkingErrors}))
+      }
+      console.log('THINKING_MODE_OUTPUT',JSON.stringify({thinkingOutput,reasoningVisible:reasoning.length>0}))
+    }
     await page.getByRole('button',{name:'Unload / stop'}).click()
     if(!(await page.locator('[role="status"]').textContent()).includes('idle'))throw new Error('Gemma unload failed')
-    console.log('PASS: SHA-pinned Gemma 4 '+variant+' WebGPU -> actual worker load -> native text generation -> unload')
+    console.log('PASS: SHA-pinned Gemma 4 '+variant+' WebGPU -> native multi-turn memory -> new chat -> unload')
   }
   if(pageErrors.length)throw new Error('Page exceptions: '+pageErrors.join(' | '))
   if(requests.some(url=>url.includes('cdn.jsdelivr.net/npm/@litert-lm/core/wasm'))){

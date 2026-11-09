@@ -28,6 +28,55 @@ The models were loaded through **production-built** Lil Local in a headless Chro
 
 This is **limited browser text qualification** on one environment, not a claim about mobile WebGPU, other browsers, 100% model accuracy, or native Android image/audio inference. Both web manifests explicitly record pass/limited with the relevant browser environment. Remote HF URI streaming was not exercised in these sessions; only local official files were used.
 
+## Native chat continuity and thinking verification
+
+The supplied official LiteRT-LM JavaScript reference documents persistent
+conversations and the getTokenCount, getBenchmarkInfo and clone APIs. Inspection
+of the installed 0.19.0 SDK confirms those capabilities. The previous Gemma
+screen created and deleted a fresh native conversation on every turn. This
+revision corrects that specific missing behavior.
+
+The shared text-gen worker now supports an optional sessionId and retains
+at most one native Conversation per loaded engine. Consecutive prompts with
+the same ID reuse the SDK conversation and native KV state, without replaying
+history. Changing chat identity starts a fresh conversation; unloading deletes
+it. Cancellation or generation errors invalidate the retained conversation,
+and incompatible per-chat settings are rejected rather than silently ignored.
+Existing one-shot consumers retain their earlier behavior when sessionId
+is omitted.
+
+The playground adds New chat, an in-memory transcript, an opt-in thinking
+toggle, an expandable reasoning channel and SDK token counts. Thinking mode
+uses the documented preface.extra_context.enable_thinking setting; toggling
+it starts a new native session.
+
+**Actual production-browser E2B and E4B tests:** each first prompt supplied
+the arbitrary secret code "turquoise railway mushroom" and asked for
+France's capital. Both answered "Paris". Each second prompt asked what code
+was supplied in the previous turn, without including the code itself.
+Both returned "turquoise railway mushroom". The browser also cleared
+visible history on New chat and unloaded the engine. Both files were
+independently SHA-256 verified before the test.
+
+**Actual E2B thinking test:** after enabling thinking for a fresh conversation,
+the native model answered "4" for 2 + 2 and exposed a reasoning channel.
+E4B thinking was not separately runtime-qualified.
+
+The SDK returned native session token counts of 35 then 69 on the two-turn
+test. Its browser benchmark prefill/decode rates were both zero, so the UI
+displays them as unavailable instead of presenting misleading throughput.
+
+Reproduction: run the existing test:gemma4:browser command with the pinned
+E2B/E4B files documented below. To exercise the optional real E2B thinking
+test, set LIL_LOCAL_GEMMA_THINKING_PROBE=1. Focused worker regression tests
+cover reuse, cleanup, settings mismatch, thinking config, cancellation and
+one-shot compatibility.
+
+The source docs also advertise Conversation.clone() and getHistory().
+These remain SDK capabilities, not claimed user-facing clone/history-export
+features; the conversation is memory-only and does not persist on reload.
+The image/audio failures below remain unaffected.
+
 ## Real negative image/audio results
 
 Actual E2B WebGPU model probes (not mocked tests) also attempted:

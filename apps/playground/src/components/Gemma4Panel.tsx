@@ -13,6 +13,8 @@ const MODELS = [
 ] as const
 
 type Stage = 'idle' | 'loading' | 'ready' | 'generating' | 'error'
+type ChatTurn = {role: 'user' | 'assistant'; text: string}
+type ChatStats = {tokenCount: number; prefillTokensPerSecond: number; decodeTokensPerSecond: number}
 
 /**
  * Explicit browser-local Gemma 4 text inference through the real LiteRT-LM
@@ -27,10 +29,17 @@ export function Gemma4Panel() {
   const [stage, setStage] = useState<Stage>('idle')
   const [output, setOutput] = useState('')
   const [reasoning, setReasoning] = useState('')
+  const [turns, setTurns] = useState<ChatTurn[]>([])
+  const [activeQuestion, setActiveQuestion] = useState<string | null>(null)
+  const [thinking, setThinking] = useState(false)
+  const [stats, setStats] = useState<ChatStats | null>(null)
   const [error, setError] = useState('')
   const clientRef = useRef<LiteRtLmWorkerClient | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
   const generationRef = useRef(0)
+  // A native LiteRT-LM Conversation is shared by turns with this ID. Changing
+  // it starts a fresh native session on the next prompt; Unload frees the worker.
+  const sessionCounterRef = useRef(0)
 
   const model = MODELS.find(item => item.id === modelId) ?? MODELS[0]
   const modelAsset = model.manifest.assets[0]
@@ -39,11 +48,26 @@ export function Gemma4Panel() {
 
   function unload() {
     generationRef.current++
+    sessionCounterRef.current++
     controllerRef.current?.abort()
     controllerRef.current = null
     clientRef.current?.dispose()
     clientRef.current = null
+    setTurns([])
+    setActiveQuestion(null)
+    setStats(null)
     setStage('idle')
+  }
+
+  function newChat() {
+    if (stage === 'loading' || stage === 'generating') return
+    sessionCounterRef.current++
+    setTurns([])
+    setActiveQuestion(null)
+    setStats(null)
+    setOutput('')
+    setReasoning('')
+    setError('')
   }
 
   useEffect(() => {
@@ -98,32 +122,54 @@ export function Gemma4Panel() {
     const controller = new AbortController()
     controllerRef.current = controller
     const generation = generationRef.current
+    const question = prompt.trim()
+    const sessionId = 'gemma-chat-' + sessionCounterRef.current
     setStage('generating')
+    setActiveQuestion(question)
     setError('')
     setOutput('')
     setReasoning('')
+    setStats(null)
     try {
       const result = await client.generate(
-        prompt.trim(),
+        question,
         text => { if (generation === generationRef.current) setOutput(previous => previous + text) },
         controller.signal,
         {
           maxOutputTokens: maxTokens,
+          sessionId,
+          ...(thinking ? {enableThinking: true} : {}),
           onReasoning: text => {
-            if (generation === generationRef.current) setReasoning(previous => previous + text)
+            if (generation === generationRef.current && !controller.signal.aborted) {
+              setReasoning(previous => previous + text)
+            }
+          },
+          onStats: data => {
+            if (generation === generationRef.current && !controller.signal.aborted) setStats(data)
           },
         },
       )
       if (generation === generationRef.current && !controller.signal.aborted) {
         setOutput(result)
+        setTurns(previous => [...previous, {role: 'user', text: question}, {role: 'assistant', text: result}])
+        setActiveQuestion(null)
+        setPrompt('')
         setStage('ready')
       }
     } catch (reason) {
       if (generation !== generationRef.current) return
+      // A cancelled or failed native turn may have an incomplete KV cache.
+      // Never display stale chat history as if the next prompt can use it.
+      sessionCounterRef.current++
+      setTurns([])
+      setActiveQuestion(null)
+      setStats(null)
+      setOutput('')
+      setReasoning('')
       setStage('ready')
-      if (!controller.signal.aborted) {
-        setError(reason instanceof Error ? reason.message : String(reason))
-      }
+      setError(controller.signal.aborted
+        ? 'Generation canceled. Native chat context reset.'
+        : (reason instanceof Error ? reason.message : String(reason)) + ' · Native chat context reset.')
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null
     }
@@ -133,7 +179,7 @@ export function Gemma4Panel() {
     <p className="text-sm text-on-surface-variant">
       On-device Gemma 4 text-only inference through the LiteRT-LM 0.19.0
       browser worker. No model initializes until you choose Load; prompts
-      remain on this device.
+      remain on this device. Chat stays in memory while this model is loaded.
     </p>
     <label className="block text-xs text-on-surface-variant">
       Model
@@ -179,6 +225,31 @@ export function Gemma4Panel() {
       <span className="text-xs text-on-surface-variant" role="status">Gemma status: {stage}</span>
     </div>
     {error && <p role="alert" className="text-sm text-error">{error}</p>}
+    <div className="flex flex-wrap items-center gap-4">
+      <button type="button" aria-label="New Gemma chat"
+        disabled={stage !== 'ready'}
+        onClick={newChat}
+        className="rounded-full border border-outline px-4 py-2 text-xs text-on-surface disabled:opacity-50">
+        New chat
+      </button>
+      <label className="flex items-center gap-2 text-xs text-on-surface-variant">
+        <input type="checkbox" aria-label="Enable thinking" checked={thinking}
+          disabled={stage === 'loading' || stage === 'generating'}
+          onChange={event => {newChat(); setThinking(event.target.checked)}}
+        />
+        Enable thinking (starts a new chat)
+      </label>
+    </div>
+    <div aria-label="Gemma chat history" className="space-y-2">
+      {(activeQuestion ? turns : turns.slice(0, -1)).map((turn, index) => (
+        <div key={index} className="rounded-lg border border-outline-variant p-3 text-sm text-on-surface">
+          <span className="font-semibold">{turn.role === 'user' ? 'You' : 'Gemma'}:</span> {turn.text}
+        </div>
+      ))}
+      {activeQuestion && <div className="rounded-lg border border-outline-variant p-3 text-sm text-on-surface">
+        <span className="font-semibold">You:</span> {activeQuestion}
+      </div>}
+    </div>
     <label className="block text-xs text-on-surface-variant">Prompt
       <textarea aria-label="Gemma prompt" rows={3} value={prompt}
         onChange={event => setPrompt(event.target.value)}
@@ -188,6 +259,7 @@ export function Gemma4Panel() {
       <label className="flex items-center gap-2 text-xs text-on-surface-variant">
         Max output tokens
         <input aria-label="Gemma max output tokens" type="number" min={1} max={512} value={maxTokens}
+          disabled={stage === 'generating' || turns.length > 0}
           onChange={event => setMaxTokens(Math.max(1, Math.min(512, Number(event.target.value)||1)))}
           className="w-20 rounded-lg border border-outline bg-surface-container px-2 py-1 text-on-surface"/>
       </label>
@@ -210,6 +282,9 @@ export function Gemma4Panel() {
         <pre className="mt-2 whitespace-pre-wrap break-words">{reasoning}</pre>
       </details>}
     </div>
+    {stats && <p aria-label="Gemma inference stats" className="text-xs text-on-surface-variant">
+      Native session: {stats.tokenCount.toLocaleString()} tokens · prefill {stats.prefillTokensPerSecond > 0 ? stats.prefillTokensPerSecond.toFixed(1) + ' tok/s' : 'unavailable'} · decode {stats.decodeTokensPerSecond > 0 ? stats.decodeTokensPerSecond.toFixed(1) + ' tok/s' : 'unavailable'}
+    </p>}
     <p className="text-xs text-on-surface-variant">
       Native Gemma 4 supports multimodal use, but the current web checkpoint
       failed real image/audio inference. Those modes are deliberately not

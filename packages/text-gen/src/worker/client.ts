@@ -4,10 +4,12 @@ import type {
   LiteRtLmWorkerPrompt,
   LiteRtLmWorkerRequest,
   LiteRtLmWorkerResponse,
+  LiteRtLmWorkerStats,
 } from './protocol';
 
 export interface LiteRtLmGenerationOptions extends LiteRtLmWorkerGenerationConfig {
   onReasoning?: (text: string) => void;
+  onStats?: (data: LiteRtLmWorkerStats) => void;
 }
 
 interface WorkerLike {
@@ -22,6 +24,7 @@ interface PendingGeneration {
   reject: (reason: unknown) => void;
   onToken: ((text: string) => void) | undefined;
   onReasoning?: (text: string) => void;
+  onStats?: (data: LiteRtLmWorkerStats) => void;
   result: string;
   cleanup: () => void;
 }
@@ -191,7 +194,7 @@ export class LiteRtLmWorkerClient {
     const id = String(++this.nextId);
     if (this.disposed) return Promise.reject(new Error('LiteRT-LM worker client is disposed'));
     if (signal?.aborted) return Promise.reject(createAbortError());
-    const { onReasoning, ...config } = options;
+    const { onReasoning, onStats, ...config } = options;
     const hasConfig = Object.keys(config).length > 0;
     return new Promise<string>((resolve, reject) => {
       const abort = (): void => {
@@ -203,7 +206,7 @@ export class LiteRtLmWorkerClient {
       const cleanup = (): void => {
         signal?.removeEventListener('abort', abort);
       };
-      const pending: PendingGeneration = { resolve, reject, onToken, onReasoning, result: '', cleanup };
+      const pending: PendingGeneration = { resolve, reject, onToken, onReasoning, onStats, result: '', cleanup };
       this.pending.set(id, pending);
       signal?.addEventListener('abort', abort, { once: true });
       this.worker.postMessage({ type: 'generate', id, prompt, ...(hasConfig ? { config } : {}) });
@@ -271,6 +274,9 @@ export class LiteRtLmWorkerClient {
           const pending = this.pending.get(message.id);
           pending?.onReasoning?.(message.text);
         }
+        break;
+      case 'stats':
+        this.pending.get(message.id)?.onStats?.(message.data);
         break;
       case 'complete':
         {

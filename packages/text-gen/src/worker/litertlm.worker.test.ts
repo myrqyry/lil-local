@@ -17,6 +17,8 @@ const liteRt = vi.hoisted(() => ({
   conversationDelete: vi.fn(),
   sendMessage: vi.fn(),
   sendMessageStreaming: vi.fn(),
+  getTokenCount: vi.fn(),
+  getBenchmarkInfo: vi.fn(),
 }));
 
 vi.mock('@litert-lm/core', () => ({
@@ -79,6 +81,11 @@ describe('LiteRT-LM worker dispatch', () => {
 
     liteRt.wasmLoad.mockResolvedValue(undefined);
     liteRt.sendMessage.mockResolvedValue({ text: '' });
+    liteRt.getTokenCount.mockResolvedValue(42);
+    liteRt.getBenchmarkInfo.mockResolvedValue({
+      lastPrefillTokensPerSecond: 150, lastDecodeTokensPerSecond: 38,
+      lastPrefillTokenCount: 12, lastDecodeTokenCount: 18, timeToFirstTokenInSecond: 0.3,
+    });
     liteRt.sendMessageStreaming.mockReturnValue(
       new ReadableStream({
         start(controller) {
@@ -89,6 +96,8 @@ describe('LiteRT-LM worker dispatch', () => {
     liteRt.createConversation.mockResolvedValue({
       sendMessage: liteRt.sendMessage,
       sendMessageStreaming: liteRt.sendMessageStreaming,
+      getTokenCount: liteRt.getTokenCount,
+      getBenchmarkInfo: liteRt.getBenchmarkInfo,
       cancel: liteRt.conversationCancel,
       delete: liteRt.conversationDelete,
     });
@@ -155,6 +164,85 @@ describe('LiteRT-LM worker dispatch', () => {
         vi.clearAllMocks();
       }
     }
+  });
+
+  it('keeps a native conversation across turns and deletes it on a new session and unload', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'gemma-4-E2B-it-web.litertlm' });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'first', prompt: 'My secret word is tangerine.', config: { sessionId: 'chat-a', maxOutputTokens: 64 } });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'second', prompt: 'What was my secret word?', config: { sessionId: 'chat-a', maxOutputTokens: 64 } });
+    await flushWorker();
+    expect(messages).toContainEqual({ type: 'complete', id: 'second' });
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(1);
+    expect(liteRt.sendMessageStreaming).toHaveBeenCalledTimes(2);
+    expect(messages).toContainEqual({
+      type: 'stats', id: 'second',
+      data: {tokenCount: 42, prefillTokensPerSecond: 150, decodeTokensPerSecond: 38},
+    });
+    expect(liteRt.conversationDelete).not.toHaveBeenCalled();
+    send(scope, { type: 'generate', id: 'fresh', prompt: 'New chat.', config: { sessionId: 'chat-b', maxOutputTokens: 64 } });
+    await flushWorker();
+    expect(liteRt.conversationDelete).toHaveBeenCalledTimes(1);
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(2);
+    send(scope, { type: 'dispose' });
+    await flushWorker();
+    expect(liteRt.conversationDelete).toHaveBeenCalledTimes(2);
+  });
+
+  it('configures thinking mode when creating a native chat session', async () => {
+    const { scope } = await bootWorker();
+    send(scope, { type: 'load', model: 'gemma-4-E2B-it-web.litertlm' });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'thinking', prompt: 'Think.', config: { sessionId: 'chat-thinking', enableThinking: true } });
+    await flushWorker();
+    expect(liteRt.createConversation).toHaveBeenCalledWith(expect.objectContaining({
+      preface: expect.objectContaining({ extra_context: { enable_thinking: true } }),
+    }));
+  });
+
+  it('discards a cancelled native chat and creates a fresh session before the next turn', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'local.litertlm' });
+    await flushWorker();
+    let closeStream!: () => void;
+    liteRt.sendMessageStreaming.mockReturnValueOnce(new ReadableStream({
+      start(controller) { closeStream = () => controller.close(); },
+    }));
+    send(scope, { type: 'generate', id: 'abort-chat', prompt: 'Something', config: { sessionId: 'my-chat' } });
+    await flushWorker();
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(1);
+    send(scope, { type: 'cancel', id: 'abort-chat' });
+    expect(liteRt.conversationCancel).toHaveBeenCalledTimes(1);
+    closeStream();
+    await flushWorker();
+    expect(messages).toContainEqual({ type: 'cancelled', id: 'abort-chat' });
+    expect(messages).not.toContainEqual({ type: 'complete', id: 'abort-chat' });
+    expect(liteRt.conversationDelete).toHaveBeenCalledTimes(1);
+
+    send(scope, { type: 'generate', id: 'after-abort', prompt: 'New turn', config: { sessionId: 'my-chat' } });
+    await flushWorker();
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(2);
+    expect(messages).toContainEqual({ type: 'complete', id: 'after-abort' });
+  });
+
+  it('rejects per-chat settings changes rather than silently reusing incompatible native state', async () => {
+    const { scope, messages } = await bootWorker();
+    send(scope, { type: 'load', model: 'local.litertlm' });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'original', prompt: 'Hello', config: { sessionId: 'fixed', maxOutputTokens: 32 } });
+    await flushWorker();
+    send(scope, { type: 'generate', id: 'changed', prompt: 'Hello', config: { sessionId: 'fixed', maxOutputTokens: 64 } });
+    await flushWorker();
+    expect(messages).toContainEqual(expect.objectContaining({
+      type: 'error', id: 'changed', message: expect.stringContaining('settings changed'),
+    }));
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(1);
+    send(scope, { type: 'generate', id: 'unchanged', prompt: 'Hello', config: { sessionId: 'fixed', maxOutputTokens: 32 } });
+    await flushWorker();
+    expect(messages).toContainEqual({ type: 'complete', id: 'unchanged' });
+    expect(liteRt.createConversation).toHaveBeenCalledTimes(1);
   });
 
   it('forwards image bytes only when LiteRT-LM vision was explicitly enabled', async () => {
