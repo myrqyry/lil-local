@@ -32,7 +32,7 @@ import { PhononPipeline } from '@lil-local/phonon'
 import { Qwen3TtsPipeline } from '@lil-local/qwen3-tts'
 import { ClipImageEmbeddingPipeline } from '@lil-local/image-embedding'
 import { MoViNetPipeline } from '@lil-local/video-classification'
-import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, YAMNET_MODEL, type AudioClip, type MediaPipeTtsStreamChunk } from '@lil-local/audio-mediapipe'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, createMediaPipeAsrStreamSession, YAMNET_MODEL, type AudioClip, type MediaPipeTtsStreamChunk, type MediaPipeAsrStreamSession } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, createPersonSegmenterSubstrate, MEDIAPIPE_VISION_MODELS, type VisionFrame, type FaceVisionResult, type GestureVisionResult, type PoseVisionResult, type ObjectVisionResult, type ImageClassifierVisionResult, type HolisticVisionResult, type SemanticVisionResult, type InteractiveSelectionRequest, type InteractiveSelectionResult, type FaceDetectorVisionResult, type PersonVisionResult } from '@lil-local/vision-mediapipe'
 import {
   DepthEstimationPipeline,
@@ -104,6 +104,8 @@ export type PackedNarrowLiteRtLmConfig = NarrowLiteRtLmTextConfig
 export type PackedAudioClip = AudioClip
 export type PackedMediaPipeTtsChunk = MediaPipeTtsStreamChunk
 export const packedMediaPipeTtsSessionFactory = createMediaPipeTtsStreamSession
+export const packedMediaPipeAsrSessionFactory = createMediaPipeAsrStreamSession
+export type PackedMediaPipeAsrSession = MediaPipeAsrStreamSession
 
 // Real downstream packed MediaPipe universal embedder + SemanticRetriever,
 // sharing exactly one caller-owned model and native provider.

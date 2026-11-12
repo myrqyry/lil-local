@@ -59,6 +59,38 @@ const speech = await tts.synthesize('Hello there')
 tts.close()
 ```
 
+### Consumer ASR streaming with ordered, timestamped transcripts
+
+A loaded `AudioTranscriber` can be wrapped with `createMediaPipeAsrStreamSession(engine)`.
+Consumers feed **normalized 16 kHz mono PCM** in capture order; the session
+copies each chunk, queues native calls sequentially, merges interim/final
+timestamped segments, and flushes only after prior chunks complete.
+`finish()` returns `{ text, segments }`, and `close()` waits for in-flight
+native operations before disposing the engine. Closing invalidates late
+results; it does not promise to interrupt running native WASM inference.
+
+The playground's existing microphone AudioWorklet now uses this public
+session rather than maintaining its own inference queue. Because it also
+uses the loaded engine for audio-file transcription, it passes
+`{ closeEngineOnClose: false }` and owns engine disposal separately.
+Model loading, microphone/tab sharing, permissions, Web Workers, clock
+mapping and playback remain consumer responsibilities. This session has
+unit and packed-consumer coverage, **not** real Parakeet model inference.
+
+```ts
+const engine = await createParakeetTranscriber(myModelFile)
+await engine.prewarm()
+const session = createMediaPipeAsrStreamSession(engine)
+try {
+  await session.push(firstPcmChunk)
+  await session.push(secondPcmChunk)
+  const transcript = await session.finish()
+  console.log(transcript.text, transcript.segments)
+} finally {
+  await session.close()
+}
+```
+
 ### Consumer speech streaming without owning playback
 
 The public `createMediaPipeTtsStreamSession(engine)` wraps a caller-loaded

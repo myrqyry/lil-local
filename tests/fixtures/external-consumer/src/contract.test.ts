@@ -10,7 +10,7 @@ import { assertAddOutput } from './add-parity'
 import { compactPointSegmentationModel, externalCompactPointSegmentation } from './index'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,mapLanguageDetectorResult,validateLanguageText} from '@lil-local/text-mediapipe'
-import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, mapYamNetResults } from '@lil-local/audio-mediapipe'
+import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, createMediaPipeAsrStreamSession, mapYamNetResults } from '@lil-local/audio-mediapipe'
 import { createFaceLandmarkerSubstrate, createGestureRecognizerSubstrate, createPoseLandmarkerSubstrate, createObjectDetectorSubstrate, createImageClassifierSubstrate, createHolisticLandmarkerSubstrate, createSemanticSegmenterSubstrate, createInteractiveSegmenterSubstrate, createFaceDetectorSubstrate, mapFaceDetectorResult, validateInteractiveStrokes, copyInteractiveMask, copySemanticCategoryMask, mapHolisticLandmarkerResult, mapImageClassifierResult, mapFaceLandmarkerResult, mapPoseLandmarkerResult, mapObjectDetectorResult } from '@lil-local/vision-mediapipe'
 
 const fixture = (onDispose: () => void = () => {}) => ({
@@ -187,6 +187,23 @@ describe('installed packed vision-mediapipe public contract', () => {
 
 
 describe('installed packed MediaPipe audio substrate', () => {
+  it('serializes transcript chunks through its exported ASR session without model downloads', async () => {
+    let closed = 0
+    const engine = {
+      transcribeStream: async () => ({
+        text: 'Hello',
+        segments: [{ transcript: 'Hello', fromTimestampMs: 0, toTimestampMs: 500, isFinal: true }],
+      }),
+      finishStream: async () => ({ text: 'Hello', segments: [] }),
+      close: () => { closed++ },
+    } as unknown as Parameters<typeof createMediaPipeAsrStreamSession>[0]
+    const session = createMediaPipeAsrStreamSession(engine)
+    expect((await session.push(Float32Array.of(0.2))).text).toBe('Hello')
+    expect((await session.finish()).segments[0].isFinal).toBe(true)
+    await session.close()
+    expect(closed).toBe(1)
+  })
+
   it('exposes the cancellable speech stream session from the packed public API', async () => {
     let released = 0
     const engine = {

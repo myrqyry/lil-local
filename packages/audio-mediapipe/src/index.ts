@@ -24,3 +24,10 @@ export {
   type MediaPipeTtsStreamSession, type MediaPipeTtsStreamChunk,
   type MediaPipeTtsUtteranceOptions,
 } from './ttsSession'
+
+export {
+  createMediaPipeAsrStreamSession,
+  type MediaPipeAsrStreamSession,
+  type MediaPipeAsrStreamSessionOptions,
+  type MediaPipeAsrTranscript,
+} from './asrSession'

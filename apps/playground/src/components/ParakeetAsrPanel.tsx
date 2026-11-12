@@ -5,6 +5,8 @@ import {
   PARAKEET_MODEL_FILENAME,
   combineParakeetSegments,
   createParakeetTranscriber,
+  createMediaPipeAsrStreamSession,
+  type MediaPipeAsrStreamSession,
   parakeetTranscript,
   validateParakeetAudio,
 } from '@lil-local/audio-mediapipe'
@@ -71,7 +73,7 @@ export function ParakeetAsrPanel() {
   const mountedRef = useRef(true)
   const acceptingRef = useRef(false)
   const segmentsRef = useRef<TranscriptionSegment[]>([])
-  const queueRef = useRef<Promise<void>>(Promise.resolve())
+  const sessionRef = useRef<MediaPipeAsrStreamSession | null>(null)
   const [modelFile, setModelFile] = useState<File | null>(null)
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
@@ -96,9 +98,13 @@ export function ParakeetAsrPanel() {
     const mic = microphoneRef.current
     microphoneRef.current = null
     if (mic) void closeMicrophone(mic)
+    const session = sessionRef.current
+    sessionRef.current = null
     const engine = engineRef.current
     engineRef.current = null
-    if (engine) void queueRef.current.finally(() => engine.close())
+    if (session) {
+      void session.close().then(() => engine?.close(), () => engine?.close())
+    } else engine?.close()
   }, [])
 
   const load = async () => {
@@ -139,14 +145,16 @@ export function ParakeetAsrPanel() {
   }
 
   const enqueue = (samples: Float32Array) => {
-    if (!samples.length) return
-    queueRef.current = queueRef.current.then(async () => {
-      const engine = engineRef.current
-      if (!engine) return
-      validateParakeetAudio(samples)
-      const result = await engine.transcribeStream(samples)
-      showSegments(result.segments)
-    }).catch(reportError)
+    const session = sessionRef.current
+    if (!samples.length || !session) return
+    void session.push(samples)
+      .then(update => {
+        if (mountedRef.current && acceptingRef.current) setTranscript(update.text)
+      })
+      .catch(issue => {
+        if (issue instanceof Error && issue.name === 'AbortError') return
+        reportError(issue)
+      })
   }
 
   const startMicrophone = async () => {
@@ -169,6 +177,9 @@ export function ParakeetAsrPanel() {
       const silent = context.createGain()
       silent.gain.value = 0
       const mic = { stream, context, source, worklet, silent }
+      sessionRef.current = createMediaPipeAsrStreamSession(engineRef.current!, {
+        closeEngineOnClose: false,
+      })
       microphoneRef.current = mic
       let flushResolve: (() => void) | undefined
       worklet.port.onmessage = ({ data }: MessageEvent<{ samples?: ArrayBuffer; flushed?: boolean }>) => {
@@ -192,6 +203,7 @@ export function ParakeetAsrPanel() {
       context = undefined
     } catch (issue) {
       acceptingRef.current = false
+      if (sessionRef.current) { await sessionRef.current.close(); sessionRef.current = null }
       if (microphoneRef.current) { await closeMicrophone(microphoneRef.current); microphoneRef.current = null }
       else { stream?.getTracks().forEach(track => track.stop()); await context?.close().catch(() => undefined) }
       reportError(issue)
@@ -200,22 +212,23 @@ export function ParakeetAsrPanel() {
 
   const stopMicrophone = async () => {
     const mic = microphoneRef.current
-    const engine = engineRef.current
-    if (!mic || !engine || busy) return
+    const session = sessionRef.current
+    if (!mic || !session || busy) return
     setBusy(true); setRecording(false)
     try {
       report('Finalizing captured audio…')
       mic.source.disconnect()
       await (mic as Microphone & { finish?: () => Promise<void> }).finish?.()
       acceptingRef.current = false
-      await queueRef.current
-      const result = await engine.finishStream()
-      showSegments(result.segments)
+      const result = await session.finish()
+      if (mountedRef.current) setTranscript(result.text)
       report('Microphone transcription complete')
     } catch (issue) { reportError(issue) }
     finally {
       acceptingRef.current = false
       microphoneRef.current = null
+      sessionRef.current = null
+      await session.close()
       await closeMicrophone(mic)
       if (mountedRef.current) setBusy(false)
     }
