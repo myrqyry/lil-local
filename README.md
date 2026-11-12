@@ -331,6 +331,7 @@ in consuming applications rather than in the shared runtime packages.
 | `packages/retrieval-mediapipe` | `@lil-local/retrieval-mediapipe` | Optional MediaPipe shared universal embeddings and semantic retrieval |
 | `packages/audio8-tts` | `@lil-local/audio8-tts` | Pinned Audio8 Realistic Air asset/provenance profiles; not inference-ready |
 | `packages/phonon` | `@lil-local/phonon` | Browser-first ONNX Phonon TTS adapter synthesizing 24 kHz PCM |
+| `packages/nemotron-asr` | `@lil-local/nemotron-asr` | Shared Nemotron 3.5 ONNX browser ASR worker, audio features and public client |
 | `packages/privacy-filter` | `@lil-local/privacy-filter` | Opt-in browser-local PII detector (OpenAI Privacy Filter, ONNX) |
 | `packages/sharp-onnx` | `@lil-local/sharp-onnx` | Experimental browser-only ONNX/WebGPU SHARP 3D Gaussian splat adapter |
 | `examples/minimal-kokoro` | `@lil-local/example-kokoro` | Minimal standalone Kokoro browser example |

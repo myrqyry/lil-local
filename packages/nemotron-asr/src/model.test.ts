@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MODEL_REVISION, MODEL_ROOT, chooseNemotronBackend, validateAudioSamples } from './nemotronWeb'
+import { MODEL_REVISION, MODEL_ROOT, chooseNemotronBackend, validateAudioSamples } from './model'
 
 describe('opt-in browser Nemotron ASR contract', () => {
   it('pins the ONNX INT4 model and never points the browser runtime at GGUF/JNI', () => {

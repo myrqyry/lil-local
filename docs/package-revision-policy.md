@@ -59,6 +59,7 @@ entrypoint.
 Experimental `@lil-local/privacy-filter` provides opt-in browser ONNX PII detection and a separate mask-copy helper. Its dedicated `pnpm test:privacy-filter-external` validates the packed public entrypoint; consider it *provisional* until the broad packed compatibility gate passes. This is not an automatic sanitization safeguard. See `docs/verification/2026-10-26-openai-privacy-filter-q4.md`.
 - `@lil-local/retrieval`
 - `@lil-local/kokoro`
+- `@lil-local/nemotron-asr` (opt-in ONNX ASR with a packaged Web Worker; host supplies the small joint graph)
 - `@lil-local/qwen3-tts`
 - `@lil-local/image-embedding`
 - `@lil-local/video-classification`

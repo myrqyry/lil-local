@@ -7,7 +7,7 @@ import {
   collectSuffixDraftCandidates,
 } from '@lil-local/text-gen'
 import { assertAddOutput } from './add-parity'
-import { compactPointSegmentationModel, externalCompactPointSegmentation } from './index'
+import { compactPointSegmentationModel, externalCompactPointSegmentation, createPackedNemotronClient, packedNemotronModelRevision } from './index'
 import { createUniversalRetrievalSubstrate, validateRetrievalRequest } from '@lil-local/retrieval-mediapipe'
 import {createLanguageDetectorSubstrate,LANGUAGE_DETECTOR_MODEL,mapLanguageDetectorResult,validateLanguageText} from '@lil-local/text-mediapipe'
 import { createYamNetSubstrate, createParakeetSubstrate, createMediaPipeTtsSubstrate, createMediaPipeTtsStreamSession, createMediaPipeAsrStreamSession, mapYamNetResults } from '@lil-local/audio-mediapipe'
@@ -185,6 +185,32 @@ describe('installed packed vision-mediapipe public contract', () => {
   })
 })
 
+
+describe('installed packed Nemotron ONNX worker API', () => {
+  it('opens and closes the worker without downloading model weights or mutating consumer PCM', async () => {
+    expect(packedNemotronModelRevision).toMatch(/^[0-9a-f]{40}$/)
+    let handle: (event: MessageEvent) => void = () => {}
+    const posted: Array<{ message: any; transfers: Transferable[] }> = []
+    let terminated = false
+    const fakeWorker = {
+      set onmessage(callback: (event: MessageEvent) => void) { handle = callback },
+      postMessage(message: any, transfers: Transferable[] = []) { posted.push({ message, transfers }) },
+      terminate() { terminated = true },
+    } as unknown as Worker
+    const client = createPackedNemotronClient(() => fakeWorker)
+    expect(posted).toHaveLength(0)
+    const pcm = Float32Array.of(0.3)
+    const result = client.pushAudio(pcm)
+    expect(posted[0].message.samples).not.toBe(pcm.buffer)
+    handle({ data: { id: posted[0].message.id, type: 'result', value: { chunks: 0, text: '', elapsedMs: 0 } } } as MessageEvent)
+    await result
+    const disposed = client.dispose()
+    handle({ data: { id: posted[1].message.id, type: 'result' } } as MessageEvent)
+    await disposed
+    expect(terminated).toBe(true)
+    expect(pcm[0]).toBeCloseTo(0.3)
+  })
+})
 
 describe('installed packed MediaPipe audio substrate', () => {
   it('serializes transcript chunks through its exported ASR session without model downloads', async () => {

@@ -1,12 +1,11 @@
 /*
  * Adapted from People-11/Nemotron_Web at 5b37ff1d9fb021db6d9db2ec3a4768e5ee6310e0.
- * MIT licensed; see adjacent LICENSE.upstream.txt. Model weights have separate NVIDIA terms.
+ * MIT licensed; see ../LICENSE.upstream.txt. Model weights have separate NVIDIA terms.
  */
 import * as ort from "onnxruntime-web/webgpu";
+import { MODEL_ROOT, type NemotronAssets } from "./model";
 import { CHUNK_FRAMES, CHUNK_SAMPLES, HOP_LENGTH, LOG_ZERO_GUARD, logMelSpectrogram, N_FFT, N_MELS, type MelSpectrogram } from "./audio";
 
-export const MODEL_ROOT =
-  "https://huggingface.co/onnx-community/nemotron-3.5-asr-streaming-0.6b-onnx-int4/resolve/8364d9e2dd9da23789b480bdbba9e423717e42ee";
 const PRE_ENCODE_CACHE = 9;
 const HIDDEN_SIZE = 1024;
 const ENCODER_LAYERS = 24;
@@ -50,7 +49,7 @@ export class NemotronBrowserASR {
   private streamProcessedSamples = 0;
   private streamLanguageId = 101;
 
-  async load(onStatus: (message: string) => void, backend: "auto" | "webgpu" | "wasm" = "auto"): Promise<void> {
+  async load(onStatus: (message: string) => void, backend: "auto" | "webgpu" | "wasm" = "auto", assets: NemotronAssets = {}): Promise<void> {
     if (this.sessions) return;
     ort.env.wasm.numThreads = globalThis.crossOriginIsolated
       ? Math.min(4, navigator.hardwareConcurrency || 1)
@@ -59,21 +58,21 @@ export class NemotronBrowserASR {
     if (backend === "webgpu" && !hasWebGpu) throw new Error("WebGPU unavailable; requested backend was not changed");
 
     onStatus("loading tokenizer");
-    const tokenizer = await fetchJson(`${MODEL_ROOT}/tokenizer.json`);
+    const tokenizer = await fetchJson(`${assets.modelRoot ?? MODEL_ROOT}/tokenizer.json`);
     this.vocabulary = tokenizer.model.vocab.map((entry: [string, number]) => entry[0]);
 
     if (hasWebGpu && backend !== "wasm") {
       try {
-        this.sessions = await createSessions(["webgpu"], true, onStatus);
+        this.sessions = await createSessions(["webgpu"], true, onStatus, assets);
       } catch (error) {
         if (backend === "webgpu") throw error;
         console.warn("WebGPU initialization failed; retrying with WASM", error);
         onStatus("WebGPU failed; retrying with WASM");
-        this.sessions = await createSessions(["wasm"], false, onStatus);
+        this.sessions = await createSessions(["wasm"], false, onStatus, assets);
       }
     } else {
       onStatus("WebGPU unavailable; using WASM");
-      this.sessions = await createSessions(["wasm"], false, onStatus);
+      this.sessions = await createSessions(["wasm"], false, onStatus, assets);
     }
     this.reset();
   }
@@ -353,8 +352,10 @@ async function createSession(
   name: "encoder" | "decoder" | "joint",
   executionProviders: ort.InferenceSession.ExecutionProviderConfig[],
   keepEncoderCacheOnGpu = false,
+  assets: NemotronAssets = {},
 ): Promise<ort.InferenceSession> {
-  const modelUrl = name === "joint" ? "/nemotron-web/joint-argmax.onnx" : `${MODEL_ROOT}/${name}.onnx`;
+  const modelRoot = assets.modelRoot ?? MODEL_ROOT;
+  const modelUrl = name === "joint" ? (assets.jointModelUrl ?? "/nemotron-web/joint-argmax.onnx") : `${modelRoot}/${name}.onnx`;
   let preferredOutputLocation: ort.InferenceSession.SessionOptions["preferredOutputLocation"];
   if (keepEncoderCacheOnGpu && name === "encoder") {
     preferredOutputLocation = {
@@ -369,7 +370,7 @@ async function createSession(
     executionProviders,
     graphOptimizationLevel: "all",
     preferredOutputLocation,
-    externalData: [{ path: `${name}.onnx.data`, data: `${MODEL_ROOT}/${name}.onnx.data` }],
+    externalData: [{ path: `${name}.onnx.data`, data: `${modelRoot}/${name}.onnx.data` }],
   });
 }
 
@@ -377,17 +378,18 @@ async function createSessions(
   executionProviders: ort.InferenceSession.ExecutionProviderConfig[],
   keepEncoderCacheOnGpu: boolean,
   onStatus: (message: string) => void,
+  assets: NemotronAssets,
 ): Promise<Sessions> {
   let encoder: ort.InferenceSession | undefined;
   let decoder: ort.InferenceSession | undefined;
   let joint: ort.InferenceSession | undefined;
   try {
     onStatus("loading encoder");
-    encoder = await createSession("encoder", executionProviders, keepEncoderCacheOnGpu);
+    encoder = await createSession("encoder", executionProviders, keepEncoderCacheOnGpu, assets);
     onStatus("loading decoder");
-    decoder = await createSession("decoder", executionProviders, keepEncoderCacheOnGpu);
+    decoder = await createSession("decoder", executionProviders, keepEncoderCacheOnGpu, assets);
     onStatus("loading joint");
-    joint = await createSession("joint", executionProviders);
+    joint = await createSession("joint", executionProviders, false, assets);
     return { encoder, decoder, joint };
   } catch (error) {
     await Promise.allSettled([encoder?.release(), decoder?.release(), joint?.release()]);

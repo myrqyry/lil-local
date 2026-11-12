@@ -4,7 +4,7 @@ import {
   createYamNetSubstrate, type AudioClip, type AudioClassificationResult,
   type AudioLoadProgress,
 } from '@lil-local/audio-mediapipe'
-import { decodeAudioFile } from '../substrates/nemotron-web/audio'
+import { decodeAudioFile } from '@lil-local/nemotron-asr'
 
 type YamNetRunner = BrowserSubstrateRunner<AudioClip, AudioClassificationResult, AudioLoadProgress>
 

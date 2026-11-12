@@ -26,7 +26,7 @@ async function handle(request: Extract<WorkerRequest, { id: number }>): Promise<
   try {
     let value: unknown;
     if (request.type === "load") {
-      await model.load((message) => ctx.postMessage({ id, type: "status", message }), request.backend);
+      await model.load((message) => ctx.postMessage({ id, type: "status", message }), request.backend, request.assets);
     } else if (request.type === "dispose") {
       await model.dispose();
     } else if (request.type === "transcribe") {

@@ -27,6 +27,7 @@ const packages = [
   ['vision-mediapipe', 'vision-mediapipe.tgz'],
   ['text-mediapipe', 'text-mediapipe.tgz'],
   ['audio-mediapipe', 'audio-mediapipe.tgz'],
+  ['nemotron-asr', 'nemotron-asr.tgz'],
   ['retrieval-mediapipe', 'retrieval-mediapipe.tgz'],
   ['depth-estimation', 'depth-estimation.tgz'],
   ['image-segmentation', 'image-segmentation.tgz'],

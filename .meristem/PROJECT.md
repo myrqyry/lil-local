@@ -74,6 +74,7 @@ Dependency flow: `inference-core → runtime-litert → model packages → playg
   semantic) plus separate MagicTouch still-image selection,
   `text-mediapipe` local language detection (MediaPipe Tasks Text 1.2.2),
   `audio-mediapipe` sound/ASR/TTS,
+  `nemotron-asr` opt-in ONNX worker and audio preprocessing (extracted from the original playground path),
   and `retrieval-mediapipe` universal embedding/index substrates,
   and the custom-WebGPU `pix2pix-webgpu` image-translation candidate.
 - `packages/browser-cache` — browser-side model/tensor cache.

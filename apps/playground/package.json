@@ -23,6 +23,7 @@
     "@lil-local/encoder": "workspace:*",
     "@lil-local/inference-core": "workspace:*",
     "@lil-local/kokoro": "workspace:*",
+    "@lil-local/nemotron-asr": "workspace:*",
     "@lil-local/pix2pix-webgpu": "workspace:*",
     "@lil-local/qwen3-tts": "workspace:*",
     "@lil-local/retrieval": "workspace:*",

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { CHUNK_SAMPLES, decodeAudioFile, logMelSpectrogram } from '../substrates/nemotron-web/audio'
-import { NemotronClient } from '../substrates/nemotron-web/nemotron-client'
-import { chooseNemotronBackend, validateAudioSamples, type NemotronBackend } from '../substrates/nemotronWeb'
+import { CHUNK_SAMPLES, decodeAudioFile, logMelSpectrogram } from '@lil-local/nemotron-asr'
+import { NemotronClient } from '@lil-local/nemotron-asr'
+import { chooseNemotronBackend, validateAudioSamples, type NemotronBackend } from '@lil-local/nemotron-asr'
 
 const WORKLET_SOURCE = `
 class LilLocalPcmCapture extends AudioWorkletProcessor {

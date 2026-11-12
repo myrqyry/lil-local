@@ -48,6 +48,7 @@ packages/image-segmentation  optional face-class and point-prompted SAM 2.1 mask
 packages/moderation       opt-in Apache-2.0 content-safety classifier (Transformers.js ONNX)
 packages/audio8-tts       pinned Audio8 Realistic Air asset/provenance profiles (not inference-ready)
 packages/phonon           browser-first ONNX Phonon TTS adapter (24 kHz PCM)
+packages/nemotron-asr     opt-in reusable Nemotron 3.5 ONNX ASR engine, worker and audio frontend
 packages/privacy-filter   opt-in browser-local PII detector (OpenAI Privacy Filter, ONNX)
 packages/sharp-onnx       experimental browser-only ONNX/WebGPU SHARP 3D Gaussian splat adapter
 apps/playground            React + Vite + Tailwind model lab (the consumer app)

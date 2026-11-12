@@ -14,3 +14,10 @@ export function validateAudioSamples(samples: Float32Array): void {
   if (!samples.length) throw new Error('Audio is empty')
   if (!samples.every(Number.isFinite)) throw new Error('Audio must contain finite samples')
 }
+
+/** Model asset locations owned by the consumer app; no automatic cache/download. */
+export interface NemotronAssets {
+  modelRoot?: string
+  /** Host-local small ONNX argmax graph; default matches the original playground. */
+  jointModelUrl?: string
+}

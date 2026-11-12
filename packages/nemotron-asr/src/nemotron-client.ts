@@ -1,12 +1,14 @@
 /* Adapted from People-11/Nemotron_Web (MIT); see LICENSE.upstream.txt. */
 import type { MelSpectrogram } from "./audio";
 import type { ChunkProgress, StreamProgress } from "./nemotron";
+import type { NemotronAssets } from "./model";
+export type { ChunkProgress, StreamProgress } from "./nemotron";
 
 // Same API surface as NemotronBrowserASR, but the model runs in a worker so heavy
 // inference (mel + WebGPU readbacks) never blocks the main thread / starves rAF.
 
 export type WorkerRequest =
-  | { id: number; type: "load"; backend: "auto" | "webgpu" | "wasm" }
+  | { id: number; type: "load"; backend: "auto" | "webgpu" | "wasm"; assets?: NemotronAssets }
   | { id: number; type: "dispose" }
   | { id: number; type: "transcribe"; mel: MelSpectrogram; langId: number }
   | { id: number; type: "startStream"; langId: number }
@@ -28,12 +30,22 @@ type Pending = {
   onPartial?: (text: string) => void;
 };
 
+export interface NemotronClientOptions {
+  /** Overrides the standard ES module worker, useful for a host worker pool. */
+  workerFactory?: () => Worker;
+  /** Optional model and local argmax graph paths, supplied by the host app. */
+  assets?: NemotronAssets;
+}
+
 export class NemotronClient {
-  private worker = new Worker(new URL("./nemotron.worker.ts", import.meta.url), { type: "module" });
+  private worker: Worker;
+  private readonly assets: NemotronAssets | undefined;
   private pending = new Map<number, Pending>();
   private nextId = 1;
 
-  constructor() {
+  constructor(options: NemotronClientOptions = {}) {
+    this.assets = options.assets;
+    this.worker = options.workerFactory?.() ?? new Worker(new URL("./nemotron.worker.ts", import.meta.url), { type: "module" });
     this.worker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
       const entry = this.pending.get(data.id);
       if (!entry) return;
@@ -62,7 +74,7 @@ export class NemotronClient {
   }
 
   load(onStatus: (message: string) => void, backend: "auto" | "webgpu" | "wasm" = "auto"): Promise<void> {
-    return this.request<void>({ id: this.nextId++, type: "load", backend }, [], { onStatus });
+    return this.request<void>({ id: this.nextId++, type: "load", backend, assets: this.assets }, [], { onStatus });
   }
 
   async dispose(): Promise<void> {
@@ -88,7 +100,8 @@ export class NemotronClient {
   }
 
   pushAudio(samples: Float32Array, flush = false, onPartial?: (text: string) => void): Promise<StreamProgress> {
-    const buffer = samples.buffer as ArrayBuffer;
+    // Never transfer the caller's own buffer; Web Audio may retain or reuse it.
+    const buffer = new Float32Array(samples).buffer;
     return this.request<StreamProgress>(
       { id: this.nextId++, type: "pushAudio", samples: buffer, flush },
       [buffer],

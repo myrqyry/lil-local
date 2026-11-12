@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AudioTranscriber, TranscriptionSegment } from '@mediapipe/tasks-audio'
-import { decodeAudioFile } from '../substrates/nemotron-web/audio'
+import { decodeAudioFile } from '@lil-local/nemotron-asr'
 import {
   PARAKEET_MODEL_FILENAME,
   combineParakeetSegments,

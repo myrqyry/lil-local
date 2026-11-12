@@ -1,6 +1,10 @@
 <!-- meristem-template:v1 -->
 # Active Work
 
+## 2026-11-11 — Nemotron 3.5 ONNX ASR moves from playground into Lil Local's public package
+- **Verified slice:** Existing Nemotron ONNX worker, engine and audio preprocessing were moved without duplication to `@lil-local/nemotron-asr`; the playground consumes that public package. Caller PCM is copied before transfer. Package tests (6/6) and typecheck passed, packed external-consumer import/build passed, real Chromium started/disposed the relocated worker without external network or page errors, and full `pnpm verify` exited 0. See [verification and boundaries](docs/verification/2026-11-11-nemotron-asr-extraction.md).
+- **Remaining acceptance:** Real model transcription must be requalified after relocation. Veyax still pins the old Lil Local revision and has no tab-audio capture. Next is a deliberate, resource-aware inference run followed by a coherent downstream pin upgrade and explicit audio-to-reaction integration; no new duplicate model driver or cloud fallback.
+
 ## 2026-11-11 — MediaPipe ASR shared consumer handoff (separate from active Gemma work)
 - **Verified slice:** Existing `@lil-local/audio-mediapipe` gained a public, ordered PCM/transcript stream session with timestamped interim/final reconciliation and safe resource ownership. The existing Parakeet microphone UI consumes it; packed external consumers import and exercise the same API. Focused Audio tests 23/23, package/playground typecheck and full `pnpm verify` exit 0. See [evidence and limitations](docs/verification/2026-11-11-mediapipe-asr-consumer-session.md).
 - **Original Veyax watch-and-comment outcome remains open:** no real Parakeet model inference in this slice, tab audio is not captured, and Veyax remains pinned to a Lil Local SHA that predates these shared MediaPipe packages. Next: real ASR qualification, explicit tab-audio capture, coherent all-package consumer repin, then transcript-to-reaction integration and real listening test. Do not duplicate inference in Veyax, silently fall back to cloud, or assume the new package test proves audio understanding. Existing Gemma and Live Vision checkpoints remain independent.
